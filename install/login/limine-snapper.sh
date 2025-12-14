@@ -25,10 +25,17 @@ EOF
     exit 1
   fi
 
-  CMDLINE=$(grep "^[[:space:]]*cmdline:" "$limine_config" | head -1 | sed 's/^[[:space:]]*cmdline:[[:space:]]*//')
+  # Extract cmdline from existing config, or use defaults
+  CMDLINE=$(grep "^[[:space:]]*cmdline:" "$limine_config" 2>/dev/null | head -1 | sed 's/^[[:space:]]*cmdline:[[:space:]]*//' || echo "")
+  
+  # Fallback to default cmdline if not found
+  if [[ -z "$CMDLINE" ]]; then
+    CMDLINE="root=UUID=$(findmnt -n -o UUID /) rw"
+    echo "Using default cmdline: $CMDLINE"
+  fi
 
   sudo tee /etc/default/limine <<EOF >/dev/null
-TARGET_OS_NAME="Omarchy"
+TARGET_OS_NAME="Homerchy"
 
 ESP_PATH="/boot"
 
@@ -36,7 +43,7 @@ KERNEL_CMDLINE[default]="$CMDLINE"
 KERNEL_CMDLINE[default]+="quiet splash"
 
 ENABLE_UKI=yes
-CUSTOM_UKI_NAME="omarchy"
+CUSTOM_UKI_NAME="homerchy"
 
 ENABLE_LIMINE_FALLBACK=yes
 
@@ -60,7 +67,7 @@ EOF
 ### Read more at config document: https://github.com/limine-bootloader/limine/blob/trunk/CONFIG.md
 #timeout: 3
 default_entry: 2
-interface_branding: Omarchy Bootloader
+interface_branding: Homerchy Bootloader
 interface_branding_color: 2
 hash_mismatch_panic: no
 
@@ -116,7 +123,38 @@ fi
 
 echo "mkinitcpio hooks re-enabled"
 
+# Generate initramfs before updating Limine config
+echo "Generating initramfs..."
+if command -v limine-mkinitcpio &>/dev/null; then
+  sudo limine-mkinitcpio || sudo mkinitcpio -P
+else
+  sudo mkinitcpio -P
+fi
+
+echo "Updating Limine bootloader configuration..."
 sudo limine-update
+
+# Verify that limine-update actually created entries
+if ! grep -q "^:" /boot/limine.conf 2>/dev/null; then
+  echo "WARNING: limine-update did not create any boot entries. Attempting to fix..."
+  # Try to manually create at least one entry if kernels exist
+  if ls /boot/vmlinuz-* 1>/dev/null 2>&1; then
+    kernel=$(ls -t /boot/vmlinuz-* | head -1)
+    initrd=$(ls -t /boot/initramfs-*.img 2>/dev/null | head -1 || echo "")
+    if [[ -n "$initrd" ]]; then
+      kernel_name=$(basename "$kernel" | sed 's/vmlinuz-//')
+      echo "" >> /boot/limine.conf
+      echo ":Homerchy" >> /boot/limine.conf
+      echo "    PROTOCOL=linux" >> /boot/limine.conf
+      echo "    KERNEL_PATH=boot:///vmlinuz-$kernel_name" >> /boot/limine.conf
+      echo "    MODULE_PATH=boot:///initramfs-$kernel_name.img" >> /boot/limine.conf
+      if [[ -n "$CMDLINE" ]]; then
+        echo "    CMDLINE=$CMDLINE quiet splash" >> /boot/limine.conf
+      fi
+      echo "Limine entry manually created"
+    fi
+  fi
+fi
 
 if [[ -n $EFI ]] && efibootmgr &>/dev/null; then
     # Remove the archinstall-created Limine entry
@@ -130,13 +168,13 @@ fi
 #   ! cat /sys/class/dmi/id/bios_vendor 2>/dev/null | grep -qi "American Megatrends" &&
 #   ! cat /sys/class/dmi/id/bios_vendor 2>/dev/null | grep -qi "Apple"; then
 #
-#   uki_file=$(find /boot/EFI/Linux/ -name "omarchy*.efi" -printf "%f\n" 2>/dev/null | head -1)
+#   uki_file=$(find /boot/EFI/Linux/ -name "homerchy*.efi" -printf "%f\n" 2>/dev/null | head -1)
 #
 #   if [[ -n "$uki_file" ]]; then
 #     sudo efibootmgr --create \
 #       --disk "$(findmnt -n -o SOURCE /boot | sed 's/p\?[0-9]*$//')" \
 #       --part "$(findmnt -n -o SOURCE /boot | grep -o 'p\?[0-9]*$' | sed 's/^p//')" \
-#       --label "Omarchy" \
+#       --label "Homerchy" \
 #       --loader "\\EFI\\Linux\\$uki_file"
 #   fi
 # fi
