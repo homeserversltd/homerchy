@@ -1,0 +1,216 @@
+---
+description: a comprehensive merge conflicts resolution workflow. when your live system files get updated and you need to merge them with your repository's "gold standard" on a case-by-case basis. It creates a dedicated workspace where you can work on the merged file, then deploy it to both the live system and repository before committing.
+alwaysApply: false
+---
+# Merge Conflicts Resolution Workflow
+
+## Overview
+This document outlines the systematic process for resolving configuration conflicts between live system files and the repository's "gold standard" configurations.
+
+## CRITICAL: Repository is Source of Truth
+
+**IMPORTANT**: The repository contains the "gold standard" configurations. The live system files may have temporary changes, experimental modifications, or even broken configurations.
+
+### What Each Location Contains:
+- **Repository files** (`desktop/conf/`, `tv/conf/`): The IDEAL, tested, working configurations
+- **Live system files** (`~/.config/`): May contain temporary changes, experiments, or broken states
+- **works/ directory**: Staging area for comparing live vs repository files
+
+### Decision Process:
+1. **Default**: Keep repository version (it's the gold standard)
+2. **Exception**: Only copy specific changes FROM live system TO repository after explicit approval
+3. **Never**: Blindly copy live system files to repository
+4. **Always**: Ask "What specific changes do you want to keep?" before copying anything
+
+## When to Use This Workflow
+- Live system files have been updated/modified
+- Repository contains the "gold standard" version
+- Manual merge decisions are required on a case-by-case basis
+- Need to preserve both system updates and repository standards
+
+## Step-by-Step Process
+
+### Phase 1: Preparation and Discovery
+1. **Identify the conflict**
+   ```bash
+   # Check git status for any changes
+   git status
+   
+   # Compare live system vs repository
+   diff -u /home/owner/.config/waybar/config.jsonc /home/owner/git/omarchy/desktop/conf/waybar/config.jsonc
+   ```
+
+2. **Copy live system files to works directory**
+   ```bash
+   # Navigate to repo
+   cd /home/owner/git/omarchy
+   
+   # Copy live system files to works directory
+   cp /home/owner/.config/waybar/config.jsonc works/waybar_config_live.jsonc
+   cp /home/owner/.config/hypr/bindings.conf works/bindings_live.conf
+   cp /home/owner/.config/waybar/style.css works/style_live.css
+   ```
+
+3. **Compare live files to repo files**
+   ```bash
+   # Compare waybar config
+   diff -u works/waybar_config_live.jsonc desktop/conf/waybar/config.jsonc
+   
+   # Compare hypr bindings
+   diff -u works/bindings_live.conf desktop/conf/hypr/bindings.conf
+   
+   # Compare waybar style
+   diff -u works/style_live.css desktop/conf/waybar/style.css
+   ```
+
+4. **Step-by-Step Decision Process**
+   - **Compare files** - Show differences clearly
+   - **Ask specific questions** - "Which changes do you want to keep?"
+   - **Get explicit approval** - Don't assume anything
+   - **Apply only approved changes** - Be surgical, not wholesale
+   - **Test before committing** - Verify the merged result works
+
+5. **Update repo files with approved changes**
+   ```bash
+   # Only copy specific approved changes to repo
+   # Example: cp works/waybar_config_live.jsonc desktop/conf/waybar/config.jsonc
+   ```
+
+6. **Commit and push changes**
+   ```bash
+   # Stage changes
+   git add desktop/conf/waybar/config.jsonc desktop/conf/hypr/bindings.conf desktop/conf/waybar/style.css
+   
+   # Commit with descriptive message
+   git commit -m "Update configs from live system: [specific changes made]"
+   
+   # Push to repository
+   git push origin main
+   ```
+
+7. **Cleanup**
+   ```bash
+   # Remove copied files from works directory
+   rm works/waybar_config_live.jsonc works/bindings_live.conf works/style_live.css
+   ```
+
+## File-Specific Merge Guidance
+
+### Waybar Config (`config.jsonc`)
+- **Clock click actions**: Usually keep live system improvements
+- **Module additions**: Usually keep repository's comprehensive list
+- **Position changes**: Test and evaluate case-by-case
+
+### Waybar Style (`style.css`)
+- **Font family**: Usually keep repository's formatting
+- **Module spacing**: Often live system has better spacing
+- **Missing modules**: Always add repository's comprehensive module list
+- **CSS variables**: Keep repository's complete styling
+
+### Hypr Bindings (`bindings.conf`)
+- **Key combination changes**: Usually keep repository's simplified versions
+- **New keybinds**: Add to repository if useful
+- **Mouse bindings**: Usually keep repository's better bindings
+- **Workspace navigation**: Usually keep repository's cleaner bindings
+
+## Common Mistakes to Avoid
+- ❌ Copying live system files without reviewing differences
+- ❌ Assuming live system is always better than repository
+- ❌ Making changes to repository without explicit approval
+- ❌ Not asking which specific changes to keep
+- ❌ Blindly copying entire files instead of selective changes
+- ✅ Comparing files first, then asking which specific changes to keep
+- ✅ Testing merged configuration before committing
+- ✅ Being surgical with changes, not wholesale
+
+## Decision Matrix for Common Conflicts
+
+### Waybar Config Conflicts
+| Conflict Type | Live System | Repository | Resolution |
+|---------------|-------------|------------|------------|
+| New modules | Keep | N/A | Add to repo standard |
+| Removed modules | N/A | Keep | Evaluate necessity |
+| Color scheme changes | Evaluate | Keep | Choose best aesthetic |
+| Position changes | Keep | N/A | Test and adopt if better |
+| Keybind changes | Keep | N/A | Merge with repo standards |
+| Click actions | Keep | N/A | Usually live system has improvements |
+
+### Waybar Style Conflicts
+| Conflict Type | Live System | Repository | Resolution |
+|---------------|-------------|------------|------------|
+| Font formatting | N/A | Keep | Repository has correct formatting |
+| Module spacing | Keep | N/A | Live system often has better spacing |
+| Missing modules | N/A | Keep | Repository has comprehensive list |
+| CSS variables | N/A | Keep | Repository has complete styling |
+
+### Hyprland Bindings Conflicts
+| Conflict Type | Live System | Repository | Resolution |
+|---------------|-------------|------------|------------|
+| New keybinds | Keep | N/A | Add to repo standard |
+| Removed keybinds | N/A | Keep | Evaluate necessity |
+| Modified keybinds | Evaluate | Keep | Choose most functional |
+| Workspace changes | Keep | N/A | Test and adopt if better |
+| Key simplification | N/A | Keep | Repository usually has cleaner bindings |
+
+## Automation Scripts
+
+### Quick Merge Script
+```bash
+#!/bin/bash
+# save as: ~/bin/merge-config
+
+if [ $# -ne 1 ]; then
+    echo "Usage: merge-config <live_file>"
+    exit 1
+fi
+
+LIVE_FILE=$1
+
+mkdir -p works
+cp $LIVE_FILE works/$(basename $LIVE_FILE)_live
+
+echo "Live file copied to: works/$(basename $LIVE_FILE)_live"
+```
+
+## Emergency Procedures
+
+### If Live System Gets Broken:
+```bash
+# Restore from repository (safest option)
+cp /home/owner/git/omarchy/desktop/conf/waybar/config.jsonc /home/owner/.config/waybar/config.jsonc
+cp /home/owner/git/omarchy/desktop/conf/hypr/bindings.conf /home/owner/.config/hypr/bindings.conf
+cp /home/owner/git/omarchy/desktop/conf/waybar/style.css /home/owner/.config/waybar/style.css
+```
+
+### If Repository Gets Corrupted:
+```bash
+# Restore from git
+git checkout HEAD -- desktop/conf/waybar/config.jsonc
+git checkout HEAD -- desktop/conf/hypr/bindings.conf
+git checkout HEAD -- desktop/conf/waybar/style.css
+```
+
+### Emergency Rollback
+If merged configuration causes issues:
+```bash
+# Restore from backup
+cp /home/owner/.config/waybar/config.jsonc.backup.YYYYMMDD_HHMMSS /home/owner/.config/waybar/config.jsonc
+
+# Or restore from repository
+cp /home/owner/git/omarchy/desktop/conf/waybar/config.jsonc /home/owner/.config/waybar/config.jsonc
+```
+
+## Best Practices
+- Always backup before merging
+- Test merged configuration before committing
+- Document decisions in commit messages
+- Keep workspace archives for reference
+- Update this workflow based on experience
+- Use version control for all changes
+- **Ask specific questions** about what to keep
+- **Be surgical** with changes, not wholesale
+- **Default to repository** unless live system has clear improvements
+
+---
+
+**Remember**: This is your personal development environment. The goal is to maintain a working system while preserving the repository as the source of truth for configuration standards.

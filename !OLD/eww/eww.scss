@@ -1,0 +1,43 @@
+/* Minimal Brightness Control */
+
+.brightness-widget {
+  background-color: rgba(0, 0, 0, 0.9);
+  border-radius: 4px;
+  padding: 2px;
+  border: 1px solid #333;
+}
+
+.monitor-label {
+  font-size: 10px;
+  color: #ccc;
+  margin-bottom: 0px;
+}
+
+.slider {
+  min-width: 100px;
+  min-height: 50px;
+}
+
+.slider scale {
+  background-color: #222;
+  border-radius: 2px;
+}
+
+.slider scale trough {
+  background-color: #333;
+  border-radius: 2px;
+  min-height: 40px;
+  min-width: 4px;
+}
+
+.slider scale trough highlight {
+  background-color: #4a9eff;
+  border-radius: 2px;
+}
+
+.slider scale trough slider {
+  background-color: #fff;
+  border-radius: 50%;
+  min-width: 8px;
+  min-height: 8px;
+}

@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Script to cycle through all open applications across all workspaces
+# This replaces the default ALT+TAB behavior to cycle through ALL windows
+
+# Get all mapped, non-hidden windows across all workspaces
+windows=$(hyprctl clients -j | jq -r '.[] | select(.mapped == true and .hidden == false) | .address' | tr '\n' ' ')
+
+# Convert to array
+IFS=' ' read -ra window_array <<< "$windows"
+
+# Get current active window
+current_window=$(hyprctl activewindow -j | jq -r '.address')
+
+# Find current window index
+current_index=-1
+for i in "${!window_array[@]}"; do
+    if [[ "${window_array[$i]}" == "$current_window" ]]; then
+        current_index=$i
+        break
+    fi
+done
+
+# If no windows found, exit
+if [ ${#window_array[@]} -eq 0 ]; then
+    exit 0
+fi
+
+# If only one window, just focus it
+if [ ${#window_array[@]} -eq 1 ]; then
+    hyprctl dispatch focuswindow "address:${window_array[0]}"
+    exit 0
+fi
+
+# Calculate next window index
+if [ $current_index -eq -1 ] || [ $current_index -eq $((${#window_array[@]} - 1)) ]; then
+    # Current window not found or is last window, go to first
+    next_index=0
+else
+    # Go to next window
+    next_index=$((current_index + 1))
+fi
+
+# Focus the next window
+hyprctl dispatch focuswindow "address:${window_array[$next_index]}"

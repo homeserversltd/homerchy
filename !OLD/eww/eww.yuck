@@ -1,0 +1,54 @@
+;; Simple Brightness Control
+
+(defvar monitor1-brightness 50)
+(defvar monitor2-brightness 50)
+(defvar monitor3-brightness 50)
+
+(defwindow brightness
+  :monitor 0
+  :windowtype "utility"
+  :geometry (geometry
+              :width 450
+              :height 250
+              :x "50%"
+              :y "50%"
+              :anchor "center")
+  :stacking "fg"
+  :wm-ignore true
+  (box
+    :class "brightness-widget"
+    :orientation "vertical"
+    :spacing 0
+    (box
+      :orientation "vertical"
+      :spacing 0
+      (label :text "Samsung G5" :class "monitor-label")
+      (scale
+        :value monitor1-brightness
+        :min 0
+        :max 50
+        :step 1
+        :onchange (str "eww update monitor1-brightness={} --config /home/owner/git/omarchy/desktop/eww && bash /home/owner/git/omarchy/desktop/eww/set-brightness.sh 7 {}")
+        :class "slider"))
+    (box
+      :orientation "vertical"
+      :spacing 0
+      (label :text "NIX VUE24" :class "monitor-label")
+      (scale
+        :value monitor2-brightness
+        :min 0
+        :max 100
+        :step 1
+        :onchange (str "eww update monitor2-brightness={} --config /home/owner/git/omarchy/desktop/eww && bash /home/owner/git/omarchy/desktop/eww/set-brightness.sh 8 {}")
+        :class "slider"))
+    (box
+      :orientation "vertical"
+      :spacing 0
+      (label :text "Acer EK220Q" :class "monitor-label")
+      (scale
+        :value monitor3-brightness
+        :min 0
+        :max 100
+        :step 1
+        :onchange (str "eww update monitor3-brightness={} --config /home/owner/git/omarchy/desktop/eww && bash /home/owner/git/omarchy/desktop/eww/set-brightness.sh 6 {}")
+        :class "slider"))))

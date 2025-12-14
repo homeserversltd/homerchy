@@ -1,0 +1,111 @@
+---
+alwaysApply: true
+---
+
+# Omarchy Repository File Hierarchy
+
+## Repository Structure → Local System Paths
+
+```
+omarchy/                                    # /home/owner/git/omarchy/
+├── desktop/                               # Desktop configuration files
+│   ├── bin/                              # → /home/owner/bin/
+│   │   ├── cycle-apps
+│   │   ├── hypr-window-manager.sh        # → /home/owner/bin/hypr-window-manager.sh
+│   │   ├── hyprstarter.conf              # → /home/owner/bin/hyprstarter.conf
+│   │   ├── workspace-nav-desktop         # → /home/owner/bin/workspace-nav-desktop
+│   │   ├── workspace-state.sh            # → /home/owner/bin/workspace-state.sh
+│   │   ├── workspace-toggle.sh           # → /home/owner/bin/workspace-toggle.sh
+│   │   └── workspace-toggle.sh           # → /home/owner/bin/workspace-toggle.sh
+│   ├── conf/                             # → /home/owner/.config/
+│   │   ├── hypr/                         # → /home/owner/.config/hypr/
+│   │   │   ├── autostart.conf            # → /home/owner/.config/hypr/autostart.conf
+│   │   │   ├── bindings.conf             # → /home/owner/.config/hypr/bindings.conf
+│   │   │   ├── envs.conf                 # → /home/owner/.config/hypr/envs.conf
+│   │   │   ├── hypridle.conf             # → /home/owner/.config/hypr/hypridle.conf
+│   │   │   ├── hyprland.conf             # → /home/owner/.config/hypr/hyprland.conf
+│   │   │   ├── hyprlock.conf             # → /home/owner/.config/hypr/hyprlock.conf
+│   │   │   ├── hyprsunset.conf           # → /home/owner/.config/hypr/hyprsunset.conf
+│   │   │   ├── input.conf                # → /home/owner/.config/hypr/input.conf
+│   │   │   ├── looknfeel.conf            # → /home/owner/.config/hypr/looknfeel.conf
+│   │   │   └── monitors.conf             # → /home/owner/.config/hypr/monitors.conf
+│   │   ├── kitty/                        # → /home/owner/.config/kitty/
+│   │   │   ├── kitty.conf                # → /home/owner/.config/kitty/kitty.conf
+│   │   │   └── theme.conf                # → /home/owner/.config/kitty/theme.conf
+│   │   └── waybar/                       # → /home/owner/.config/waybar/
+│   │       ├── config.jsonc              # → /home/owner/.config/waybar/config.jsonc
+│   │       └── style.css                 # → /home/owner/.config/waybar/style.css
+│   └── eww/                              # → /home/owner/.config/eww/
+│       ├── bang-toggle.sh                # → /home/owner/.config/eww/bang-toggle.sh
+│       ├── brightness-toggle.sh          # → /home/owner/.config/eww/brightness-toggle.sh
+│       ├── eww.scss                      # → /home/owner/.config/eww/eww.scss
+│       ├── eww.yuck                      # → /home/owner/.config/eww/eww.yuck
+│       ├── get-brightness.sh             # → /home/owner/.config/eww/get-brightness.sh
+│       ├── init-brightness.sh            # → /home/owner/.config/eww/init-brightness.sh
+│       └── set-brightness.sh             # → /home/owner/.config/eww/set-brightness.sh
+├── tv/                                   # TV configuration files
+│   ├── bin/                              # → /home/owner/bin/ (TV-specific scripts)
+│   │   ├── cycle-apps                    # → /home/owner/bin/cycle-apps-tv
+│   │   ├── nnn_opener.sh                 # → /home/owner/bin/nnn_opener.sh
+│   │   └── workspace-nav                 # → /home/owner/bin/workspace-nav-tv
+│   └── conf/                             # → /home/owner/.config/ (TV-specific configs)
+│       ├── hypr/                         # → /home/owner/.config/hypr/ (TV-specific)
+│       │   ├── autostart.conf            # → /home/owner/.config/hypr/autostart-tv.conf
+│       │   ├── bindings.conf             # → /home/owner/.config/hypr/bindings-tv.conf
+│       │   ├── envs.conf                 # → /home/owner/.config/hypr/envs-tv.conf
+│       │   ├── hypridle.conf             # → /home/owner/.config/hypr/hypridle-tv.conf
+│       │   ├── hyprland.conf             # → /home/owner/.config/hypr/hyprland-tv.conf
+│       │   ├── hyprlock.conf             # → /home/owner/.config/hypr/hyprlock-tv.conf
+│       │   ├── hyprsunset.conf           # → /home/owner/.config/hypr/hyprsunset-tv.conf
+│       │   ├── input.conf                # → /home/owner/.config/hypr/input-tv.conf
+│       │   ├── looknfeel.conf            # → /home/owner/.config/hypr/looknfeel-tv.conf
+│       │   └── monitors.conf             # → /home/owner/.config/hypr/monitors-tv.conf
+│       └── kitty/                        # → /home/owner/.config/kitty/ (TV-specific)
+│           ├── kitty.conf                # → /home/owner/.config/kitty/kitty-tv.conf
+│           └── theme.conf                # → /home/owner/.config/kitty/theme-tv.conf
+├── docs/                                 # Documentation
+│   └── prompts/                          # AI prompts and documentation
+│       └── sendrecieve.md
+├── LICENSE
+└── README.md
+```
+
+## Quick Copy Commands
+
+### Desktop Setup (Primary)
+```bash
+# Hyprland configs
+cp desktop/conf/hypr/* /home/owner/.config/hypr/
+
+# Scripts
+cp desktop/bin/* /home/owner/bin/
+
+# Waybar configs
+cp desktop/conf/waybar/* /home/owner/.config/waybar/
+
+# Kitty configs
+cp desktop/conf/kitty/* /home/owner/.config/kitty/
+
+# Eww configs
+cp desktop/eww/* /home/owner/.config/eww/
+```
+
+### TV Setup (Alternative)
+```bash
+# TV-specific Hyprland configs (rename to avoid conflicts)
+cp tv/conf/hypr/autostart.conf /home/owner/.config/hypr/autostart-tv.conf
+cp tv/conf/hypr/bindings.conf /home/owner/.config/hypr/bindings-tv.conf
+# ... etc for all TV configs
+
+# TV-specific scripts (rename to avoid conflicts)
+cp tv/bin/cycle-apps /home/owner/bin/cycle-apps-tv
+cp tv/bin/workspace-nav /home/owner/bin/workspace-nav-tv
+# ... etc
+```
+
+## Key Mapping Notes
+
+- **Desktop configs** go directly to standard locations (e.g., `~/.config/hypr/`)
+- **TV configs** should be renamed with `-tv` suffix to avoid conflicts
+- **Scripts** can go directly to `~/bin/` or be renamed for TV variants
+- **Repository is the source of truth** - always copy FROM repo TO system

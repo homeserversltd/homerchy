@@ -1,0 +1,126 @@
+---
+alwaysApply: true
+---
+# Omarchy Vibes - Configuration Management System
+
+## Core Purpose
+This repository contains and propagates all configuration files, scripts, and deployment automation for Coltin Leekley's computing environment.
+
+## Explicit Rules (JSON Format)
+
+```json
+{
+  "repository_purpose": {
+    "rule": "This repo manages ALL personal configuration",
+    "reason": "Centralized config management enables consistent environment replication across machines and time"
+  },
+  "content_scope": {
+    "rule": "Include ALL scripts, configs, dotfiles, and deployment automation",
+    "reason": "Complete system state capture ensures nothing is lost and everything is reproducible"
+  },
+  "deployment_target": {
+    "rule": "Support automated deployment on new machines",
+    "reason": "Rapid environment setup without manual configuration drift"
+  },
+  "dual_setup_support": {
+    "rule": "Must support both 'desktop' and 'tv' configurations",
+    "reason": "Different hardware setups require different configuration parameters"
+  },
+  "live_system_caution": {
+    "rule": "ASK QUESTIONS before risky operations - we're working on live systems",
+    "reason": "Preventing system breakage is more important than speed"
+  },
+  "patience_requirement": {
+    "rule": "Be patient - configuration management is inherently complex",
+    "reason": "Rushing leads to broken systems and lost work"
+  }
+}
+```
+
+## Setup Configurations
+
+### Desktop Setup
+- **Hardware**: 3 monitors
+- **Use Case**: Primary development workstation
+- **Configuration**: Full desktop environment with multi-monitor support
+- **Scripts**: Desktop-specific initialization and management
+
+### TV Setup  
+- **Hardware**: Laptop screen or big TV screen
+- **Use Case**: Media consumption, casual computing
+- **Configuration**: Simplified interface, single display optimized
+- **Scripts**: TV-specific display and media management
+
+## What This Repo Contains
+
+### Configuration Files
+- Shell configurations (zsh, aliases, functions)
+- Terminal configurations (kitty, oh-my-posh)
+- System configurations (systemd, network, firewall)
+- Development tool configurations
+- Desktop environment settings
+
+### Scripts
+- Automation scripts from `~/bin/`
+- Installation scripts
+- Deployment scripts
+- System maintenance scripts
+- Custom utility functions
+
+### Deployment Automation
+- Machine setup scripts
+- Environment detection logic
+- Configuration deployment based on setup type
+- Dependency management
+
+## Development Principles
+
+### Safety First
+- **Always ask before destructive operations**
+- **Test on non-critical systems when possible**
+- **Backup before major changes**
+- **Document breaking changes immediately**
+
+### Patience Required
+- Configuration management is complex
+- Multiple systems must be kept in sync
+- Breaking changes can cascade
+- Recovery takes time
+
+### Live System Awareness
+- We're often working on active systems
+- Mistakes have immediate consequences
+- Questions prevent disasters
+- "Better safe than sorry" applies here
+
+## Quick Reference
+
+### Before Making Changes
+1. Ask: "Is this safe for live systems?"
+2. Ask: "What could break?"
+3. Ask: "Do we have a rollback plan?"
+4. Ask: "Should we test this first?"
+
+### Configuration Types
+- **Desktop**: Full-featured, multi-monitor, development-focused
+- **TV**: Simplified, single-display, media-focused
+- **Common**: Shared configurations that work on both
+
+### File Organization
+```
+├── desktop/          # Desktop-specific configs
+├── tv/              # TV-specific configs  
+├── common/          # Shared configurations
+├── scripts/         # All automation scripts
+├── deployment/      # Machine setup automation
+└── docs/           # Documentation and guides
+```
+
+## Emergency Contacts
+- **System**: Arch Linux rolling release
+
+
+---
+
+**Remember**: This repo keeps your entire computing environment alive. Treat it with respect, ask questions, and be patient. The goal is system reliability, not speed.
+

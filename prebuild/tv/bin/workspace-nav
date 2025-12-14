@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# Workspace navigation script with looping behavior
+# Usage: workspace-nav [left|right] [--move-window]
+# Cap at workspace 5 with looping behavior
+# --move-window: Move the active window along with workspace change
+
+MAX_WORKSPACE=5
+MIN_WORKSPACE=1
+MOVE_WINDOW=false
+
+# Parse arguments
+if [ "$2" = "--move-window" ]; then
+    MOVE_WINDOW=true
+fi
+
+# Get current workspace
+CURRENT_WS=$(hyprctl activeworkspace -j | jq -r '.id')
+
+if [ "$1" = "left" ]; then
+    # Move to previous workspace with looping
+    if [ "$CURRENT_WS" -le "$MIN_WORKSPACE" ]; then
+        NEW_WS=$MAX_WORKSPACE
+    else
+        NEW_WS=$((CURRENT_WS - 1))
+    fi
+elif [ "$1" = "right" ]; then
+    # Move to next workspace with looping
+    if [ "$CURRENT_WS" -ge "$MAX_WORKSPACE" ]; then
+        NEW_WS=$MIN_WORKSPACE
+    else
+        NEW_WS=$((CURRENT_WS + 1))
+    fi
+else
+    echo "Usage: $0 [left|right] [--move-window]"
+    exit 1
+fi
+
+# Move active window if requested
+if [ "$MOVE_WINDOW" = true ]; then
+    # Get the active window address
+    ACTIVE_WINDOW=$(hyprctl activewindow -j | jq -r '.address')
+    
+    # Only move if there's an active window (not empty workspace)
+    if [ "$ACTIVE_WINDOW" != "null" ] && [ -n "$ACTIVE_WINDOW" ]; then
+        # Move the window to the new workspace
+        hyprctl dispatch movetoworkspace "$NEW_WS,address:$ACTIVE_WINDOW"
+    else
+        # No active window, just switch workspace
+        hyprctl dispatch workspace "$NEW_WS"
+    fi
+else
+    # Switch to the new workspace without moving window
+    hyprctl dispatch workspace "$NEW_WS"
+fi
