@@ -42,47 +42,7 @@ export GUM_SPIN_PADDING="$PADDING"
 export GUM_TABLE_PADDING="$PADDING"
 export GUM_CONFIRM_PADDING="$PADDING"
 
-# Detect if we're running in a VM (QEMU, VirtualBox, etc.)
-# ANSI escape sequences often don't work well in VM consoles
-is_vm_environment() {
-  # Check DMI system vendor/product for common VM indicators
-  if [ -f /sys/class/dmi/id/sys_vendor ]; then
-    local vendor=$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null | tr '[:upper:]' '[:lower:]')
-    case "$vendor" in
-      *qemu*|*kvm*|*vmware*|*virtualbox*|*microsoft*|*xen*)
-        return 0
-        ;;
-    esac
-  fi
-  
-  # Check for virtio devices (common in QEMU/KVM)
-  if [ -d /sys/bus/virtio ]; then
-    local virtio_count=$(find /sys/bus/virtio/devices -mindepth 1 -maxdepth 1 2>/dev/null | wc -l)
-    if [ "$virtio_count" -gt 2 ]; then
-      return 0
-    fi
-  fi
-  
-  # Check if TERM is set to something that doesn't support ANSI well
-  case "${TERM:-}" in
-    linux|vt220|dumb)
-      return 0
-      ;;
-  esac
-  
-  return 1
-}
-
 clear_logo() {
-  if is_vm_environment; then
-    # Simple clear for VM environments
-    clear
-    echo
-    cat "$LOGO_PATH"
-    echo
-  else
-    # ANSI-based clear for real hardware
-    printf "\033[H\033[2J" # Clear screen and move cursor to top-left
-    gum style --foreground 2 --padding "1 0 0 $PADDING_LEFT" "$(<"$LOGO_PATH")"
-  fi
+  printf "\033[H\033[2J" # Clear screen and move cursor to top-left
+  gum style --foreground 2 --padding "1 0 0 $PADDING_LEFT" "$(<"$LOGO_PATH")"
 }

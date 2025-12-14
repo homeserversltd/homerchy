@@ -1,2 +1,5 @@
 **/isoprep/work/**
 **.iso**
+*.ours
+*.theirs
+*.base
