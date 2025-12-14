@@ -19,7 +19,8 @@ ERROR_HANDLING=false
 
 # Cursor is usually hidden while we install
 show_cursor() {
-  printf "\033[?25h"
+  # Always output to terminal, never to stdout (which may be redirected to log file)
+  printf "\033[?25h" >/dev/tty 2>/dev/null || printf "\033[?25h"
 }
 
 # Display truncated log lines from the install log
