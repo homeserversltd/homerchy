@@ -68,6 +68,28 @@ notice() {
   echo
 }
 
+# Load VM test settings from JSON file
+load_vm_settings() {
+  local settings_file="/root/vmtools/settings.json"
+  if [[ -n "${OMARCHY_VM_TEST:-}" && -f "$settings_file" ]]; then
+    debug_log "load_vm_settings: Loading from $settings_file"
+    # Use jq to extract values, with fallbacks to defaults if file is malformed
+    VM_KEYBOARD_CHOICE=$(jq -r '.keyboard.choice // "English (US)"' "$settings_file" 2>/dev/null || echo "English (US)")
+    VM_KEYBOARD_CODE=$(jq -r '.keyboard.code // "us"' "$settings_file" 2>/dev/null || echo "us")
+    VM_USERNAME=$(jq -r '.user.username // "testuser"' "$settings_file" 2>/dev/null || echo "testuser")
+    VM_PASSWORD=$(jq -r '.user.password // "testpass123"' "$settings_file" 2>/dev/null || echo "testpass123")
+    VM_FULL_NAME=$(jq -r '.user.full_name // "Test User"' "$settings_file" 2>/dev/null || echo "Test User")
+    VM_EMAIL=$(jq -r '.user.email_address // "test@example.com"' "$settings_file" 2>/dev/null || echo "test@example.com")
+    VM_HOSTNAME=$(jq -r '.system.hostname // "homerchy"' "$settings_file" 2>/dev/null || echo "homerchy")
+    VM_TIMEZONE=$(jq -r '.system.timezone // "America/New_York"' "$settings_file" 2>/dev/null || echo "America/New_York")
+    debug_log "load_vm_settings: Loaded settings successfully"
+    return 0
+  else
+    debug_log "load_vm_settings: VM test mode not enabled or settings file not found"
+    return 1
+  fi
+}
+
 # STEP 1: KEYBOARD LAYOUT
 
 keyboard_form() {
@@ -125,10 +147,18 @@ Ukrainian|ua'
   
   # Non-interactive mode for VM testing
   if [[ -n "${OMARCHY_VM_TEST:-}" ]]; then
-    choice="English (US)"
-    keyboard="us"
-    debug_log "keyboard_form: VM Test Mode - using default (English US)"
-    echo "VM Test Mode: Using default keyboard layout (English US)"
+    if load_vm_settings; then
+      choice="$VM_KEYBOARD_CHOICE"
+      keyboard="$VM_KEYBOARD_CODE"
+      debug_log "keyboard_form: VM Test Mode - using settings from /root/vmtools/settings.json"
+      echo "VM Test Mode: Using keyboard layout from settings ($choice)"
+    else
+      # Fallback to defaults if settings file not found
+      choice="English (US)"
+      keyboard="us"
+      debug_log "keyboard_form: VM Test Mode - using fallback defaults (English US)"
+      echo "VM Test Mode: Using default keyboard layout (English US)"
+    fi
   else
     choice=$(printf '%s\n' "$keyboards" | cut -d'|' -f1 | gum choose --height 10 --selected "English (US)" --header "Select keyboard layout") || abort
     keyboard=$(printf '%s\n' "$keyboards" | awk -F'|' -v c="$choice" '$1==c{print $2; exit}')
@@ -153,19 +183,36 @@ user_form() {
 
   # Non-interactive mode for VM testing
   if [[ -n "${OMARCHY_VM_TEST:-}" ]]; then
-    username="testuser"
-    password="testpass123"
-    password_confirmation="testpass123"
-    full_name="Test User"
-    email_address="test@example.com"
-    hostname="homerchy"
-    timezone="America/New_York"
-    debug_log "user_form: VM Test Mode - using defaults"
-    debug_log "user_form: Username=$username, Hostname=$hostname, Timezone=$timezone"
-    echo "VM Test Mode: Using default values"
-    echo "  Username: $username"
-    echo "  Hostname: $hostname"
-    echo "  Timezone: $timezone"
+    if load_vm_settings; then
+      username="$VM_USERNAME"
+      password="$VM_PASSWORD"
+      password_confirmation="$VM_PASSWORD"
+      full_name="$VM_FULL_NAME"
+      email_address="$VM_EMAIL"
+      hostname="$VM_HOSTNAME"
+      timezone="$VM_TIMEZONE"
+      debug_log "user_form: VM Test Mode - using settings from /root/vmtools/settings.json"
+      debug_log "user_form: Username=$username, Hostname=$hostname, Timezone=$timezone"
+      echo "VM Test Mode: Using values from settings"
+      echo "  Username: $username"
+      echo "  Hostname: $hostname"
+      echo "  Timezone: $timezone"
+    else
+      # Fallback to defaults if settings file not found
+      username="testuser"
+      password="testpass123"
+      password_confirmation="testpass123"
+      full_name="Test User"
+      email_address="test@example.com"
+      hostname="homerchy"
+      timezone="America/New_York"
+      debug_log "user_form: VM Test Mode - using fallback defaults"
+      debug_log "user_form: Username=$username, Hostname=$hostname, Timezone=$timezone"
+      echo "VM Test Mode: Using default values"
+      echo "  Username: $username"
+      echo "  Hostname: $hostname"
+      echo "  Timezone: $timezone"
+    fi
   else
     while true; do
       username=$(gum input --placeholder "Alphanumeric without spaces (like dhh)" --prompt.foreground="#845DF9" --prompt "Username> ") || abort

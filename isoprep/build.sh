@@ -93,8 +93,10 @@ rsync -a --exclude 'isoprep/work' \
          --exclude '.git' \
          "${REPO_ROOT}/" "$PROFILE_DIR/airootfs/root/homerchy/"
 
-# 4b. Inject VM specific environment signal
+# 4b. Inject VM specific environment signal and settings
+mkdir -p "$PROFILE_DIR/airootfs/root/vmtools"
 cp "${REPO_ROOT}/vmtools/vm-env.sh" "$PROFILE_DIR/airootfs/root/vm-env.sh"
+cp "${REPO_ROOT}/vmtools/settings.json" "$PROFILE_DIR/airootfs/root/vmtools/settings.json"
 
 # 5. Customize Package List
 # Add packages defined in our tech stack logic

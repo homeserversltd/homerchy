@@ -197,6 +197,20 @@ $OMARCHY_USER ALL=(ALL:ALL) NOPASSWD: ALL
 EOF
   chmod 440 /mnt/etc/sudoers.d/99-omarchy-installer
 
+  log "install_base_system: Ensuring user home directory exists"
+  # Ensure the user's home directory exists with proper permissions
+  # archinstall should create it, but we'll ensure it exists just in case
+  if [[ ! -d "/mnt/home/$OMARCHY_USER" ]]; then
+    debug_log "install_base_system: Home directory doesn't exist, creating it"
+    mkdir -p /mnt/home/$OMARCHY_USER
+    # Copy skeleton files if /etc/skel exists
+    if [[ -d "/mnt/etc/skel" ]]; then
+      cp -r /mnt/etc/skel/. /mnt/home/$OMARCHY_USER/ 2>/dev/null || true
+    fi
+    chmod 755 /mnt/home/$OMARCHY_USER
+    chown -R 1000:1000 /mnt/home/$OMARCHY_USER
+  fi
+
   log "install_base_system: Copying omarchy repository to user home"
   # Copy the local omarchy repo to the user's home directory
   mkdir -p /mnt/home/$OMARCHY_USER/.local/share/
