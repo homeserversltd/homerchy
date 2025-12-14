@@ -138,10 +138,11 @@ sudo limine-update
 entries_exist=false
 entries_have_protocol=false
 
-if grep -q "^:" /boot/limine.conf 2>/dev/null; then
+# Check for entries starting with / (Limine v10.x syntax)
+if grep -q "^/" /boot/limine.conf 2>/dev/null; then
   entries_exist=true
-  # Check if any entry has PROTOCOL field
-  if grep -A 5 "^:" /boot/limine.conf 2>/dev/null | grep -q "PROTOCOL="; then
+  # Check if any entry has PROTOCOL field with correct syntax (PROTOCOL:)
+  if grep -A 5 "^/" /boot/limine.conf 2>/dev/null | grep -q "PROTOCOL:"; then
     entries_have_protocol=true
   fi
 fi
@@ -149,8 +150,8 @@ fi
 # If entries exist but don't have PROTOCOL, or no entries exist, fix it
 if [[ "$entries_exist" == "true" && "$entries_have_protocol" == "false" ]]; then
   echo "WARNING: Limine entries exist but are missing PROTOCOL. Fixing entries..."
-  # Remove invalid entries (everything from first : to next : or end of file)
-  sudo sed -i '/^:/,$d' /boot/limine.conf
+  # Remove invalid entries (everything from first / to next / or end of file)
+  sudo sed -i '/^\/.*$/,$d' /boot/limine.conf
   entries_exist=false
 fi
 
@@ -168,11 +169,11 @@ if [[ "$entries_exist" == "false" ]]; then
       fi
       sudo tee -a /boot/limine.conf >/dev/null <<EOF
 
-:Homerchy
-    PROTOCOL=linux
-    KERNEL_PATH=boot:///vmlinuz-$kernel_name
-    MODULE_PATH=boot:///initramfs-$kernel_name.img
-    CMDLINE=$CMDLINE quiet splash
+/Homerchy
+    PROTOCOL: linux
+    KERNEL_PATH: boot():/vmlinuz-$kernel_name
+    MODULE_PATH: boot():/initramfs-$kernel_name.img
+    CMDLINE: $CMDLINE quiet splash
 EOF
       echo "Limine entry manually created for kernel: $kernel_name"
     else

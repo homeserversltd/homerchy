@@ -1,59 +1,37 @@
 start_log_output() {
-  local ANSI_SAVE_CURSOR="\033[s"
-  local ANSI_RESTORE_CURSOR="\033[u"
-  local ANSI_CLEAR_LINE="\033[2K"
-  local ANSI_HIDE_CURSOR="\033[?25l"
   local ANSI_RESET="\033[0m"
   local ANSI_GRAY="\033[90m"
-
-  # Save cursor position and hide cursor
-  printf $ANSI_SAVE_CURSOR
-  printf $ANSI_HIDE_CURSOR
+  local max_line_width=$((LOGO_WIDTH - 4))
 
   (
-    local log_lines=20
-    local max_line_width=$((LOGO_WIDTH - 4))
-    local last_size=0
-    local last_hash=""
-
+    local last_position=0
+    
     while true; do
-      # Only update if log file has actually changed
       if [ -f "$OMARCHY_INSTALL_LOG_FILE" ]; then
+        # Get current file size
         current_size=$(stat -c%s "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null || echo 0)
-        current_hash=$(tail -c 1000 "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null | md5sum 2>/dev/null | cut -d' ' -f1 || echo "")
         
-        # Only redraw if file size or content changed
-        if [ "$current_size" != "$last_size" ] || [ "$current_hash" != "$last_hash" ]; then
-          last_size=$current_size
-          last_hash=$current_hash
-          
-          # Read the last N lines into an array
-          mapfile -t current_lines < <(tail -n $log_lines "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null)
-
-          # Build complete output buffer with escape sequences
-          output=""
-          for ((i = 0; i < log_lines; i++)); do
-            line="${current_lines[i]:-}"
-
+        # Only read new content since last position
+        if [ "$current_size" -gt "$last_position" ]; then
+          # Read new lines from last position
+          tail -c +$((last_position + 1)) "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null | while IFS= read -r line || [ -n "$line" ]; do
             # Truncate if needed
             if [ ${#line} -gt $max_line_width ]; then
               line="${line:0:$max_line_width}..."
             fi
-
-            # Add clear line escape and formatted output for each line
+            
+            # Append new line with formatting
             if [ -n "$line" ]; then
-              output+="${ANSI_CLEAR_LINE}${ANSI_GRAY}${PADDING_LEFT_SPACES}  → ${line}${ANSI_RESET}\n"
-            else
-              output+="${ANSI_CLEAR_LINE}${PADDING_LEFT_SPACES}\n"
+              printf "${ANSI_GRAY}${PADDING_LEFT_SPACES}  → %s${ANSI_RESET}\n" "$line"
             fi
           done
-
-          printf "${ANSI_RESTORE_CURSOR}%b" "$output"
+          
+          last_position=$current_size
         fi
       fi
-
-      # Check less frequently when nothing is changing
-      sleep 0.5
+      
+      # Check for new content every 0.2 seconds
+      sleep 0.2
     done
   ) &
   monitor_pid=$!

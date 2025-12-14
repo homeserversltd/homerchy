@@ -24,8 +24,11 @@ if sudo test -f /etc/sudoers.d/99-omarchy-installer; then
   sudo rm -f /etc/sudoers.d/99-omarchy-installer &>/dev/null
 fi
 
-# Exit gracefully if user chooses not to reboot
-if gum confirm --padding "0 0 0 $((PADDING_LEFT + 32))" --show-help=false --default --affirmative "Reboot Now" --negative "" ""; then
+# Prompt user to reboot
+echo
+gum style --foreground 2 --padding "1 0 0 $PADDING_LEFT" "Installation complete!"
+echo
+if gum confirm --padding "0 0 0 $PADDING_LEFT" --default --affirmative "Reboot Now" --negative "Reboot Later" "Ready to reboot into your new system?"; then
   # Clear screen to hide any shutdown messages
   clear
 
@@ -33,6 +36,11 @@ if gum confirm --padding "0 0 0 $((PADDING_LEFT + 32))" --show-help=false --defa
     touch /var/tmp/omarchy-install-completed
     exit 0
   else
+    echo "Rebooting..."
     sudo reboot 2>/dev/null
   fi
+else
+  echo
+  gum style --foreground 3 --padding "0 0 0 $PADDING_LEFT" "You can reboot later with: sudo reboot"
+  echo
 fi
