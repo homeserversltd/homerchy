@@ -1,38 +1,9 @@
 start_log_output() {
   # Detect VM environment and disable ANSI sequences if needed
   if is_vm_environment; then
-    # Simple output without ANSI escape sequences for VM environments
-    (
-      local log_lines=20
-      local max_line_width=$((TERM_WIDTH - 4))
-
-      while true; do
-        # Read the last N lines
-        mapfile -t current_lines < <(tail -n $log_lines "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null)
-
-        # Clear screen with simple method
-        clear
-        
-        # Print each line simply
-        for ((i = 0; i < log_lines && i < ${#current_lines[@]}; i++)); do
-          line="${current_lines[i]}"
-          
-          # Truncate if needed
-          if [ ${#line} -gt $max_line_width ]; then
-            line="${line:0:$max_line_width}..."
-          fi
-          
-          if [ -n "$line" ]; then
-            echo "  → $line"
-          else
-            echo
-          fi
-        done
-
-        sleep 0.5  # Slower refresh in VM
-      done
-    ) &
-    monitor_pid=$!
+    # In VM environments, disable live log output entirely to prevent flashing
+    # Users can still view logs via "View full log" option or by reading the file directly
+    debug_log "VM environment detected - disabling live log output to prevent display corruption"
     return
   fi
 
