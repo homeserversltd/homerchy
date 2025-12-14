@@ -61,19 +61,12 @@ install_arch() {
   gum style --foreground 3 --padding "1 0 0 $PADDING_LEFT" "Installing..."
   echo
 
-
-
-  start_log_output
-
   # Set CURRENT_SCRIPT for the trap to display better when nothing is returned for some reason
   CURRENT_SCRIPT="install_base_system"
-  # Redirect all output to log file only (log viewer will display it)
-  # Use exec to redirect all output from the function
-  {
-    install_base_system
-  } > >(sed -u 's/\x1b\[[0-9;]*[a-zA-Z]//g' >>/var/log/omarchy-install.log) 2>&1
+  # Output goes to terminal directly, also tee to log file for debugging
+  # NO log viewer - it was causing duplicates and input issues
+  install_base_system 2>&1 | tee -a /var/log/omarchy-install.log
   unset CURRENT_SCRIPT
-  stop_log_output
 }
 
 install_omarchy() {

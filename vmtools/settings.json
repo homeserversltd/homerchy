@@ -4,13 +4,14 @@
     "code": "us"
   },
   "user": {
-    "username": "testuser",
-    "password": "testpass123",
-    "full_name": "Test User",
-    "email_address": "test@example.com"
+    "username": "owner",
+    "password": "123",
+    "full_name": "Owner",
+    "email_address": "owner@example.com"
   },
   "system": {
     "hostname": "homerchy",
     "timezone": "America/New_York"
   }
 }
+

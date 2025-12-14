@@ -37,5 +37,6 @@ qemu-system-x86_64 \
     -display default \
     -netdev user,id=net0,hostfwd=tcp::2222-:22 \
     -device virtio-net-pci,netdev=net0 \
+    -monitor unix:/tmp/homerchy-qemu-monitor.sock,server,nowait \
     -usb -device usb-tablet \
     -name "Homerchy Test VM"

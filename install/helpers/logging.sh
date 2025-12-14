@@ -5,28 +5,45 @@ start_log_output() {
 
   (
     local last_position=0
+    local last_inode=0
     
     while true; do
       if [ -f "$OMARCHY_INSTALL_LOG_FILE" ]; then
-        # Get current file size
+        # Get current file size and inode to detect file rotation/recreation
         current_size=$(stat -c%s "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null || echo 0)
+        current_inode=$(stat -c%i "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null || echo 0)
+        
+        # Reset position if file was recreated (different inode)
+        if [ "$current_inode" != "$last_inode" ] && [ "$last_inode" != "0" ]; then
+          last_position=0
+        fi
+        last_inode=$current_inode
         
         # Only read new content since last position
         if [ "$current_size" -gt "$last_position" ]; then
-          # Read new lines from last position
-          tail -c +$((last_position + 1)) "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null | while IFS= read -r line || [ -n "$line" ]; do
-            # Truncate if needed
-            if [ ${#line} -gt $max_line_width ]; then
-              line="${line:0:$max_line_width}..."
-            fi
-            
-            # Append new line with formatting
-            if [ -n "$line" ]; then
-              printf "${ANSI_GRAY}${PADDING_LEFT_SPACES}  → %s${ANSI_RESET}\n" "$line"
-            fi
-          done
+          # Read new content, ensuring we start at a line boundary
+          # Skip partial lines by reading from last position and finding first newline
+          local new_content
+          new_content=$(tail -c +$((last_position + 1)) "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null)
           
-          last_position=$current_size
+          # Process only complete lines (skip if we're in the middle of a line)
+          if [ -n "$new_content" ]; then
+            echo "$new_content" | while IFS= read -r line || [ -n "$line" ]; do
+              # Truncate if needed
+              if [ ${#line} -gt $max_line_width ]; then
+                line="${line:0:$max_line_width}..."
+              fi
+              
+              # Append new line with formatting (only if not empty)
+              # Write directly to /dev/tty to avoid interfering with stdout redirection
+              if [ -n "$line" ]; then
+                printf "${ANSI_GRAY}${PADDING_LEFT_SPACES}  → %s${ANSI_RESET}\n" "$line" >/dev/tty 2>/dev/null || printf "${ANSI_GRAY}${PADDING_LEFT_SPACES}  → %s${ANSI_RESET}\n" "$line"
+              fi
+            done
+            
+            # Update position to current file size
+            last_position=$current_size
+          fi
         fi
       fi
       
