@@ -17,11 +17,17 @@ echo "Launching ISO: $ISO_FILE"
 
 qemu-system-x86_64 \
     -enable-kvm \
+    -machine type=q35,accel=kvm \
     -m 8G \
     -smp 4 \
+    -cpu host \
     -cdrom "$ISO_FILE" \
     -boot d \
-    -vga std \
-    -display default \
-    -net nic -net user,hostfwd=tcp::2222-:22 \
+    -vga virtio \
+    -display gtk \
+    -usb \
+    -device usb-tablet \
+    -device usb-kbd \
+    -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+    -device virtio-net-pci,netdev=net0 \
     -name "Homerchy Test VM"

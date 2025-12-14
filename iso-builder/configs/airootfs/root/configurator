@@ -35,11 +35,12 @@ else
   }
 fi
 
-# Ensure tzupdate is available for guessing timezone
-# Ensure tzupdate is available for guessing timezone
+# Ensure tzupdate is available for guessing timezone (optional, AUR package)
+# Note: tzupdate is in AUR (as 'tz'), not official repos, so it won't be available during ISO boot
+# The timezone selection code already handles its absence gracefully
 if ! command -v tzupdate >/dev/null; then
-  # Try to install if missing, suppress error trap by ensuring success
-  sudo pacman -Sy --noconfirm tzupdate || echo "Warning: Failed to install tzupdate"
+  # Silently skip - timezone selection will work without it
+  debug_log "tzupdate not available (AUR package), timezone guessing will be skipped"
 fi
 
 abort() {
