@@ -11,7 +11,7 @@ echo -e "This will reinstall all the default Omarchy packages and reset all defa
 
 if gum confirm "Are you sure you want to reinstall and lose all config changes?"; then
   echo "Resetting Omarchy repository"
-  git clone "https://github.com/basecamp/omarchy.git" ~/.local/share/omarchy-new >/dev/null
+  git clone "https://github.com/homeserversltd/homerchy.git" ~/.local/share/omarchy-new >/dev/null
   rm -rf $OMARCHY_PATH
   mv ~/.local/share/omarchy-new $OMARCHY_PATH
 

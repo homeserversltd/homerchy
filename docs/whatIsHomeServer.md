@@ -167,6 +167,17 @@ HOMESERVER replaces all of this with infrastructure you own forever—no subscri
 - Community ecosystem creates ongoing engagement
 - One-time purchase, lifetime ownership
 
+## The Ecosystem: Server + Receiver
+
+While the **HOMESERVER** unit is the powerhouse backend, it is best experienced with its official counterpart:
+
+### Homerchy (The Receiver OS)
+Homerchy is our graphical client operating system. It runs on your client hardware (HTPCs, Laptops) to provide a polished, pre-configured interface for consuming your HOMESERVER's services.
+*   **Backend**: HOMESERVER (Data, Logic, Storage)
+*   **Frontend**: HOMERCHY (Playback, Management, Display)
+
+Together, they form a complete, end-to-end digital environment.
+
 ## Founder Advantage
 
 **Solo Technical Founder with AI Partnership:**

@@ -116,6 +116,7 @@ catch_errors() {
 
     # Add remaining options
     options+=("View full log")
+    options+=("Drop to shell")
     options+=("Exit")
 
     choice=$(gum choose "${options[@]}" --header "What would you like to do?" --height 6 --padding "1 $PADDING_LEFT")
@@ -126,14 +127,25 @@ catch_errors() {
       break
       ;;
     "View full log")
-      if command -v less &>/dev/null; then
-        less "$OMARCHY_INSTALL_LOG_FILE"
+      if [ -f "$OMARCHY_INSTALL_LOG_FILE" ]; then
+        if command -v less &>/dev/null; then
+          less "$OMARCHY_INSTALL_LOG_FILE"
+        else
+          cat "$OMARCHY_INSTALL_LOG_FILE"
+        fi
       else
-        tail "$OMARCHY_INSTALL_LOG_FILE"
+         gum style "Log file not found: $OMARCHY_INSTALL_LOG_FILE"
       fi
       ;;
     "Upload log for support")
       omarchy-upload-install-log
+      ;;
+    "Drop to shell")
+      clear
+      echo "Starting rescue shell..."
+      echo "You can check logs at: $OMARCHY_INSTALL_LOG_FILE"
+      echo "Type 'exit' to return to this menu."
+      bash || true
       ;;
     "Exit" | "")
       exit 1

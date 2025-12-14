@@ -1,51 +1,33 @@
-# Homerchy - The Experimental Homeserver OS
+# Homerchy
 
-**Homerchy** is an experimental, Omarchy-based Linux distribution designed as a development and testing platform for homeserver configurations.
+**The official graphical receiver OS for HOMESERVER LLC.**
 
-> [!NOTE]
-> **Homerchy vs. HOMESERVER LLC**
-> 
-> *   **Homerchy** (This Project) is the **workshop**: a place for rapid prototyping, breaking things, and community experimentation.
-> *   **HOMESERVER LLC** is the **showroom**: the commercial provider of polished, enterprise-grade homeserver products.
-> 
-> See [Relationship to HOMESERVER LLC](#relationship-to-homeserver-llc) for more details.
+Homerchy is a specialized operating system designed to pair perfectly with your [HOMESERVER](docs/whatIsHomeServer.md). While the HOMESERVER unit handles the heavy lifting (hosting services, storage, and backend logic at `home.arpa`), Homerchy transforms any computer into the perfect living room receiver and frontend interface.
 
-## Overview
+## The Product Pair
 
-Homerchy serves as a tangible "playground" for digital sovereignty. It integrates the build systems, VM testing machinery, and configuration patterns needed to create robust homeserver systems, but keeps them in a flexible, fork-friendly state.
+HOMESERVER LLC provides a complete ecosystem for digital sovereignty:
 
-We also expect Homerchy to be the **perfect pairing** with a purchased HOMESERVER unit. While the server handles the heavy lifting, Homerchy is designed to be the **living room receiver** to your server's content—providing a dedicated, beautiful interface for your self-hosted media and services.
+1.  **HOMESERVER**: The headless, powerful backend (TTY) that hosts your life at `home.arpa`.
+2.  **HOMERCHY**: The graphical frontend (GUI) that consumes it.
 
-It is **NOT** a commercial product. It is a tool for builders.
+## Purpose
 
-## Key Features
+This repository allows you to:
+1.  **Generate a Homerchy ISO** tailored for your hardware.
+2.  **Flash it to a drive** to install on any machine (Mini PC, Laptop, HTPC).
+3.  **Connect** instantly to your HOMESERVER ecosystem.
 
-*   **Self-Contained ISO Builder**: Includes the full `omarchy-iso` builder machinery. No external dependencies required to build bootable ISOs.
-*   **Integrated VM Testing**: Built-in QEMU/KVM orchestration tools (via `controller.sh`) allow for rapid "Build -> Boot -> Test" cycles in minutes.
-*   **Homeserver Configs**: Pre-configured with Hyprland and essential services, serving as a reference implementation for homeserver setups.
-*   **Fork-Friendly**: Designed from the ground up to be forked and branded. Create your own distro by changing a few config files.
+It provides a polished, "it just works" experience out of the box, with pre-configured Hyprland environments, media players, and connection tools optimized for the local `home.arpa` network.
 
-## Relationship to HOMESERVER LLC
-
-**HOMESERVER LLC** builds "datacenter-in-a-box" products that replace cloud subscriptions with owned infrastructure. These are stable, supported, and professional-grade.
-
-**Homerchy** exists to:
-1.  Test new configurations before they land in commercial products.
-2.  Provide a reference implementation for the community.
-3.  Allow anyone to build their own homeserver OS using the same tooling.
-
-Think of Homerchy as the upstream open-source project that powers the innovation, while HOMESERVER LLC packages that innovation into a finished product.
-
-## Quick Start
+## Getting Started
 
 ### Prerequisites
-*   Arch Linux (or Arch-based) host
-*   Docker
-*   Git
-*   QEMU/KVM (for VM testing)
-*   ~20GB Disk Space
+*   An Arch Linux (or Arch-based) host system.
+*   Docker (for the build environment).
+*   ~20GB of disk space.
 
-### Usage
+### Build Your Receiver
 
 1.  **Clone the Repository**
     ```bash
@@ -53,32 +35,23 @@ Think of Homerchy as the upstream open-source project that powers the innovation
     cd homerchy
     ```
 
-2.  **Use the Controller**
-    The `controller.sh` script is your main interface.
+2.  **Build the Production ISO**
+    Use the controller script to generate a bootable image:
+    ```bash
+    ./controller.sh --build homeserver
+    ```
+    *This will produce a standard ISO file in `iso-builder/release/`.*
 
-    *   **Build & Test in VM:**
-        ```bash
-        ./controller.sh --full vm
-        ```
-    *   **Build Production ISO:**
-        ```bash
-        ./controller.sh --build homeserver
-        ```
+3.  **Install**
+    Flash the generated ISO to a USB drive, boot your target machine, and install.
 
-## Documentation
+## Development & Customization
 
-*   [Repository Purpose](docs/repository-purpose.md): Detailed explanation of the project's goals.
-*   [Project Plan](docs/homerchy-project-plan.md): Technical architecture and implementation details.
-*   [What is HOMESERVER?](docs/whatIsHomeServer.md): Information about the commercial ecosystem.
+For advanced users and developers, Homerchy includes a full VM testing suite to validate builds before deploying to hardware.
 
-## Contributing
+*   **Test in VM**: `./controller.sh --full vm`
+*   **Build & Deploy**: `./controller.sh --full homeserver`
 
-This is a community playground! We welcome:
-*   Forks and derivative projects.
-*   New service configurations.
-*   Improvements to the build tools.
-*   Bug reports and experiments.
+---
 
-## License
-
-Homerchy is released under the **MIT License**.
+*Homerchy is a product of HOMESERVER LLC. It is the designated interface for the Home Server ecosystem.*
