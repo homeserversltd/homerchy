@@ -6,9 +6,9 @@ start_log_output() {
   local ANSI_RESET="\033[0m"
   local ANSI_GRAY="\033[90m"
 
-  # Save cursor position and hide cursor - always to terminal, never to stdout (which may be redirected)
-  printf $ANSI_SAVE_CURSOR >/dev/tty 2>/dev/null || printf $ANSI_SAVE_CURSOR
-  printf $ANSI_HIDE_CURSOR >/dev/tty 2>/dev/null || printf $ANSI_HIDE_CURSOR
+  # Save cursor position and hide cursor
+  printf $ANSI_SAVE_CURSOR
+  printf $ANSI_HIDE_CURSOR
 
   (
     local log_lines=20
@@ -36,8 +36,7 @@ start_log_output() {
         fi
       done
 
-      # Always output to terminal, never to stdout (which may be redirected to log file)
-      printf "${ANSI_RESTORE_CURSOR}%b" "$output" >/dev/tty 2>/dev/null || printf "${ANSI_RESTORE_CURSOR}%b" "$output"
+      printf "${ANSI_RESTORE_CURSOR}%b" "$output"
 
       sleep 0.1
     done

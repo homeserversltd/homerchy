@@ -19,8 +19,7 @@ ERROR_HANDLING=false
 
 # Cursor is usually hidden while we install
 show_cursor() {
-  # Always output to terminal, never to stdout (which may be redirected to log file)
-  printf "\033[?25h" >/dev/tty 2>/dev/null || printf "\033[?25h"
+  printf "\033[?25h"
 }
 
 # Display truncated log lines from the install log
@@ -128,14 +127,10 @@ catch_errors() {
       break
       ;;
     "View full log")
-      if [ -f "$OMARCHY_INSTALL_LOG_FILE" ]; then
-        if command -v less &>/dev/null; then
-          less "$OMARCHY_INSTALL_LOG_FILE"
-        else
-          cat "$OMARCHY_INSTALL_LOG_FILE"
-        fi
+      if command -v less &>/dev/null; then
+        less "$OMARCHY_INSTALL_LOG_FILE"
       else
-         gum style "Log file not found: $OMARCHY_INSTALL_LOG_FILE"
+        tail "$OMARCHY_INSTALL_LOG_FILE"
       fi
       ;;
     "Upload log for support")
