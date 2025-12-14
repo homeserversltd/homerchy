@@ -281,4 +281,12 @@ if [[ $(tty) == "/dev/tty1" ]]; then
     exit 1
   }
   log "Omarchy installation completed"
+  
+  # If we didn't reboot, tell the user to reboot
+  if [[ ! -f /mnt/var/tmp/omarchy-install-completed ]]; then
+    echo
+    echo "Installation complete! Please reboot your system:"
+    echo "  sudo reboot"
+    echo
+  fi
 fi

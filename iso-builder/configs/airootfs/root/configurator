@@ -534,8 +534,7 @@ cat <<-_EOF_ >user_configuration.json
     },
     "packages": [
         "base-devel",
-        "git",
-        "omarchy-keyring"
+        "git"
     ],
     "profile_config": {
         "gfx_driver": null,
