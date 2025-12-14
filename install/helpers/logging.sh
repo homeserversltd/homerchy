@@ -1,13 +1,4 @@
 start_log_output() {
-  # Detect VM environment and disable ANSI sequences if needed
-  if is_vm_environment; then
-    # In VM environments, disable live log output entirely to prevent flashing
-    # Users can still view logs via "View full log" option or by reading the file directly
-    debug_log "VM environment detected - disabling live log output to prevent display corruption"
-    return
-  fi
-
-  # Original ANSI-based output for real hardware
   local ANSI_SAVE_CURSOR="\033[s"
   local ANSI_RESTORE_CURSOR="\033[u"
   local ANSI_CLEAR_LINE="\033[2K"
