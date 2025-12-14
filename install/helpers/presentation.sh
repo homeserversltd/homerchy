@@ -43,6 +43,12 @@ export GUM_TABLE_PADDING="$PADDING"
 export GUM_CONFIRM_PADDING="$PADDING"
 
 clear_logo() {
-  printf "\033[H\033[2J" # Clear screen and move cursor to top-left
-  gum style --foreground 2 --padding "1 0 0 $PADDING_LEFT" "$(<"$LOGO_PATH")"
+  # Always output logo to terminal, not to redirected stdout (log file)
+  local tty_output="/dev/tty"
+  if [ ! -w "$tty_output" ]; then
+    tty_output="/dev/stdout"
+  fi
+  
+  printf "\033[H\033[2J" >"$tty_output" # Clear screen and move cursor to top-left
+  gum style --foreground 2 --padding "1 0 0 $PADDING_LEFT" "$(<"$LOGO_PATH")" >"$tty_output"
 }

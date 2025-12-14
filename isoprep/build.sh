@@ -45,6 +45,38 @@ rm -rf "$PROFILE_DIR/airootfs/etc/xdg/reflector" 2>/dev/null || true
 # This overwrites files in the releng profile with our versions
 cp -r "${REPO_ROOT}/iso-builder/configs/"* "$PROFILE_DIR/"
 
+# 3a. Detect VM environment and adjust boot timeout
+# If building in a VM, set syslinux timeout to 0 for instant boot
+# Also check for environment variable override
+IS_VM=false
+if [ -n "${OMARCHY_VM_BUILD:-}" ]; then
+    IS_VM=true
+    echo -e "${BLUE}VM build mode forced via OMARCHY_VM_BUILD environment variable${NC}"
+elif [ -f /sys/class/dmi/id/product_name ]; then
+    PRODUCT_NAME=$(cat /sys/class/dmi/id/product_name 2>/dev/null || echo "")
+    if echo "$PRODUCT_NAME" | grep -qiE "(QEMU|KVM|VMware|VirtualBox|Virtual Machine|Xen|Bochs)"; then
+        IS_VM=true
+        echo -e "${BLUE}VM detected via DMI ($PRODUCT_NAME)${NC}"
+    fi
+fi
+
+# Also check systemd-detect-virt if available
+if [ "$IS_VM" = false ] && command -v systemd-detect-virt &> /dev/null; then
+    VIRT_TYPE=$(systemd-detect-virt 2>/dev/null || echo "none")
+    if [ "$VIRT_TYPE" != "none" ]; then
+        IS_VM=true
+        echo -e "${BLUE}VM detected via systemd-detect-virt ($VIRT_TYPE)${NC}"
+    fi
+fi
+
+if [ "$IS_VM" = true ]; then
+    SYSLINUX_CFG="$PROFILE_DIR/syslinux/archiso_sys.cfg"
+    if [ -f "$SYSLINUX_CFG" ]; then
+        sed -i 's/^TIMEOUT [0-9]*/TIMEOUT 0/' "$SYSLINUX_CFG"
+        echo -e "${GREEN}Boot timeout set to 0 for instant VM boot${NC}"
+    fi
+fi
+
 # 3b. Force Online Build Config
 # We want to build using online repos, not looking for a local offline cache
 cp "${REPO_ROOT}/iso-builder/configs/pacman-online.conf" "$PROFILE_DIR/pacman.conf"

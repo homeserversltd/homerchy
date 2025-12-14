@@ -3,3 +3,4 @@
 *.ours
 *.theirs
 *.base
+*.qcow2

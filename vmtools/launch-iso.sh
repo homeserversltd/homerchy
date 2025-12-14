@@ -3,6 +3,7 @@ set -e
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ISO_DIR="${REPO_ROOT}/isoprep/isoout"
+DISK_FILE="${REPO_ROOT}/vmtools/homerchy-test-disk.qcow2"
 
 # Find the latest ISO
 ISO_FILE=$(ls -t "$ISO_DIR"/omarchy-*.iso 2>/dev/null | head -n 1)
@@ -13,15 +14,28 @@ if [ -z "$ISO_FILE" ]; then
     exit 1
 fi
 
+# Create virtual disk if it doesn't exist
+if [ ! -f "$DISK_FILE" ]; then
+    echo "Creating virtual disk: $DISK_FILE"
+    qemu-img create -f qcow2 "$DISK_FILE" 20G
+fi
+
 echo "Launching ISO: $ISO_FILE"
+echo "Using disk: $DISK_FILE"
 
 qemu-system-x86_64 \
     -enable-kvm \
+    -machine q35,accel=kvm \
+    -cpu host \
     -m 8G \
     -smp 4 \
     -cdrom "$ISO_FILE" \
     -boot d \
-    -vga std \
+    -drive file="$DISK_FILE",format=qcow2,if=none,id=drive0 \
+    -device virtio-blk-pci,drive=drive0 \
+    -device virtio-vga \
     -display default \
-    -net nic -net user,hostfwd=tcp::2222-:22 \
+    -netdev user,id=net0,hostfwd=tcp::2222-:22 \
+    -device virtio-net-pci,netdev=net0 \
+    -usb -device usb-tablet \
     -name "Homerchy Test VM"

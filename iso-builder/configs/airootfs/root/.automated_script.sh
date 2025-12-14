@@ -122,15 +122,25 @@ set_tokyo_night_colors() {
 
 install_base_system() {
   debug_log "install_base_system: Initializing pacman keyring"
-  # Initialize and populate the keyring
-  if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
-    pacman-key --init >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1
-    pacman-key --populate archlinux >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1
-    pacman-key --populate omarchy >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1
+  # Initialize and populate the keyring only if not already initialized
+  # The systemd service may have already done this, so check first
+  if [ ! -d /etc/pacman.d/gnupg ] || [ ! -f /etc/pacman.d/gnupg/pubring.gpg ]; then
+    if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
+      pacman-key --init >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1 || true
+    else
+      pacman-key --init >/dev/null 2>&1 || true
+    fi
   else
-    pacman-key --init >/dev/null 2>&1
-    pacman-key --populate archlinux >/dev/null 2>&1
-    pacman-key --populate omarchy >/dev/null 2>&1
+    debug_log "install_base_system: Keyring already initialized, skipping init"
+  fi
+  
+  # Populate keyrings (safe to run multiple times)
+  if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
+    pacman-key --populate archlinux >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1 || true
+    pacman-key --populate omarchy >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1 || true
+  else
+    pacman-key --populate archlinux >/dev/null 2>&1 || true
+    pacman-key --populate omarchy >/dev/null 2>&1 || true
   fi
 
   debug_log "install_base_system: Syncing package database"

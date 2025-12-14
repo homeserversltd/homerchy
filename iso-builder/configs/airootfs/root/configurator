@@ -51,14 +51,18 @@ abort() {
 }
 
 step() {
-  clear_logo
+  # Only clear logo on first step to reduce flashing
+  if [[ -z "${STEP_COUNT:-}" ]]; then
+    clear_logo
+    export STEP_COUNT=1
+  fi
   echo
   gum style "$1"
   echo
 }
 
 notice() {
-  clear_logo
+  # Don't clear logo for notices to reduce flashing
   echo
   gum spin --spinner "pulse" --title "$1" -- sleep "${2:-2}"
   echo
