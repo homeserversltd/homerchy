@@ -134,25 +134,52 @@ fi
 echo "Updating Limine bootloader configuration..."
 sudo limine-update
 
-# Verify that limine-update actually created entries
-if ! grep -q "^:" /boot/limine.conf 2>/dev/null; then
-  echo "WARNING: limine-update did not create any boot entries. Attempting to fix..."
+# Verify that limine-update actually created valid entries with PROTOCOL
+entries_exist=false
+entries_have_protocol=false
+
+if grep -q "^:" /boot/limine.conf 2>/dev/null; then
+  entries_exist=true
+  # Check if any entry has PROTOCOL field
+  if grep -A 5 "^:" /boot/limine.conf 2>/dev/null | grep -q "PROTOCOL="; then
+    entries_have_protocol=true
+  fi
+fi
+
+# If entries exist but don't have PROTOCOL, or no entries exist, fix it
+if [[ "$entries_exist" == "true" && "$entries_have_protocol" == "false" ]]; then
+  echo "WARNING: Limine entries exist but are missing PROTOCOL. Fixing entries..."
+  # Remove invalid entries (everything from first : to next : or end of file)
+  sudo sed -i '/^:/,$d' /boot/limine.conf
+  entries_exist=false
+fi
+
+if [[ "$entries_exist" == "false" ]]; then
+  echo "WARNING: limine-update did not create valid boot entries. Creating entries manually..."
   # Try to manually create at least one entry if kernels exist
   if ls /boot/vmlinuz-* 1>/dev/null 2>&1; then
     kernel=$(ls -t /boot/vmlinuz-* | head -1)
     initrd=$(ls -t /boot/initramfs-*.img 2>/dev/null | head -1 || echo "")
     if [[ -n "$initrd" ]]; then
       kernel_name=$(basename "$kernel" | sed 's/vmlinuz-//')
-      echo "" >> /boot/limine.conf
-      echo ":Homerchy" >> /boot/limine.conf
-      echo "    PROTOCOL=linux" >> /boot/limine.conf
-      echo "    KERNEL_PATH=boot:///vmlinuz-$kernel_name" >> /boot/limine.conf
-      echo "    MODULE_PATH=boot:///initramfs-$kernel_name.img" >> /boot/limine.conf
-      if [[ -n "$CMDLINE" ]]; then
-        echo "    CMDLINE=$CMDLINE quiet splash" >> /boot/limine.conf
+      # Get root UUID for cmdline if not already set
+      if [[ -z "$CMDLINE" ]]; then
+        CMDLINE="root=UUID=$(findmnt -n -o UUID /) rw"
       fi
-      echo "Limine entry manually created"
+      sudo tee -a /boot/limine.conf >/dev/null <<EOF
+
+:Homerchy
+    PROTOCOL=linux
+    KERNEL_PATH=boot:///vmlinuz-$kernel_name
+    MODULE_PATH=boot:///initramfs-$kernel_name.img
+    CMDLINE=$CMDLINE quiet splash
+EOF
+      echo "Limine entry manually created for kernel: $kernel_name"
+    else
+      echo "ERROR: No initramfs found for kernel $(basename "$kernel")"
     fi
+  else
+    echo "ERROR: No kernels found in /boot/"
   fi
 fi
 
