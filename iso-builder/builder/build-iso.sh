@@ -37,6 +37,16 @@ else
   git clone -b $OMARCHY_INSTALLER_REF https://github.com/$OMARCHY_INSTALLER_REPO.git "$build_cache_dir/airootfs/root/omarchy"
 fi
 
+# Copy prebuild directory if it exists in the source
+if [[ -d /omarchy/prebuild ]]; then
+  # prebuild is already included in the omarchy copy above
+  echo "Prebuild directory found in omarchy source"
+elif [[ -d /prebuild ]]; then
+  # Copy prebuild from separate mount if provided
+  cp -rp /prebuild "$build_cache_dir/airootfs/root/omarchy/prebuild"
+  echo "Copied prebuild directory from /prebuild"
+fi
+
 # Make log uploader available in the ISO too
 mkdir -p "$build_cache_dir/airootfs/usr/local/bin/"
 cp "$build_cache_dir/airootfs/root/omarchy/bin/omarchy-upload-log" "$build_cache_dir/airootfs/usr/local/bin/omarchy-upload-log"

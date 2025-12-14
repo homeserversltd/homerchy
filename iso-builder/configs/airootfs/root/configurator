@@ -1,7 +1,39 @@
 #!/bin/bash
 
+# Set log file path early (before helpers load, in case they fail)
+export OMARCHY_INSTALL_LOG_FILE="${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}"
+
+# Debug logging helper - only logs if OMARCHY_DEBUG is set
+debug_log() {
+  if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] configurator: $*" >> "$OMARCHY_INSTALL_LOG_FILE" 2>&1
+  fi
+}
+
+# Always log errors and important events
+log() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] configurator: $*" >> "$OMARCHY_INSTALL_LOG_FILE" 2>&1
+}
+
+# Log that configurator started
+log "Script started"
+debug_log "OMARCHY_PATH=${OMARCHY_PATH:-not set}"
+debug_log "OMARCHY_INSTALL=${OMARCHY_INSTALL:-not set}"
+debug_log "OMARCHY_VM_TEST=${OMARCHY_VM_TEST:-not set}"
+debug_log "OMARCHY_DEBUG=${OMARCHY_DEBUG:-not set}"
+
 # Rely on Omarchy for styling and error handling
-source "$OMARCHY_INSTALL/helpers/all.sh"
+if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
+  source "$OMARCHY_INSTALL/helpers/all.sh" >> "$OMARCHY_INSTALL_LOG_FILE" 2>&1 || {
+    log "ERROR: Failed to load helpers"
+    exit 1
+  }
+else
+  source "$OMARCHY_INSTALL/helpers/all.sh" || {
+    log "ERROR: Failed to load helpers"
+    exit 1
+  }
+fi
 
 # Ensure tzupdate is available for guessing timezone
 # Ensure tzupdate is available for guessing timezone
@@ -34,6 +66,7 @@ notice() {
 # STEP 1: KEYBOARD LAYOUT
 
 keyboard_form() {
+  debug_log "keyboard_form: Starting"
   step "Let's setup your machine..."
   keyboards=$'Azerbaijani|azerty
 Belarusian|by
@@ -84,14 +117,25 @@ Swedish|sv-latin1
 Tajik|tj_alt-UTF8
 Turkish|trq
 Ukrainian|ua'
-  choice=$(printf '%s\n' "$keyboards" | cut -d'|' -f1 | gum choose --height 10 --selected "English (US)" --header "Select keyboard layout") || abort
-  keyboard=$(printf '%s\n' "$keyboards" | awk -F'|' -v c="$choice" '$1==c{print $2; exit}')
+  
+  # Non-interactive mode for VM testing
+  if [[ -n "${OMARCHY_VM_TEST:-}" ]]; then
+    choice="English (US)"
+    keyboard="us"
+    debug_log "keyboard_form: VM Test Mode - using default (English US)"
+    echo "VM Test Mode: Using default keyboard layout (English US)"
+  else
+    choice=$(printf '%s\n' "$keyboards" | cut -d'|' -f1 | gum choose --height 10 --selected "English (US)" --header "Select keyboard layout") || abort
+    keyboard=$(printf '%s\n' "$keyboards" | awk -F'|' -v c="$choice" '$1==c{print $2; exit}')
+    debug_log "keyboard_form: Selected $choice ($keyboard)"
+  fi
 
   # Only attempt to load keyboard layout if we're on a real console
   # loadkeys only works on Linux virtual consoles (tty), not in terminal emulators
   if [[ $(tty 2>/dev/null) == "/dev/tty"* ]]; then
-    loadkeys "$keyboard" 2>/dev/null
+    loadkeys "$keyboard" 2>/dev/null && debug_log "keyboard_form: Loaded keyboard layout"
   fi
+  debug_log "keyboard_form: Completed"
 }
 
 keyboard_form
@@ -99,65 +143,86 @@ keyboard_form
 # STEP 2: USER
 
 user_form() {
+  debug_log "user_form: Starting"
   step "Let's setup your user account..."
 
-  while true; do
-    username=$(gum input --placeholder "Alphanumeric without spaces (like dhh)" --prompt.foreground="#845DF9" --prompt "Username> ") || abort
+  # Non-interactive mode for VM testing
+  if [[ -n "${OMARCHY_VM_TEST:-}" ]]; then
+    username="testuser"
+    password="testpass123"
+    password_confirmation="testpass123"
+    full_name="Test User"
+    email_address="test@example.com"
+    hostname="homerchy"
+    timezone="America/New_York"
+    debug_log "user_form: VM Test Mode - using defaults"
+    debug_log "user_form: Username=$username, Hostname=$hostname, Timezone=$timezone"
+    echo "VM Test Mode: Using default values"
+    echo "  Username: $username"
+    echo "  Hostname: $hostname"
+    echo "  Timezone: $timezone"
+  else
+    while true; do
+      username=$(gum input --placeholder "Alphanumeric without spaces (like dhh)" --prompt.foreground="#845DF9" --prompt "Username> ") || abort
 
-    if [[ "$username" =~ ^[a-z_][a-z0-9_-]*[$]?$ ]]; then
-      break
+      if [[ "$username" =~ ^[a-z_][a-z0-9_-]*[$]?$ ]]; then
+        break
+      else
+        notice "Username must be alphanumeric with no spaces" 1
+      fi
+    done
+
+    while true; do
+      password=$(gum input --placeholder "Used for user + root + encryption" --prompt.foreground="#845DF9" --password --prompt "Password> ") || abort
+      password_confirmation=$(gum input --placeholder "Must match the password you just typed" --prompt.foreground="#845DF9" --password --prompt "Confirm> ") || abort
+
+      if [[ -n "$password" && "$password" == "$password_confirmation" ]]; then
+        break
+      elif [[ -z "$password" ]]; then
+        notice "Your password can't be blank!" 1
+      else
+        notice "Passwords didn't match!" 1
+      fi
+    done
+
+    full_name=$(gum input --placeholder "Used for git authentication (hit return to skip)" --prompt.foreground="#845DF9" --prompt "Full name> ")
+    email_address=$(gum input --placeholder "Used for git authentication (hit return to skip)" --prompt.foreground="#845DF9" --prompt "Email address> ")
+
+    while true; do
+      hostname=$(gum input --placeholder "Alphanumeric without spaces (or return for 'homerchy')" --prompt.foreground="#845DF9" --prompt "Hostname> ")
+
+      if [[ "$hostname" =~ ^[A-Za-z_][A-Za-z0-9_-]*\$?$ ]]; then
+        break
+      elif [[ -z $hostname ]]; then
+        hostname="homerchy"
+        break
+      else
+        notice "Hostname must be alphanumeric using dashes or underscores but no spaces" 1
+      fi
+    done
+
+    # Pick timezone
+    geo_guessed_timezone=$(tzupdate -p 2>/dev/null)
+
+    if [[ -n $geo_guessed_timezone ]]; then
+      timezone=$(timedatectl list-timezones | gum choose --height 10 --selected "$geo_guessed_timezone" --header "Timezone") || abort
     else
-      notice "Username must be alphanumeric with no spaces" 1
+      timezone=$(timedatectl list-timezones | gum filter --height 10 --header "Timezone") || abort
     fi
-  done
-
-  while true; do
-    password=$(gum input --placeholder "Used for user + root + encryption" --prompt.foreground="#845DF9" --password --prompt "Password> ") || abort
-    password_confirmation=$(gum input --placeholder "Must match the password you just typed" --prompt.foreground="#845DF9" --password --prompt "Confirm> ") || abort
-
-    if [[ -n "$password" && "$password" == "$password_confirmation" ]]; then
-      break
-    elif [[ -z "$password" ]]; then
-      notice "Your password can't be blank!" 1
-    else
-      notice "Passwords didn't match!" 1
-    fi
-  done
+  fi
 
   # Hash the password using yescrypt
   password_hash=$(printf '%s' "$password" | openssl passwd -6 -stdin)
-
-  full_name=$(gum input --placeholder "Used for git authentication (hit return to skip)" --prompt.foreground="#845DF9" --prompt "Full name> ")
-  email_address=$(gum input --placeholder "Used for git authentication (hit return to skip)" --prompt.foreground="#845DF9" --prompt "Email address> ")
-
-  while true; do
-    hostname=$(gum input --placeholder "Alphanumeric without spaces (or return for 'homerchy')" --prompt.foreground="#845DF9" --prompt "Hostname> ")
-
-    if [[ "$hostname" =~ ^[A-Za-z_][A-Za-z0-9_-]*\$?$ ]]; then
-      break
-    elif [[ -z $hostname ]]; then
-      hostname="homerchy"
-      break
-    else
-      notice "Hostname must be alphanumeric using dashes or underscores but no spaces" 1
-    fi
-  done
-
-  # Pick timezone
-  geo_guessed_timezone=$(tzupdate -p 2>/dev/null)
-
-  if [[ -n $geo_guessed_timezone ]]; then
-    timezone=$(timedatectl list-timezones | gum choose --height 10 --selected "$geo_guessed_timezone" --header "Timezone") || abort
-  else
-    timezone=$(timedatectl list-timezones | gum filter --height 10 --header "Timezone") || abort
-  fi
+  debug_log "user_form: Completed"
 }
 
 user_form
 
-while true; do
-  # Add manual padding since gum table -p doesn't respect padding
-  echo -e "Field,Value
+# Skip confirmation in VM test mode
+if [[ -z "${OMARCHY_VM_TEST:-}" ]]; then
+  while true; do
+    # Add manual padding since gum table -p doesn't respect padding
+    echo -e "Field,Value
 Username,$username
 Password,$(printf "%${#password}s" | tr ' ' '*')
 Full name,${full_name:-[Skipped]}
@@ -165,16 +230,17 @@ Email address,${email_address:-[Skipped]}
 Hostname,$hostname
 Timezone,$timezone
 Keyboard,$keyboard" |
-    gum table -s "," -p | sed "s/^/${PADDING_LEFT_SPACES}/"
+      gum table -s "," -p | sed "s/^/${PADDING_LEFT_SPACES}/"
 
-  echo
-  if gum confirm --negative "No, change it" "Does this look right?"; then
-    break
-  else
-    keyboard_form
-    user_form
-  fi
-done
+    echo
+    if gum confirm --negative "No, change it" "Does this look right?"; then
+      break
+    else
+      keyboard_form
+      user_form
+    fi
+  done
+fi
 
 # STEP 3: DISK
 
@@ -195,11 +261,13 @@ get_disk_info() {
 }
 
 disk_form() {
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] configurator: disk_form: Starting" >> "$OMARCHY_INSTALL_LOG_FILE" 2>&1
   step "Let's select where to install Homerchy..."
 
   # Don't offer the install media as an option (Arch ISO mounts it here)
   local exclude_disk
   exclude_disk=$(findmnt -no SOURCE /run/archiso/bootmnt 2>/dev/null || true)
+  debug_log "disk_form: Excluding boot disk: ${exclude_disk:-none}"
 
   # List all installable disks, excluding the boot device if present
   local available_disks
@@ -209,39 +277,60 @@ disk_form() {
       grep -E '/dev/(sd|hd|vd|nvme|mmcblk|xv)' |
       { if [[ -n "$exclude_disk" ]]; then grep -Fvx "$exclude_disk"; else cat; fi; }
   )
+  debug_log "disk_form: Available disks: $(echo "$available_disks" | tr '\n' ' ')"
 
-  # Get available disks and format them with info
-  local disk_options=""
-  while IFS= read -r device; do
-    if [[ -n "$device" ]]; then
-      disk_info=$(get_disk_info "$device")
-      disk_options="$disk_options$disk_info"$'\n'
+  # Non-interactive mode for VM testing - use first available disk
+  if [[ -n "${OMARCHY_VM_TEST:-}" ]]; then
+    disk=$(echo "$available_disks" | head -n1)
+    if [[ -z "$disk" ]]; then
+      log "disk_form: ERROR: No disk found!"
+      echo "Error: No disk found for installation"
+      exit 1
     fi
-  done <<<"$available_disks"
+    debug_log "disk_form: VM Test Mode - selected disk: $disk"
+    echo "VM Test Mode: Using disk $disk"
+  else
+    # Get available disks and format them with info
+    local disk_options=""
+    while IFS= read -r device; do
+      if [[ -n "$device" ]]; then
+        disk_info=$(get_disk_info "$device")
+        disk_options="$disk_options$disk_info"$'\n'
+      fi
+    done <<<"$available_disks"
 
-  selected_display=$(echo "$disk_options" | gum choose --header "Select install disk") || abort
-  disk=$(echo "$selected_display" | awk '{print $1}')
+    selected_display=$(echo "$disk_options" | gum choose --header "Select install disk") || abort
+    disk=$(echo "$selected_display" | awk '{print $1}')
+    debug_log "disk_form: Selected disk: $disk"
+  fi
+  debug_log "disk_form: Completed"
 }
 
 disk_form
 
-while true; do
-  gum style "Everything will be overwritten. There is no recovery possible."
+# Skip confirmation in VM test mode
+if [[ -z "${OMARCHY_VM_TEST:-}" ]]; then
+  while true; do
+    gum style "Everything will be overwritten. There is no recovery possible."
 
-  echo
-  if gum confirm --affirmative "Yes, format disk" --negative "No, change it" "Confirm overwriting ${disk}"; then
-    break
-  else
-    disk_form
-  fi
-done
+    echo
+    if gum confirm --affirmative "Yes, format disk" --negative "No, change it" "Confirm overwriting ${disk}"; then
+      break
+    else
+      disk_form
+    fi
+  done
+fi
 
 clear
+
+debug_log "Saving user configuration files"
 
 # Save user full name and email address, so the autostart can
 # set them as OMARCHY_USER_NAME and OMARCHY_USER_EMAIL
 echo "$full_name" >user_full_name.txt
 echo "$email_address" >user_email_address.txt
+debug_log "Created user_full_name.txt and user_email_address.txt"
 
 # Escape username and password for safe inclusion
 password_escaped=$(echo -n "$password" | jq -Rsa)
@@ -264,7 +353,9 @@ cat <<-_EOF_ >user_credentials.json
 _EOF_
 
 # Setup partition layout
+debug_log "Calculating partition layout for disk: $disk"
 disk_size=$(lsblk -bdno SIZE "$disk")
+debug_log "Disk size: $disk_size bytes"
 mib=$((1024 * 1024))
 gib=$((mib * 1024))
 disk_size_in_mib=$((disk_size / mib * mib)) # Rounds to nearest MiB
@@ -276,11 +367,15 @@ boot_partition_size=$((2 * gib))
 main_partition_start=$((boot_partition_size + boot_partition_start))
 main_partition_size=$((disk_size_in_mib - main_partition_start - gpt_backup_reserve))
 
+debug_log "Boot partition: ${boot_partition_size} bytes, Main partition: ${main_partition_size} bytes"
+
 # Detect T2 Mac and set appropriate kernel
 if lspci -nn 2>/dev/null | grep -q "106b:180[12]"; then
   kernel_choice="linux-t2"
+  debug_log "Detected T2 Mac, using linux-t2 kernel"
 else
   kernel_choice="linux"
+  debug_log "Using standard linux kernel"
 fi
 
 cat <<-_EOF_ >user_configuration.json
@@ -398,6 +493,9 @@ cat <<-_EOF_ >user_configuration.json
     "version": "3.0.9"
 }
 _EOF_
+
+log "Created user_configuration.json and user_credentials.json"
+log "Configuration complete!"
 
 if [[ $1 == "dry" ]]; then
   echo -e "User Configuration:"

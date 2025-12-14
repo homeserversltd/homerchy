@@ -1,0 +1,153 @@
+{
+  "packages": [
+    "zsh",
+    "micro",
+    "fastfetch",
+    "zoxide",
+    "atuin",
+    "oh-my-posh",
+    "nnn",
+    "fzf",
+    "eza",
+    "bat",
+    "bc",
+    "tree",
+    "net-tools",
+    "usbutils",
+    "pciutils",
+    "ripgrep",
+    "git",
+    "yay",
+    "chezmoi",
+    "inetutils",
+    "moar"
+  ],
+  "deployments": [
+    {
+      "source": "dot/.aliases",
+      "destination": "~/.aliases",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source": "dot/.functions",
+      "destination": "~/.functions",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source": "dot/.inputrc",
+      "destination": "~/.inputrc",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source": "dot/.nanorc",
+      "destination": "~/.nanorc",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source": "dot/.profile",
+      "destination": "~/.profile",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source": "dot/.zshrc",
+      "destination": "~/.zshrc",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source": "bin/cycle-apps",
+      "destination": "~/bin/cycle-apps",
+      "type": "script",
+      "permissions": "755"
+    },
+    {
+      "source": "bin/nnn_opener.sh",
+      "destination": "~/bin/nnn_opener.sh",
+      "type": "script",
+      "permissions": "755"
+    },
+    {
+      "source": "bin/workspace-nav",
+      "destination": "~/bin/workspace-nav",
+      "type": "script",
+      "permissions": "755"
+    },
+    {
+      "source": "hypr/autostart.conf",
+      "destination": "~/.config/hypr/autostart.conf",
+      "type": "config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/bindings.conf",
+      "destination": "~/.config/hypr/bindings.conf",
+      "type": "config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/envs.conf",
+      "destination": "~/.config/hypr/envs.conf",
+      "type": "config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/hypridle.conf",
+      "destination": "~/.config/hypr/hypridle.conf",
+      "type": "config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/hyprland.conf",
+      "destination": "~/.config/hypr/hyprland.conf",
+      "type": "config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/hyprlock.conf",
+      "destination": "~/.config/hypr/hyprlock.conf",
+      "type": "config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/hyprsunset.conf",
+      "destination": "~/.config/hypr/hyprsunset.conf",
+      "type": "config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/input.conf",
+      "destination": "~/.config/hypr/input.conf",
+      "type": "config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/looknfeel.conf",
+      "destination": "~/.config/hypr/looknfeel.conf",
+      "type": "config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/monitors.conf",
+      "destination": "~/.config/hypr/monitors.conf",
+      "type": "config",
+      "permissions": "644"
+    },
+    {
+      "source": "kitty/kitty.conf",
+      "destination": "~/.config/kitty/kitty.conf",
+      "type": "config",
+      "permissions": "644"
+    },
+    {
+      "source": "kitty/theme.conf",
+      "destination": "~/.config/kitty/theme.conf",
+      "type": "config",
+      "permissions": "644"
+    }
+  ]
+}

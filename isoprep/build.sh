@@ -51,6 +51,8 @@ cp "${REPO_ROOT}/iso-builder/configs/pacman-online.conf" "$PROFILE_DIR/pacman.co
 
 # 4. Inject Current Repository Source
 # This allows the ISO to contain the latest changes from this workspace
+# Note: prebuild/ directory is included in this copy and will be available
+# at /root/homerchy/prebuild/ in the ISO, which will be deployed during installation
 echo -e "${BLUE}Injecting current repository source...${NC}"
 mkdir -p "$PROFILE_DIR/airootfs/root/homerchy"
 # Copy excluding build artifacts and .git to save space/time
