@@ -3,10 +3,17 @@
 # This script logs EVERYTHING to a separate detailed log file for debugging
 # Normal output goes to stdout (captured by run_logged), detailed logs go to SSH_LOG_FILE
 
-SSH_LOG_FILE="/var/log/omarchy-ssh-install.log"
+# Use same directory as main install log - if that works, this will work
+LOG_DIR=$(dirname "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}")
+SSH_LOG_FILE="${LOG_DIR}/omarchy-ssh-install.log"
 TIMESTAMP() { date '+%Y-%m-%d %H:%M:%S'; }
 
 # Create the separate ssh log file FIRST, before defining LOG functions
+# Use same approach as main log file - ensure directory exists, then create file
+if [ ! -d "$LOG_DIR" ]; then
+  sudo mkdir -p "$LOG_DIR" 2>&1 || true
+fi
+
 create_output=$(sudo touch "$SSH_LOG_FILE" 2>&1)
 if [ $? -ne 0 ]; then
   echo "[$(TIMESTAMP)] post-install/ssh.sh: ERROR: Failed to create ssh log file: $create_output" >&2

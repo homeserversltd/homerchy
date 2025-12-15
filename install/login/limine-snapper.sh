@@ -1,5 +1,26 @@
 if command -v limine &>/dev/null; then
   sudo pacman -S --noconfirm --needed limine-snapper-sync limine-mkinitcpio-hook
+  
+  # CRITICAL FIX: Disable hooks that call limine-update (command doesn't exist)
+  # The limine-mkinitcpio-hook package installs hooks that call limine-update
+  # We handle bootloader entries manually, so disable these hooks
+  echo "Disabling limine-mkinitcpio-hook hooks that call limine-update..."
+  if [ -f /usr/share/libalpm/hooks/limine-mkinitcpio.hook ]; then
+    sudo mv /usr/share/libalpm/hooks/limine-mkinitcpio.hook /usr/share/libalpm/hooks/limine-mkinitcpio.hook.disabled 2>/dev/null || true
+  fi
+  if [ -f /etc/pacman.d/hooks/limine-mkinitcpio.hook ]; then
+    sudo mv /etc/pacman.d/hooks/limine-mkinitcpio.hook /etc/pacman.d/hooks/limine-mkinitcpio.hook.disabled 2>/dev/null || true
+  fi
+  # Also check for any hooks in mkinitcpio hooks directory
+  if [ -d /usr/lib/mkinitcpio/hooks ]; then
+    for hook_file in /usr/lib/mkinitcpio/hooks/limine*; do
+      if [ -f "$hook_file" ] && grep -q "limine-update" "$hook_file" 2>/dev/null; then
+        echo "Disabling hook file that calls limine-update: $hook_file"
+        sudo mv "$hook_file" "${hook_file}.disabled" 2>/dev/null || true
+      fi
+    done
+  fi
+  echo "limine-update hooks disabled"
 
   sudo tee /etc/mkinitcpio.conf.d/omarchy_hooks.conf <<EOF >/dev/null
 HOOKS=(base udev plymouth keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck btrfs-overlayfs)

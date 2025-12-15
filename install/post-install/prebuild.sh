@@ -5,10 +5,17 @@
 
 set -euo pipefail
 
-PREBUILD_LOG_FILE="/var/log/omarchy-prebuild-install.log"
+# Use same directory as main install log - if that works, this will work
+LOG_DIR=$(dirname "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}")
+PREBUILD_LOG_FILE="${LOG_DIR}/omarchy-prebuild-install.log"
 TIMESTAMP() { date '+%Y-%m-%d %H:%M:%S'; }
 
 # Create the separate prebuild log file FIRST, before defining LOG functions
+# Use same approach as main log file - ensure directory exists, then create file
+if [ ! -d "$LOG_DIR" ]; then
+  sudo mkdir -p "$LOG_DIR" 2>&1 || true
+fi
+
 create_output=$(sudo touch "$PREBUILD_LOG_FILE" 2>&1)
 if [ $? -ne 0 ]; then
   echo "[$(TIMESTAMP)] post-install/prebuild.sh: ERROR: Failed to create prebuild log file: $create_output" >&2

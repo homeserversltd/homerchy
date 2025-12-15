@@ -3,10 +3,17 @@
 # This script logs EVERYTHING to a separate detailed log file for debugging
 # Normal output goes to stdout (captured by run_logged), detailed logs go to BASE_LOG_FILE
 
-BASE_LOG_FILE="/var/log/omarchy-base-install.log"
+# Use same directory as main install log - if that works, this will work
+LOG_DIR=$(dirname "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}")
+BASE_LOG_FILE="${LOG_DIR}/omarchy-base-install.log"
 TIMESTAMP() { date '+%Y-%m-%d %H:%M:%S'; }
 
 # Create the separate base log file FIRST, before defining LOG functions
+# Use same approach as main log file - ensure directory exists, then create file
+if [ ! -d "$LOG_DIR" ]; then
+  sudo mkdir -p "$LOG_DIR" 2>&1 || true
+fi
+
 create_output=$(sudo touch "$BASE_LOG_FILE" 2>&1)
 if [ $? -ne 0 ]; then
   echo "[$(TIMESTAMP)] packaging/base.sh: ERROR: Failed to create base log file: $create_output" >&2
