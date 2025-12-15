@@ -46,7 +46,7 @@ fi
 abort() {
   gum style "${1:-Aborted installation}"
   echo
-  gum style "You can retry later by running: ./.automated_script.sh"
+  gum style "You can retry later by running: python3 ./.automated_script.py"
   exit 1
 }
 

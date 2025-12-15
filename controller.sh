@@ -3,7 +3,7 @@ set -e
 
 # Config
 REPO_ROOT="$(dirname "$(realpath "$0")")"
-BUILD_SCRIPT="${REPO_ROOT}/isoprep/build.sh"
+BUILD_SCRIPT="${REPO_ROOT}/isoprep/build.py"
 LAUNCH_SCRIPT="${REPO_ROOT}/vmtools/launch-iso.sh"
 ISO_DIR="${REPO_ROOT}/isoprep/isoout"
 
@@ -55,10 +55,10 @@ function do_eject() {
 
 function do_build() {
     echo ">>> Starting Build..."
-    if [ -x "$BUILD_SCRIPT" ]; then
-        "$BUILD_SCRIPT"
+    if [ -f "$BUILD_SCRIPT" ]; then
+        python3 "$BUILD_SCRIPT"
     else
-        echo "Error: Build script not found or executable at $BUILD_SCRIPT"
+        echo "Error: Build script not found at $BUILD_SCRIPT"
         exit 1
     fi
 }
