@@ -22,13 +22,20 @@ def debug_log(message: str):
     """Log debug messages if OMARCHY_DEBUG is set."""
     if os.environ.get('OMARCHY_DEBUG'):
         log(message)
+    # Always print debug messages to console for visibility
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(f"[{timestamp}] DEBUG: {message}", flush=True)
 
 
 def log(message: str):
-    """Log important events."""
+    """Log important events to both file and console."""
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    log_line = f"[{timestamp}] {message}"
+    # Write to file
     with open(LOG_FILE, 'a') as f:
-        f.write(f"[{timestamp}] {message}\n")
+        f.write(f"{log_line}\n")
+    # Also print to console
+    print(log_line, flush=True)
 
 
 def get_helpers_path():
@@ -150,7 +157,7 @@ def run_configurator():
     return True
 
 
-def chroot_bash(*args):
+def chroot_bash(*args, stdout=None, stderr=None):
     """Execute command in chroot with proper environment."""
     omarchy_user = os.environ.get('OMARCHY_USER')
     if not omarchy_user:
@@ -172,7 +179,7 @@ def chroot_bash(*args):
     })
     
     cmd = ['arch-chroot', '-u', omarchy_user, '/mnt'] + list(args)
-    return subprocess.run(cmd, env=env)
+    return subprocess.run(cmd, env=env, stdout=stdout, stderr=stderr)
 
 
 def install_base_system():
@@ -206,12 +213,15 @@ def install_base_system():
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
     
     debug_log("install_base_system: Syncing package database")
-    if debug:
-        subprocess.run(['pacman', '-Sy', '--noconfirm'],
-                     stdout=open(LOG_FILE, 'a'), stderr=subprocess.STDOUT, check=True)
+    # Try to sync databases, but don't fail if it doesn't work (archinstall will sync anyway)
+    # This is just to ensure we have fresh databases if network is available
+    log("install_base_system: Syncing pacman database...")
+    pacman_sync_result = subprocess.run(['pacman', '-Sy', '--noconfirm'],
+                                       stdout=sys.stdout, stderr=sys.stderr)
+    if pacman_sync_result.returncode != 0:
+        log("install_base_system: WARNING: pacman database sync failed, continuing anyway (archinstall will sync)")
     else:
-        subprocess.run(['pacman', '-Sy', '--noconfirm'],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        log("install_base_system: Package database synced successfully")
     
     debug_log("install_base_system: Cleaning up old mounts")
     # Unmount any existing mounts
@@ -220,8 +230,17 @@ def install_base_system():
     
     log("install_base_system: Starting archinstall")
     
-    # Run archinstall
-    subprocess.run([
+    # Verify network connectivity before archinstall (archinstall needs network to download packages)
+    debug_log("install_base_system: Checking network connectivity")
+    network_check = subprocess.run(['ping', '-c', '1', '-W', '2', '8.8.8.8'],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if network_check.returncode != 0:
+        log("install_base_system: WARNING: Network connectivity check failed - archinstall may fail")
+        log("install_base_system: WARNING: Continuing anyway, but installation may be incomplete")
+    
+    # Run archinstall - show output to console
+    log("install_base_system: Running archinstall (this may take a while)...")
+    archinstall_result = subprocess.run([
         'archinstall',
         '--config', 'user_configuration.json',
         '--creds', 'user_credentials.json',
@@ -229,7 +248,11 @@ def install_base_system():
         '--skip-ntp',
         '--skip-wkd',
         '--skip-wifi-check'
-    ], check=True)
+    ], stdout=sys.stdout, stderr=sys.stderr)
+    
+    if archinstall_result.returncode != 0:
+        log(f"install_base_system: ERROR: archinstall failed with return code {archinstall_result.returncode}")
+        raise RuntimeError(f"archinstall failed with return code {archinstall_result.returncode}")
     
     log("install_base_system: Archinstall completed, setting up chroot environment")
     
