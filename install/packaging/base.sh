@@ -10,7 +10,7 @@ mapfile -t packages < <(grep -v '^#' "$OMARCHY_INSTALL/omarchy-base.packages" | 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] packaging/base.sh: Installing ${#packages[@]} base packages"
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] packaging/base.sh: Packages: ${packages[*]}"
 
-if ! sudo pacman -S --noconfirm --needed "${packages[@]}"; then
+if ! sudo pacman -S --noconfirm --needed "${packages[@]}" 2>&1; then
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] packaging/base.sh: ERROR: Failed to install base packages"
   exit 1
 fi

@@ -4,13 +4,13 @@ set -euo pipefail
 # Debug logging helper - only logs if OMARCHY_DEBUG is set
 debug_log() {
   if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-preinstall.log}" 2>&1
   fi
 }
 
 # Always log errors and important events
 log() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-preinstall.log}" 2>&1
 }
 
 use_omarchy_helpers() {
@@ -23,7 +23,7 @@ use_omarchy_helpers() {
   fi
 
   export OMARCHY_INSTALL="${OMARCHY_PATH}/install"
-  export OMARCHY_INSTALL_LOG_FILE="/var/log/omarchy-install.log"
+  export OMARCHY_INSTALL_LOG_FILE="/var/log/omarchy-preinstall.log"
   source "${OMARCHY_INSTALL}/helpers/all.sh"
 }
 
@@ -33,7 +33,7 @@ run_configurator() {
   
   log "run_configurator: Executing configurator script"
   if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
-    ./configurator >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1 || {
+    ./configurator >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-preinstall.log}" 2>&1 || {
       local exit_code=$?
       log "run_configurator: Configurator exited with code $exit_code"
       return $exit_code
@@ -65,21 +65,21 @@ install_arch() {
   CURRENT_SCRIPT="install_base_system"
   # Output goes to terminal directly, also tee to log file for debugging
   # NO log viewer - it was causing duplicates and input issues
-  install_base_system 2>&1 | tee -a /var/log/omarchy-install.log
+  install_base_system 2>&1 | tee -a /var/log/omarchy-preinstall.log
   unset CURRENT_SCRIPT
 }
 
 install_omarchy() {
   debug_log "install_omarchy: Installing gum in chroot"
   if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
-    chroot_bash -lc "sudo pacman -S --noconfirm --needed gum" >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1
+    chroot_bash -lc "sudo pacman -S --noconfirm --needed gum" >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-preinstall.log}" 2>&1
   else
     chroot_bash -lc "sudo pacman -S --noconfirm --needed gum" >/dev/null 2>&1
   fi
   
   log "install_omarchy: Running omarchy installer in chroot"
   if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
-    chroot_bash -lc "source /home/$OMARCHY_USER/.local/share/omarchy/install.sh || bash" >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1
+    chroot_bash -lc "source /home/$OMARCHY_USER/.local/share/omarchy/install.sh || bash" >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-preinstall.log}" 2>&1
   else
     chroot_bash -lc "source /home/$OMARCHY_USER/.local/share/omarchy/install.sh || bash"
   fi
@@ -123,7 +123,7 @@ install_base_system() {
   # The systemd service may have already done this, so check first
   if [ ! -d /etc/pacman.d/gnupg ] || [ ! -f /etc/pacman.d/gnupg/pubring.gpg ]; then
     if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
-      pacman-key --init >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1 || true
+      pacman-key --init >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-preinstall.log}" 2>&1 || true
     else
       pacman-key --init >/dev/null 2>&1 || true
     fi
@@ -133,8 +133,8 @@ install_base_system() {
   
   # Populate keyrings (safe to run multiple times)
   if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
-    pacman-key --populate archlinux >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1 || true
-    pacman-key --populate omarchy >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1 || true
+    pacman-key --populate archlinux >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-preinstall.log}" 2>&1 || true
+    pacman-key --populate omarchy >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-preinstall.log}" 2>&1 || true
   else
     pacman-key --populate archlinux >/dev/null 2>&1 || true
     pacman-key --populate omarchy >/dev/null 2>&1 || true
@@ -143,7 +143,7 @@ install_base_system() {
   debug_log "install_base_system: Syncing package database"
   # Sync the offline database so pacman can find packages
   if [[ -n "${OMARCHY_DEBUG:-}" ]]; then
-    pacman -Sy --noconfirm >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}" 2>&1
+    pacman -Sy --noconfirm >> "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-preinstall.log}" 2>&1
   else
     pacman -Sy --noconfirm >/dev/null 2>&1
   fi
@@ -233,20 +233,20 @@ chroot_bash() {
 
 if [[ $(tty) == "/dev/tty1" ]]; then
   # Initialize log IMMEDIATELY before anything else
-  touch /var/log/omarchy-install.log
-  chmod 666 /var/log/omarchy-install.log
+  touch /var/log/omarchy-preinstall.log
+  chmod 666 /var/log/omarchy-preinstall.log
   
   # Write initial log entry before loading helpers (in case helpers fail)
   {
-    echo "=== Omarchy Installation Started: $(date '+%Y-%m-%d %H:%M:%S') ==="
+    echo "=== Omarchy Pre-Install Started: $(date '+%Y-%m-%d %H:%M:%S') ==="
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting automated_script.sh"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] TTY: $(tty)"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] User: $(whoami)"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] PWD: $(pwd)"
-  } >> /var/log/omarchy-install.log 2>&1
+  } >> /var/log/omarchy-preinstall.log 2>&1
 
   # Set log file path before loading helpers
-  export OMARCHY_INSTALL_LOG_FILE="/var/log/omarchy-install.log"
+  export OMARCHY_INSTALL_LOG_FILE="/var/log/omarchy-preinstall.log"
   
   use_omarchy_helpers || {
     log "ERROR: Failed to load omarchy helpers"
