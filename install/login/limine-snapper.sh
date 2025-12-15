@@ -62,11 +62,11 @@ EOF
     sudo sed -i '/^ENABLE_UKI=/d; /^ENABLE_LIMINE_FALLBACK=/d' /etc/default/limine
   fi
 
-  # We overwrite the whole thing knowing the limine-update will add the entries for us
+  # Create base config - entries will be added manually below
   sudo tee /boot/limine.conf <<EOF >/dev/null
-### Read more at config document: https://github.com/limine-bootloader/limine/blob/trunk/CONFIG.md
+### Read more at config document: https://codeberg.org/Limine/Limine/src/branch/v10.x/CONFIG.md
 #timeout: 3
-default_entry: 2
+default_entry: 0
 interface_branding: Homerchy Bootloader
 interface_branding_color: 2
 hash_mismatch_panic: no
@@ -131,57 +131,46 @@ else
   sudo mkinitcpio -P
 fi
 
-echo "Updating Limine bootloader configuration..."
-sudo limine-update
-
-# Verify that limine-update actually created valid entries with PROTOCOL
-entries_exist=false
-entries_have_protocol=false
-
-# Check for entries starting with / (Limine v10.x syntax)
-if grep -q "^/" /boot/limine.conf 2>/dev/null; then
-  entries_exist=true
-  # Check if any entry has PROTOCOL field with correct syntax (PROTOCOL:)
-  if grep -A 5 "^/" /boot/limine.conf 2>/dev/null | grep -q "PROTOCOL:"; then
-    entries_have_protocol=true
+echo "Creating Limine bootloader entries manually..."
+# Create boot entries for all available kernels
+entry_count=0
+if ls /boot/vmlinuz-* 1>/dev/null 2>&1; then
+  # Get root UUID for cmdline if not already set
+  if [[ -z "$CMDLINE" ]]; then
+    CMDLINE="root=UUID=$(findmnt -n -o UUID /) rw"
   fi
-fi
-
-# If entries exist but don't have PROTOCOL, or no entries exist, fix it
-if [[ "$entries_exist" == "true" && "$entries_have_protocol" == "false" ]]; then
-  echo "WARNING: Limine entries exist but are missing PROTOCOL. Fixing entries..."
-  # Remove invalid entries (everything from first / to next / or end of file)
-  sudo sed -i '/^\/.*$/,$d' /boot/limine.conf
-  entries_exist=false
-fi
-
-if [[ "$entries_exist" == "false" ]]; then
-  echo "WARNING: limine-update did not create valid boot entries. Creating entries manually..."
-  # Try to manually create at least one entry if kernels exist
-  if ls /boot/vmlinuz-* 1>/dev/null 2>&1; then
-    kernel=$(ls -t /boot/vmlinuz-* | head -1)
-    initrd=$(ls -t /boot/initramfs-*.img 2>/dev/null | head -1 || echo "")
-    if [[ -n "$initrd" ]]; then
-      kernel_name=$(basename "$kernel" | sed 's/vmlinuz-//')
-      # Get root UUID for cmdline if not already set
-      if [[ -z "$CMDLINE" ]]; then
-        CMDLINE="root=UUID=$(findmnt -n -o UUID /) rw"
-      fi
+  
+  # Process kernels in reverse order (newest first) to create entries
+  for kernel in $(ls -t /boot/vmlinuz-*); do
+    kernel_name=$(basename "$kernel" | sed 's/vmlinuz-//')
+    initrd="/boot/initramfs-${kernel_name}.img"
+    
+    if [[ -f "$initrd" ]]; then
+      # Create entry for this kernel
       sudo tee -a /boot/limine.conf >/dev/null <<EOF
 
-/Homerchy
+/Homerchy ($kernel_name)
     PROTOCOL: linux
     KERNEL_PATH: boot():/vmlinuz-$kernel_name
     MODULE_PATH: boot():/initramfs-$kernel_name.img
     CMDLINE: $CMDLINE quiet splash
 EOF
-      echo "Limine entry manually created for kernel: $kernel_name"
+      echo "Created Limine entry for kernel: $kernel_name"
+      entry_count=$((entry_count + 1))
     else
-      echo "ERROR: No initramfs found for kernel $(basename "$kernel")"
+      echo "WARNING: No initramfs found for kernel $kernel_name, skipping entry"
     fi
+  done
+  
+  # Update default_entry to point to first entry (0-based index)
+  if [[ $entry_count -gt 0 ]]; then
+    sudo sed -i "s/^default_entry:.*/default_entry: 0/" /boot/limine.conf
+    echo "Created $entry_count Limine boot entries"
   else
-    echo "ERROR: No kernels found in /boot/"
+    echo "ERROR: No valid kernel/initramfs pairs found"
   fi
+else
+  echo "ERROR: No kernels found in /boot/"
 fi
 
 if [[ -n $EFI ]] && efibootmgr &>/dev/null; then

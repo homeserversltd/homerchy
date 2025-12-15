@@ -3,13 +3,13 @@ if [[ -f /boot/EFI/linux/omarchy_linux.efi ]] && [[ -f /boot/EFI/linux/$(cat /et
   sudo rm -f /boot/EFI/Linux/$(cat /etc/machine-id)_linux.efi
 
   if grep -q "/boot/EFI/Linux/$(cat /etc/machine-id)_linux.efi" /boot/limine.conf; then
-    echo -e "Resetting limine config\n(you may need to re-add other entries via sudo limine-update)"
+    echo "Resetting limine config and recreating entries"
 
     sudo mv /boot/limine.conf /boot/limine.conf.bak
   sudo tee /boot/limine.conf <<EOF >/dev/null
-### Read more at config document: https://github.com/limine-bootloader/limine/blob/trunk/CONFIG.md
+### Read more at config document: https://codeberg.org/Limine/Limine/src/branch/v10.x/CONFIG.md
 #timeout: 3
-default_entry: 2
+default_entry: 0
 interface_branding: Omarchy Bootloader
 interface_branding_color: 2
 hash_mismatch_panic: no
@@ -27,7 +27,29 @@ term_foreground_bright: c0caf5
 term_background_bright: 24283b
 
 EOF
-    sudo limine-update
+    # Create boot entries manually
+    entry_count=0
+    CMDLINE="root=UUID=$(findmnt -n -o UUID /) rw"
+    if ls /boot/vmlinuz-* 1>/dev/null 2>&1; then
+      for kernel in $(ls -t /boot/vmlinuz-*); do
+        kernel_name=$(basename "$kernel" | sed 's/vmlinuz-//')
+        initrd="/boot/initramfs-${kernel_name}.img"
+        if [[ -f "$initrd" ]]; then
+          sudo tee -a /boot/limine.conf >/dev/null <<EOF
+
+/Omarchy ($kernel_name)
+    PROTOCOL: linux
+    KERNEL_PATH: boot():/vmlinuz-$kernel_name
+    MODULE_PATH: boot():/initramfs-$kernel_name.img
+    CMDLINE: $CMDLINE quiet splash
+EOF
+          entry_count=$((entry_count + 1))
+        fi
+      done
+      if [[ $entry_count -gt 0 ]]; then
+        sudo sed -i "s/^default_entry:.*/default_entry: 0/" /boot/limine.conf
+      fi
+    fi
     sudo limine-snapper-sync
   fi
 fi

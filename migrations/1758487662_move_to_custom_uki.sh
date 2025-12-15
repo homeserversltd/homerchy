@@ -11,7 +11,33 @@ if command -v limine &>/dev/null && [[ -f /etc/default/limine ]]; then
       sudo efibootmgr -b "$bootnum" -B >/dev/null 2>&1
     done < <(efibootmgr | grep -E "^Boot[0-9]{4}\*? Arch Linux Limine" | sed 's/^Boot\([0-9]\{4\}\).*/\1/')
 
-    sudo limine-update
+    # Recreate Limine entries manually (limine-update doesn't exist)
+    if [[ -f /boot/limine.conf ]]; then
+      # Remove existing entries and recreate
+      sudo sed -i '/^\/.*$/,$d' /boot/limine.conf
+      entry_count=0
+      CMDLINE="root=UUID=$(findmnt -n -o UUID /) rw"
+      if ls /boot/vmlinuz-* 1>/dev/null 2>&1; then
+        for kernel in $(ls -t /boot/vmlinuz-*); do
+          kernel_name=$(basename "$kernel" | sed 's/vmlinuz-//')
+          initrd="/boot/initramfs-${kernel_name}.img"
+          if [[ -f "$initrd" ]]; then
+            sudo tee -a /boot/limine.conf >/dev/null <<EOF
+
+/Omarchy ($kernel_name)
+    PROTOCOL: linux
+    KERNEL_PATH: boot():/vmlinuz-$kernel_name
+    MODULE_PATH: boot():/initramfs-$kernel_name.img
+    CMDLINE: $CMDLINE quiet splash
+EOF
+            entry_count=$((entry_count + 1))
+          fi
+        done
+        if [[ $entry_count -gt 0 ]]; then
+          sudo sed -i "s/^default_entry:.*/default_entry: 0/" /boot/limine.conf
+        fi
+      fi
+    fi
 
     uki_file=$(find /boot/EFI/Linux/ -name "omarchy*.efi" -printf "%f\n" 2>/dev/null | head -1)
 
