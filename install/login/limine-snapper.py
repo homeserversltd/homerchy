@@ -130,7 +130,21 @@ def get_root_uuid() -> str:
 
 def create_mkinitcpio_hooks_config() -> bool:
     """Create mkinitcpio hooks configuration."""
-    hooks_content = "HOOKS=(base udev plymouth keyboard autodetect microcode modconf kms keymap consolefont block encrypt filesystems fsck btrfs-overlayfs)\n"
+    # Check if btrfs-overlayfs hook exists (it's optional)
+    hooks_dir = Path('/usr/lib/mkinitcpio/hooks')
+    btrfs_overlayfs_hook = hooks_dir / 'btrfs-overlayfs' if hooks_dir.exists() else None
+    
+    # Build hooks list - include btrfs-overlayfs only if hook exists
+    hooks_list = [
+        'base', 'udev', 'plymouth', 'keyboard', 'autodetect', 'microcode',
+        'modconf', 'kms', 'keymap', 'consolefont', 'block', 'encrypt',
+        'filesystems', 'fsck'
+    ]
+    
+    if btrfs_overlayfs_hook and btrfs_overlayfs_hook.exists():
+        hooks_list.append('btrfs-overlayfs')
+    
+    hooks_content = f"HOOKS=({' '.join(hooks_list)})\n"
     
     config_dir = Path('/etc/mkinitcpio.conf.d')
     config_dir.mkdir(parents=True, exist_ok=True)
