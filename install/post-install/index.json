@@ -1,0 +1,19 @@
+{
+    "metadata": {
+        "schema_version": "1.0.0",
+        "name": "Post-Install Phase",
+        "description": "Post-installation tasks"
+    },
+    "children": [
+        "pacman",
+        "prebuild",
+        "ssh",
+        "allow-reboot",
+        "finished"
+    ],
+    "execution": {
+        "mode": "sequential",
+        "continue_on_error": false
+    }
+}
+

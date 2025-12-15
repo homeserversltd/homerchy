@@ -1,0 +1,24 @@
+{
+    "metadata": {
+        "schema_version": "1.0.0",
+        "name": "Packaging Phase",
+        "description": "Package installation and setup"
+    },
+    "children": [
+        "base",
+        "fonts",
+        "icons",
+        "nvim",
+        "tuis",
+        "webapps"
+    ],
+    "execution": {
+        "mode": "sequential",
+        "continue_on_error": false
+    },
+    "package_files": {
+        "base": "omarchy-base.packages",
+        "other": "omarchy-other.packages"
+    }
+}
+

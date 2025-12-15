@@ -1,0 +1,22 @@
+{
+    "metadata": {
+        "schema_version": "1.0.0",
+        "name": "First-Run Phase",
+        "description": "First boot tasks"
+    },
+    "children": [
+        "battery-monitor",
+        "cleanup-reboot-sudoers",
+        "dns-resolver",
+        "elephant",
+        "firewall",
+        "gnome-theme",
+        "welcome",
+        "wifi"
+    ],
+    "execution": {
+        "mode": "sequential",
+        "continue_on_error": true
+    }
+}
+
