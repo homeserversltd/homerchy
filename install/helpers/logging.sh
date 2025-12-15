@@ -146,33 +146,36 @@ run_logged() {
 
   export CURRENT_SCRIPT="$script"
 
+  # Use phase-specific log file if set, otherwise use main install log
+  local log_file="${OMARCHY_PHASE_LOG_FILE:-$OMARCHY_INSTALL_LOG_FILE}"
+
   # Ensure log file exists before writing
-  if [ ! -f "$OMARCHY_INSTALL_LOG_FILE" ]; then
-    echo "ERROR: Log file does not exist: $OMARCHY_INSTALL_LOG_FILE" >&2
+  if [ ! -f "$log_file" ]; then
+    echo "ERROR: Log file does not exist: $log_file" >&2
     echo "ERROR: Attempting to create it..." >&2
-    sudo touch "$OMARCHY_INSTALL_LOG_FILE" || {
-      echo "ERROR: Failed to create log file: $OMARCHY_INSTALL_LOG_FILE" >&2
+    sudo touch "$log_file" || {
+      echo "ERROR: Failed to create log file: $log_file" >&2
       return 1
     }
-    sudo chmod 666 "$OMARCHY_INSTALL_LOG_FILE" || true
+    sudo chmod 666 "$log_file" || true
   fi
 
   # Write start message - ensure it actually writes
-  if ! echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting: $script" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1; then
-    echo "ERROR: Failed to write to log file: $OMARCHY_INSTALL_LOG_FILE" >&2
+  if ! echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting: $script" >>"$log_file" 2>&1; then
+    echo "ERROR: Failed to write to log file: $log_file" >&2
     return 1
   fi
 
   # Use bash -c to create a clean subshell
-  bash -c "source '$script'" </dev/null >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+  bash -c "source '$script'" </dev/null >>"$log_file" 2>&1
 
   local exit_code=$?
 
   if [ $exit_code -eq 0 ]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Completed: $script" >>"$OMARCHY_INSTALL_LOG_FILE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Completed: $script" >>"$log_file"
     unset CURRENT_SCRIPT
   else
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Failed: $script (exit code: $exit_code)" >>"$OMARCHY_INSTALL_LOG_FILE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Failed: $script (exit code: $exit_code)" >>"$log_file"
   fi
 
   return $exit_code
