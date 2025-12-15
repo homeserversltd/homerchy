@@ -9,31 +9,31 @@ INDEX_FILE="${PREBUILD_DIR}/index.json"
 
 # Check if prebuild directory exists
 if [[ ! -d "$PREBUILD_DIR" ]]; then
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Prebuild directory not found: $PREBUILD_DIR" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Skipping prebuild deployment" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Prebuild directory not found: $PREBUILD_DIR"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Skipping prebuild deployment"
   return 0
 fi
 
 # Check if index.json exists
 if [[ ! -f "$INDEX_FILE" ]]; then
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: index.json not found: $INDEX_FILE" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Skipping prebuild deployment" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: index.json not found: $INDEX_FILE"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Skipping prebuild deployment"
   return 0
 fi
 
 # Check if jq is available
 if ! command -v jq &>/dev/null; then
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: ERROR: jq is required but not found" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: ERROR: jq is required but not found"
   return 1
 fi
 
 # Validate JSON syntax
 if ! jq empty "$INDEX_FILE" 2>/dev/null; then
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: ERROR: Invalid JSON syntax in $INDEX_FILE" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: ERROR: Invalid JSON syntax in $INDEX_FILE"
   return 1
 fi
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Starting prebuild deployment" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Starting prebuild deployment"
 
 # Determine user home directory
 # In chroot context, use OMARCHY_USER; otherwise use $HOME
@@ -50,7 +50,7 @@ expand_path() {
 }
 
 # Install packages
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Installing prerequisite packages" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Installing prerequisite packages"
 
 packages=$(jq -r '.packages[]?' "$INDEX_FILE" 2>/dev/null || true)
 if [[ -n "$packages" ]]; then
@@ -58,19 +58,19 @@ if [[ -n "$packages" ]]; then
   mapfile -t package_array < <(echo "$packages" | grep -v '^$')
   
   if [[ ${#package_array[@]} -gt 0 ]]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Installing packages: ${package_array[*]}" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
-    sudo pacman -S --noconfirm --needed "${package_array[@]}" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1 || {
-      echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: WARNING: Some packages failed to install" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Installing packages: ${package_array[*]}"
+    sudo pacman -S --noconfirm --needed "${package_array[@]}" || {
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: WARNING: Some packages failed to install"
     }
   fi
 fi
 
 # Deploy files
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Deploying configuration files" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Deploying configuration files"
 
 deployment_count=$(jq '.deployments | length' "$INDEX_FILE" 2>/dev/null || echo "0")
 if [[ "$deployment_count" -eq 0 ]]; then
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: No deployments found in index.json" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: No deployments found in index.json"
   return 0
 fi
 
@@ -96,7 +96,7 @@ for ((i = 0; i < deployment_count; i++)); do
   
   # Check if source file exists
   if [[ ! -f "$source_path" ]]; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: WARNING: Source file not found: $source_path" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: WARNING: Source file not found: $source_path"
     ((failed++)) || true
     continue
   fi
@@ -105,14 +105,14 @@ for ((i = 0; i < deployment_count; i++)); do
   dest_dir=$(dirname "$dest_path")
   if [[ ! -d "$dest_dir" ]]; then
     mkdir -p "$dest_dir"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Created directory: $dest_dir" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Created directory: $dest_dir"
   fi
   
   # Backup existing file if it exists
   if [[ -f "$dest_path" ]]; then
     backup_path="${dest_path}.backup"
     cp "$dest_path" "$backup_path" 2>/dev/null || true
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Backed up existing file: $dest_path -> $backup_path" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Backed up existing file: $dest_path -> $backup_path"
   fi
   
   # Copy file
@@ -125,18 +125,18 @@ for ((i = 0; i < deployment_count; i++)); do
       chown "$OMARCHY_USER:$OMARCHY_USER" "$dest_path" 2>/dev/null || true
     fi
     
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Deployed: $source_file -> $dest_path (perms: $permissions)" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Deployed: $source_file -> $dest_path (perms: $permissions)"
     ((deployed++)) || true
   else
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: ERROR: Failed to deploy: $source_file -> $dest_path" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: ERROR: Failed to deploy: $source_file -> $dest_path"
     ((failed++)) || true
   fi
 done
 
-echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Deployment complete - $deployed deployed, $failed failed" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: Deployment complete - $deployed deployed, $failed failed"
 
 if [[ $failed -gt 0 ]]; then
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: WARNING: Some files failed to deploy" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] prebuild: WARNING: Some files failed to deploy"
   return 1
 fi
 
