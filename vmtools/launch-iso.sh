@@ -33,7 +33,7 @@ qemu-system-x86_64 \
     -m 8G \
     -smp 4 \
     -cdrom "$ISO_FILE" \
-    -boot d \
+    -boot order=dc \
     -drive file="$DISK_FILE",format=qcow2,if=none,id=drive0 \
     -device virtio-blk-pci,drive=drive0 \
     -device virtio-vga \

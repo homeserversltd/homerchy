@@ -388,6 +388,126 @@ def create_limine_entries(cmdline: str) -> int:
     return entry_count
 
 
+def install_limine_to_efi() -> bool:
+    """Install Limine EFI files to EFI partition and create boot entry."""
+    try:
+        # Find Limine EFI binary
+        limine_efi_paths = [
+            Path('/usr/share/limine/limine-uefi-x64.efi'),
+            Path('/usr/lib/limine/limine-uefi-x64.efi'),
+            Path('/usr/share/limine/BOOTX64.EFI'),
+        ]
+        
+        limine_efi = None
+        for path in limine_efi_paths:
+            if path.exists():
+                limine_efi = path
+                break
+        
+        if not limine_efi:
+            print("WARNING: Limine EFI binary not found, skipping EFI installation")
+            return True  # Not fatal if Limine EFI not found
+        
+        # Determine EFI partition mount point
+        boot_mount = subprocess.run(
+            ['findmnt', '-n', '-o', 'TARGET', '/boot'],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if boot_mount.returncode != 0:
+            print("WARNING: Could not determine /boot mount point")
+            return True
+        
+        boot_path = boot_mount.stdout.strip()
+        
+        # EFI directories to try
+        efi_dirs = [
+            Path(boot_path) / 'EFI' / 'BOOT',
+            Path(boot_path) / 'EFI' / 'limine',
+        ]
+        
+        efi_dir = None
+        for dir_path in efi_dirs:
+            if dir_path.exists():
+                efi_dir = dir_path
+                break
+        
+        if not efi_dir:
+            # Create EFI/BOOT directory
+            efi_dir = Path(boot_path) / 'EFI' / 'BOOT'
+            efi_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy Limine EFI binary
+        target_efi = efi_dir / 'BOOTX64.EFI'
+        try:
+            import shutil
+            shutil.copy2(limine_efi, target_efi)
+            print(f"Copied Limine EFI to {target_efi}")
+        except Exception as e:
+            print(f"WARNING: Failed to copy Limine EFI: {e}")
+            return True
+        
+        # Copy limine.conf to EFI partition
+        limine_conf_source = Path('/boot/limine.conf')
+        if limine_conf_source.exists():
+            limine_conf_target = efi_dir / 'limine.conf'
+            try:
+                shutil.copy2(limine_conf_source, limine_conf_target)
+                print(f"Copied limine.conf to {limine_conf_target}")
+            except Exception as e:
+                print(f"WARNING: Failed to copy limine.conf: {e}")
+        
+        # Create EFI boot entry if efibootmgr is available
+        if check_command('efibootmgr'):
+            try:
+                # Find boot device and partition
+                boot_source = subprocess.run(
+                    ['findmnt', '-n', '-o', 'SOURCE', '/boot'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                
+                if boot_source.returncode == 0:
+                    boot_device = boot_source.stdout.strip()
+                    
+                    # Extract disk and partition number
+                    # Format is usually /dev/sda1 or /dev/nvme0n1p1
+                    import re
+                    match = re.match(r'(.+?)(p?\d+)$', boot_device)
+                    if match:
+                        disk = match.group(1)
+                        part = match.group(2).lstrip('p')
+                        
+                        # Create EFI boot entry
+                        result = subprocess.run(
+                            [
+                                'sudo', 'efibootmgr', '--create',
+                                '--disk', disk,
+                                '--part', part,
+                                '--label', 'Homerchy',
+                                '--loader', f'\\EFI\\BOOT\\BOOTX64.EFI'
+                            ],
+                            capture_output=True,
+                            text=True,
+                            timeout=10
+                        )
+                        
+                        if result.returncode == 0:
+                            print("Created EFI boot entry for Homerchy")
+                        else:
+                            print(f"WARNING: Failed to create EFI boot entry: {result.stderr}")
+            except Exception as e:
+                print(f"WARNING: Failed to create EFI boot entry: {e}")
+        
+        return True
+    except Exception as e:
+        print(f"WARNING: EFI installation failed: {e}")
+        return True  # Don't fail installation if EFI setup fails
+
+
 def cleanup_efi_boot_entries() -> bool:
     """Remove archinstall-created Limine entries from EFI."""
     if not check_command('efibootmgr'):
@@ -478,9 +598,26 @@ def main(config: dict) -> dict:
         if not create_limine_base_config():
             return {"success": False, "message": "Failed to create base Limine config"}
         
-        # Remove original config if different location
+        # Copy limine.conf to EFI partition if EFI system
+        if efi:
+            efi_config_locations = [
+                Path('/boot/EFI/BOOT/limine.conf'),
+                Path('/boot/EFI/limine/limine.conf')
+            ]
+            for efi_config in efi_config_locations:
+                efi_config.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    import shutil
+                    shutil.copy2(Path('/boot/limine.conf'), efi_config)
+                    print(f"Copied limine.conf to {efi_config}")
+                except Exception as e:
+                    print(f"WARNING: Failed to copy limine.conf to {efi_config}: {e}")
+        
+        # Remove original config if different location (but keep EFI copies)
         if limine_config != Path('/boot/limine.conf') and limine_config.exists():
-            subprocess.run(['sudo', 'rm', str(limine_config)], check=False)
+            # Only remove if it's not one of the EFI locations we just created
+            if limine_config not in [Path('/boot/EFI/BOOT/limine.conf'), Path('/boot/EFI/limine/limine.conf')]:
+                subprocess.run(['sudo', 'rm', str(limine_config)], check=False)
         
         # Setup Snapper configs
         if not setup_snapper_configs():
@@ -502,9 +639,11 @@ def main(config: dict) -> dict:
         if entry_count == 0:
             return {"success": False, "message": "No valid kernel/initramfs pairs found"}
         
-        # Cleanup EFI boot entries
+        # Cleanup old EFI boot entries
         if efi:
             cleanup_efi_boot_entries()
+            # Install Limine to EFI partition and create boot entry
+            install_limine_to_efi()
         
         return {"success": True, "message": f"Limine and Snapper configured successfully ({entry_count} boot entries created)"}
     
