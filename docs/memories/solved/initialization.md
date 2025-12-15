@@ -84,20 +84,7 @@ ISO Boot
 
 ## Log File Locations
 
-**Two separate log files are now used:**
+- **During ISO boot (before chroot)**: `/var/log/omarchy-install.log` (live ISO filesystem)
+- **During chroot install**: `/var/log/omarchy-install.log` inside chroot = `/mnt/var/log/omarchy-install.log` from host
+- **After installation**: `/var/log/omarchy-install.log` on installed system (this is what user sees)
 
-1. **`/var/log/omarchy-preinstall.log`**:
-   - Created by `.automated_script.sh` on live ISO (line 236)
-   - Used during: preflight, packaging, config, login phases
-   - Written to inside chroot (accessible at `/mnt/var/log/omarchy-preinstall.log` from host)
-   - Contains: base.sh, all packaging/config/login scripts
-
-2. **`/var/log/omarchy-postinstall.log`**:
-   - Created by `start_postinstall_log()` at start of `post-install/all.sh`
-   - Used during: post-install phase only
-   - Contains: pacman.sh, prebuild.sh, ssh.sh, allow-reboot.sh logs
-   - Contains: Installation time summary combining both phases
-
-**After installation**: Both log files exist on the installed system at:
-- `/var/log/omarchy-preinstall.log`
-- `/var/log/omarchy-postinstall.log`

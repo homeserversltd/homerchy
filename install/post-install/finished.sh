@@ -9,17 +9,13 @@ echo
 tte -i ~/.local/share/omarchy/logo.txt --canvas-width 0 --anchor-text c --frame-rate 920 laseretch
 echo
 
-# Display installation time if available (check postinstall log first, then preinstall)
-TOTAL_TIME=""
-if [[ -f /var/log/omarchy-postinstall.log ]] && grep -q "Total:" /var/log/omarchy-postinstall.log 2>/dev/null; then
-  TOTAL_TIME=$(tail -n 20 /var/log/omarchy-postinstall.log | grep "^Total:" | sed 's/^Total:[[:space:]]*//')
-elif [[ -f /var/log/omarchy-preinstall.log ]] && grep -q "Total:" /var/log/omarchy-preinstall.log 2>/dev/null; then
-  TOTAL_TIME=$(tail -n 20 /var/log/omarchy-preinstall.log | grep "^Total:" | sed 's/^Total:[[:space:]]*//')
-fi
-
-if [ -n "$TOTAL_TIME" ]; then
+# Display installation time if available
+if [[ -f $OMARCHY_INSTALL_LOG_FILE ]] && grep -q "Total:" "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null; then
   echo
-  echo_in_style "Installed in $TOTAL_TIME"
+  TOTAL_TIME=$(tail -n 20 "$OMARCHY_INSTALL_LOG_FILE" | grep "^Total:" | sed 's/^Total:[[:space:]]*//')
+  if [ -n "$TOTAL_TIME" ]; then
+    echo_in_style "Installed in $TOTAL_TIME"
+  fi
 else
   echo_in_style "Finished installing"
 fi

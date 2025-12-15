@@ -24,3 +24,4 @@ sudo systemctl start sshd
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] SSH service enabled and started"
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] SSH available at: ssh -p 2222 owner@localhost (password: from settings.json)"
+

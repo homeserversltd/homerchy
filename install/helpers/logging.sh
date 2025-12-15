@@ -63,28 +63,12 @@ stop_log_output() {
 }
 
 start_install_log() {
-  # Use preinstall log file
-  export OMARCHY_INSTALL_LOG_FILE="${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-preinstall.log}"
-  
   sudo touch "$OMARCHY_INSTALL_LOG_FILE"
   sudo chmod 666 "$OMARCHY_INSTALL_LOG_FILE"
 
   export OMARCHY_START_TIME=$(date '+%Y-%m-%d %H:%M:%S')
 
-  echo "=== Omarchy Pre-Install Started: $OMARCHY_START_TIME ===" >>"$OMARCHY_INSTALL_LOG_FILE"
-  start_log_output
-}
-
-start_postinstall_log() {
-  # Switch to postinstall log file
-  export OMARCHY_INSTALL_LOG_FILE="/var/log/omarchy-postinstall.log"
-  
-  sudo touch "$OMARCHY_INSTALL_LOG_FILE"
-  sudo chmod 666 "$OMARCHY_INSTALL_LOG_FILE"
-
-  export OMARCHY_POSTINSTALL_START_TIME=$(date '+%Y-%m-%d %H:%M:%S')
-
-  echo "=== Omarchy Post-Install Started: $OMARCHY_POSTINSTALL_START_TIME ===" >>"$OMARCHY_INSTALL_LOG_FILE"
+  echo "=== Omarchy Installation Started: $OMARCHY_START_TIME ===" >>"$OMARCHY_INSTALL_LOG_FILE"
   start_log_output
 }
 
@@ -94,78 +78,44 @@ stop_install_log() {
 
   if [[ -n ${OMARCHY_INSTALL_LOG_FILE:-} ]]; then
     OMARCHY_END_TIME=$(date '+%Y-%m-%d %H:%M:%S')
-    
-    # Determine which phase we're in based on log file name
-    if [[ "$OMARCHY_INSTALL_LOG_FILE" == *"preinstall"* ]]; then
-      echo "=== Omarchy Pre-Install Completed: $OMARCHY_END_TIME ===" >>"$OMARCHY_INSTALL_LOG_FILE"
-    else
-      echo "=== Omarchy Post-Install Completed: $OMARCHY_END_TIME ===" >>"$OMARCHY_INSTALL_LOG_FILE"
-      echo "" >>"$OMARCHY_INSTALL_LOG_FILE"
-      echo "=== Installation Time Summary ===" >>"$OMARCHY_INSTALL_LOG_FILE"
+    echo "=== Omarchy Installation Completed: $OMARCHY_END_TIME ===" >>"$OMARCHY_INSTALL_LOG_FILE"
+    echo "" >>"$OMARCHY_INSTALL_LOG_FILE"
+    echo "=== Installation Time Summary ===" >>"$OMARCHY_INSTALL_LOG_FILE"
 
-      # Calculate preinstall duration if available
-      PREINSTALL_LOG="/var/log/omarchy-preinstall.log"
-      if [ -f "$PREINSTALL_LOG" ] && [ -n "${OMARCHY_START_TIME:-}" ]; then
-        PREINSTALL_START=$(grep "=== Omarchy Pre-Install Started:" "$PREINSTALL_LOG" 2>/dev/null | sed 's/.*Started: \(.*\) ===/\1/' || echo "$OMARCHY_START_TIME")
-        PREINSTALL_END=$(grep "=== Omarchy Pre-Install Completed:" "$PREINSTALL_LOG" 2>/dev/null | sed 's/.*Completed: \(.*\) ===/\1/' || true)
-        
-        if [ -n "$PREINSTALL_END" ]; then
-          PREINSTALL_START_EPOCH=$(date -d "$PREINSTALL_START" +%s 2>/dev/null || echo 0)
-          PREINSTALL_END_EPOCH=$(date -d "$PREINSTALL_END" +%s 2>/dev/null || echo 0)
-          PREINSTALL_DURATION=$((PREINSTALL_END_EPOCH - PREINSTALL_START_EPOCH))
-          
-          if [ "$PREINSTALL_DURATION" -gt 0 ]; then
-            PREINSTALL_MINS=$((PREINSTALL_DURATION / 60))
-            PREINSTALL_SECS=$((PREINSTALL_DURATION % 60))
-            echo "Preinstall:  ${PREINSTALL_MINS}m ${PREINSTALL_SECS}s" >>"$OMARCHY_INSTALL_LOG_FILE"
-          fi
-        fi
+    if [ -f "/var/log/archinstall/install.log" ]; then
+      ARCHINSTALL_START=$(grep -m1 '^\[' /var/log/archinstall/install.log 2>/dev/null | sed 's/^\[\([^]]*\)\].*/\1/' || true)
+      ARCHINSTALL_END=$(grep 'Installation completed without any errors' /var/log/archinstall/install.log 2>/dev/null | sed 's/^\[\([^]]*\)\].*/\1/' || true)
+
+      if [ -n "$ARCHINSTALL_START" ] && [ -n "$ARCHINSTALL_END" ]; then
+        ARCH_START_EPOCH=$(date -d "$ARCHINSTALL_START" +%s)
+        ARCH_END_EPOCH=$(date -d "$ARCHINSTALL_END" +%s)
+        ARCH_DURATION=$((ARCH_END_EPOCH - ARCH_START_EPOCH))
+
+        ARCH_MINS=$((ARCH_DURATION / 60))
+        ARCH_SECS=$((ARCH_DURATION % 60))
+
+        echo "Archinstall: ${ARCH_MINS}m ${ARCH_SECS}s" >>"$OMARCHY_INSTALL_LOG_FILE"
       fi
+    fi
 
-      # Calculate postinstall duration
-      if [ -n "${OMARCHY_POSTINSTALL_START_TIME:-}" ]; then
-        POSTINSTALL_START_EPOCH=$(date -d "$OMARCHY_POSTINSTALL_START_TIME" +%s 2>/dev/null || echo 0)
-        POSTINSTALL_END_EPOCH=$(date -d "$OMARCHY_END_TIME" +%s 2>/dev/null || echo 0)
-        POSTINSTALL_DURATION=$((POSTINSTALL_END_EPOCH - POSTINSTALL_START_EPOCH))
-        
-        if [ "$POSTINSTALL_DURATION" -gt 0 ]; then
-          POSTINSTALL_MINS=$((POSTINSTALL_DURATION / 60))
-          POSTINSTALL_SECS=$((POSTINSTALL_DURATION % 60))
-          echo "Postinstall: ${POSTINSTALL_MINS}m ${POSTINSTALL_SECS}s" >>"$OMARCHY_INSTALL_LOG_FILE"
-        fi
-      fi
+    if [ -n "$OMARCHY_START_TIME" ]; then
+      OMARCHY_START_EPOCH=$(date -d "$OMARCHY_START_TIME" +%s)
+      OMARCHY_END_EPOCH=$(date -d "$OMARCHY_END_TIME" +%s)
+      OMARCHY_DURATION=$((OMARCHY_END_EPOCH - OMARCHY_START_EPOCH))
 
-      # Calculate archinstall duration if available
-      if [ -f "/var/log/archinstall/install.log" ]; then
-        ARCHINSTALL_START=$(grep -m1 '^\[' /var/log/archinstall/install.log 2>/dev/null | sed 's/^\[\([^]]*\)\].*/\1/' || true)
-        ARCHINSTALL_END=$(grep 'Installation completed without any errors' /var/log/archinstall/install.log 2>/dev/null | sed 's/^\[\([^]]*\)\].*/\1/' || true)
+      OMARCHY_MINS=$((OMARCHY_DURATION / 60))
+      OMARCHY_SECS=$((OMARCHY_DURATION % 60))
 
-        if [ -n "$ARCHINSTALL_START" ] && [ -n "$ARCHINSTALL_END" ]; then
-          ARCH_START_EPOCH=$(date -d "$ARCHINSTALL_START" +%s 2>/dev/null || echo 0)
-          ARCH_END_EPOCH=$(date -d "$ARCHINSTALL_END" +%s 2>/dev/null || echo 0)
-          ARCH_DURATION=$((ARCH_END_EPOCH - ARCH_START_EPOCH))
+      echo "Omarchy:     ${OMARCHY_MINS}m ${OMARCHY_SECS}s" >>"$OMARCHY_INSTALL_LOG_FILE"
 
-          if [ "$ARCH_DURATION" -gt 0 ]; then
-            ARCH_MINS=$((ARCH_DURATION / 60))
-            ARCH_SECS=$((ARCH_DURATION % 60))
-            echo "Archinstall: ${ARCH_MINS}m ${ARCH_SECS}s" >>"$OMARCHY_INSTALL_LOG_FILE"
-          fi
-        fi
-      fi
-
-      # Calculate total if we have durations
-      if [ -n "${PREINSTALL_DURATION:-}" ] && [ -n "${POSTINSTALL_DURATION:-}" ]; then
-        TOTAL_DURATION=$((PREINSTALL_DURATION + POSTINSTALL_DURATION))
-        if [ -n "${ARCH_DURATION:-}" ]; then
-          TOTAL_DURATION=$((TOTAL_DURATION + ARCH_DURATION))
-        fi
+      if [ -n "$ARCH_DURATION" ]; then
+        TOTAL_DURATION=$((ARCH_DURATION + OMARCHY_DURATION))
         TOTAL_MINS=$((TOTAL_DURATION / 60))
         TOTAL_SECS=$((TOTAL_DURATION % 60))
         echo "Total:       ${TOTAL_MINS}m ${TOTAL_SECS}s" >>"$OMARCHY_INSTALL_LOG_FILE"
       fi
-      
-      echo "=================================" >>"$OMARCHY_INSTALL_LOG_FILE"
     fi
+    echo "=================================" >>"$OMARCHY_INSTALL_LOG_FILE"
 
     echo "Rebooting system..." >>"$OMARCHY_INSTALL_LOG_FILE"
   fi

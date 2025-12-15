@@ -1,6 +1,3 @@
-# Switch to post-install log file
-start_postinstall_log
-
 run_logged $OMARCHY_INSTALL/post-install/pacman.sh
 run_logged $OMARCHY_INSTALL/post-install/prebuild.sh
 run_logged $OMARCHY_INSTALL/post-install/ssh.sh
