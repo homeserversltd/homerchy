@@ -14,11 +14,14 @@ if [ -z "$ISO_FILE" ]; then
     exit 1
 fi
 
-# Create virtual disk if it doesn't exist
-if [ ! -f "$DISK_FILE" ]; then
-    echo "Creating virtual disk: $DISK_FILE"
-    qemu-img create -f qcow2 "$DISK_FILE" 20G
+# Always remove existing disk and create fresh one
+if [ -f "$DISK_FILE" ]; then
+    echo "Removing existing disk: $DISK_FILE"
+    rm -f "$DISK_FILE"
 fi
+
+echo "Creating virtual disk: $DISK_FILE"
+qemu-img create -f qcow2 "$DISK_FILE" 100G
 
 echo "Launching ISO: $ISO_FILE"
 echo "Using disk: $DISK_FILE"

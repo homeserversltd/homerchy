@@ -62,10 +62,29 @@ After installation completes, `/var/log/omarchy-install.log` only contains:
 1. **Enhanced `start_install_log()`**: Added error handling and directory creation to ensure log file is created properly
 2. **Enhanced `run_logged()`**: Added check to ensure log file exists before writing, with automatic creation if missing
 3. **Added path verification in `install.sh`**: Added check to ensure installation directory exists before proceeding
+4. **Fixed VM disk size**: Increased from 40GB to 100GB to prevent "No space left on device" errors
+5. **Updated VM launch script**: Now always deletes and recreates disk file for clean test runs
 
-## Current Hypothesis
+## Root Cause Found
 
-The log file `/var/log/omarchy-install.log` inside the chroot should be created by `start_install_log()` in `preflight/begin.sh`, but if that fails silently, `run_logged()` will try to append to a non-existent file. Bash will create the file if the directory exists, but if the directory doesn't exist, the redirection fails silently. The fixes above should address this by ensuring the directory and file exist before writing.
+**The actual problem was disk space, not logging code!**
+
+During testing, we discovered:
+- VM disk was only 40GB, which filled up during installation
+- This caused "No space left on device" errors when trying to write to `/var/log/omarchy-install.log`
+- All the `run_logged()` calls were failing silently because the disk was full
+- This is why `base.sh` and other packaging scripts weren't appearing in logs - they were running but couldn't write to the log file
+
+**Evidence:**
+- Multiple "ERROR: Failed to write to log file" messages
+- "echo: write error: No space left on device" errors in logging.sh
+- `grep -i "base.sh"` returned no results because nothing was being written
+- Only post-install entries appeared because they ran after the disk filled up
+
+**Solution:**
+- Increased VM disk size to 100GB
+- Updated launch script to always create fresh disk (ensures clean test environment)
+- The logging fixes we made are still valuable for better error handling, but the primary issue was disk space
 
 ## SSH Access to VM
 
