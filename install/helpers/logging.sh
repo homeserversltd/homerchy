@@ -63,12 +63,32 @@ stop_log_output() {
 }
 
 start_install_log() {
-  sudo touch "$OMARCHY_INSTALL_LOG_FILE"
-  sudo chmod 666 "$OMARCHY_INSTALL_LOG_FILE"
+  # Ensure log directory exists
+  local log_dir=$(dirname "$OMARCHY_INSTALL_LOG_FILE")
+  if [ ! -d "$log_dir" ]; then
+    sudo mkdir -p "$log_dir" || {
+      echo "ERROR: Failed to create log directory: $log_dir" >&2
+      return 1
+    }
+  fi
+
+  # Create log file with proper permissions
+  sudo touch "$OMARCHY_INSTALL_LOG_FILE" || {
+    echo "ERROR: Failed to create log file: $OMARCHY_INSTALL_LOG_FILE" >&2
+    return 1
+  }
+  sudo chmod 666 "$OMARCHY_INSTALL_LOG_FILE" || {
+    echo "WARNING: Failed to set log file permissions" >&2
+  }
 
   export OMARCHY_START_TIME=$(date '+%Y-%m-%d %H:%M:%S')
 
-  echo "=== Omarchy Installation Started: $OMARCHY_START_TIME ===" >>"$OMARCHY_INSTALL_LOG_FILE"
+  # Write initial header - ensure it actually writes
+  if ! echo "=== Omarchy Installation Started: $OMARCHY_START_TIME ===" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1; then
+    echo "ERROR: Failed to write to log file: $OMARCHY_INSTALL_LOG_FILE" >&2
+    return 1
+  fi
+
   start_log_output
 }
 
@@ -126,7 +146,22 @@ run_logged() {
 
   export CURRENT_SCRIPT="$script"
 
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting: $script" >>"$OMARCHY_INSTALL_LOG_FILE"
+  # Ensure log file exists before writing
+  if [ ! -f "$OMARCHY_INSTALL_LOG_FILE" ]; then
+    echo "ERROR: Log file does not exist: $OMARCHY_INSTALL_LOG_FILE" >&2
+    echo "ERROR: Attempting to create it..." >&2
+    sudo touch "$OMARCHY_INSTALL_LOG_FILE" || {
+      echo "ERROR: Failed to create log file: $OMARCHY_INSTALL_LOG_FILE" >&2
+      return 1
+    }
+    sudo chmod 666 "$OMARCHY_INSTALL_LOG_FILE" || true
+  fi
+
+  # Write start message - ensure it actually writes
+  if ! echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting: $script" >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1; then
+    echo "ERROR: Failed to write to log file: $OMARCHY_INSTALL_LOG_FILE" >&2
+    return 1
+  fi
 
   # Use bash -c to create a clean subshell
   bash -c "source '$script'" </dev/null >>"$OMARCHY_INSTALL_LOG_FILE" 2>&1
