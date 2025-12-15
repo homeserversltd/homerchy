@@ -48,18 +48,27 @@ else
     export OMARCHY_PHASE_LOG_FILE="$phase_log_file"
   }
 
-  setup_phase_log "preflight"
-  source "$OMARCHY_INSTALL/preflight/all.sh"
+  # Helper to run phase - prefers Python over shell
+  run_phase() {
+    local phase_name="$1"
+    setup_phase_log "$phase_name"
+    
+    local python_all="$OMARCHY_INSTALL/$phase_name/all.py"
+    local shell_all="$OMARCHY_INSTALL/$phase_name/all.sh"
+    
+    if [ -f "$python_all" ] && command -v python3 >/dev/null 2>&1; then
+      python3 "$python_all"
+    elif [ -f "$shell_all" ]; then
+      source "$shell_all"
+    else
+      echo "ERROR: No all.py or all.sh found for phase: $phase_name" >&2
+      return 1
+    fi
+  }
 
-  setup_phase_log "packaging"
-  source "$OMARCHY_INSTALL/packaging/all.sh"
-
-  setup_phase_log "config"
-  source "$OMARCHY_INSTALL/config/all.sh"
-
-  setup_phase_log "login"
-  source "$OMARCHY_INSTALL/login/all.sh"
-
-  setup_phase_log "post-install"
-  source "$OMARCHY_INSTALL/post-install/all.sh"
+  run_phase "preflight"
+  run_phase "packaging"
+  run_phase "config"
+  run_phase "login"
+  run_phase "post-install"
 fi

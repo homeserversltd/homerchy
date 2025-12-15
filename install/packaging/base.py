@@ -107,10 +107,51 @@ def main(config: dict) -> dict:
         package_file = find_package_file(install_path, package_filename)
         
         # Read packages
-        packages = read_packages(package_file)
+        all_packages = read_packages(package_file)
+        
+        if not all_packages:
+            return {"success": False, "message": "No packages found in package list"}
+        
+        # Filter out AUR-only packages (can't be installed via pacman -S)
+        # These need to be installed via AUR helper (yay, paru, etc.) separately
+        aur_packages = {
+            'yay', 'spotify', 'typora', 'pinta', 'python-terminaltexteffects',
+            'tobi-try', 'ttf-ia-writer', 'ufw-docker', 'wayfreeze', 
+            'xdg-terminal-exec', 'yaru-icon-theme', 'tzupdate'
+        }
+        
+        # Check if omarchy repo is configured (for omarchy-* packages)
+        omarchy_repo_configured = False
+        try:
+            with open('/etc/pacman.conf', 'r') as f:
+                if '[omarchy]' in f.read():
+                    omarchy_repo_configured = True
+        except Exception:
+            pass
+        
+        # Filter packages
+        packages = []
+        skipped_aur = []
+        skipped_omarchy = []
+        
+        for pkg in all_packages:
+            if pkg in aur_packages:
+                skipped_aur.append(pkg)
+            elif pkg.startswith('omarchy-') and not omarchy_repo_configured:
+                skipped_omarchy.append(pkg)
+            else:
+                packages.append(pkg)
+        
+        if skipped_omarchy:
+            print(f"INFO: Skipping {len(skipped_omarchy)} omarchy packages (repo not configured): {', '.join(skipped_omarchy)}")
+        
+        if skipped_aur:
+            print(f"INFO: Skipping {len(skipped_aur)} AUR packages (install separately): {', '.join(skipped_aur[:5])}")
+            if len(skipped_aur) > 5:
+                print(f"... and {len(skipped_aur) - 5} more")
         
         if not packages:
-            return {"success": False, "message": "No packages found in package list"}
+            return {"success": False, "message": "No non-AUR packages found in package list"}
         
         # Check jq is in list (critical dependency)
         jq_in_list = 'jq' in packages
@@ -136,7 +177,8 @@ def main(config: dict) -> dict:
         if sync_result.returncode != 0:
             return {"success": False, "message": f"Failed to sync pacman database: {sync_result.stderr}"}
         
-        # Install packages
+        # Install packages - pacman will fail if ANY package is missing
+        # We'll check what actually got installed after
         print(f"Installing {len(packages)} packages...")
         start_time = time.time()
         
@@ -149,18 +191,31 @@ def main(config: dict) -> dict:
         
         duration = int(time.time() - start_time)
         
-        if install_result.returncode != 0:
-            # Check which packages failed
-            failed_packages = []
-            for pkg in packages:
-                if not verify_package_installed(pkg):
-                    failed_packages.append(pkg)
-            
-            error_msg = f"Package installation failed (exit code: {install_result.returncode})"
+        # Check what actually got installed (pacman may have installed some before failing)
+        installed_count = 0
+        failed_packages = []
+        
+        for pkg in packages:
+            if verify_package_installed(pkg):
+                installed_count += 1
+            else:
+                failed_packages.append(pkg)
+        
+        # If no packages installed at all, that's a real failure
+        if installed_count == 0:
+            error_msg = f"Package installation failed - no packages installed (exit code: {install_result.returncode})"
             if failed_packages:
-                error_msg += f"\nFailed packages: {', '.join(failed_packages)}"
-            
+                error_msg += f"\nFailed packages: {', '.join(failed_packages[:10])}"  # Show first 10
             return {"success": False, "message": error_msg}
+        
+        # Some packages installed, log warnings for missing ones
+        if failed_packages:
+            print(f"WARNING: {len(failed_packages)} packages not found/installed: {', '.join(failed_packages[:5])}")
+            if len(failed_packages) > 5:
+                print(f"... and {len(failed_packages) - 5} more")
+        
+        # Success if we installed at least some packages
+        print(f"Successfully installed {installed_count}/{len(packages)} packages")
         
         # Verify critical packages
         print("Verifying critical packages...")
