@@ -5,6 +5,17 @@
 
 BASE_LOG_FILE="/var/log/omarchy-base-install.log"
 TIMESTAMP() { date '+%Y-%m-%d %H:%M:%S'; }
+
+# Create the separate base log file FIRST, before defining LOG functions
+create_output=$(sudo touch "$BASE_LOG_FILE" 2>&1)
+if [ $? -ne 0 ]; then
+  echo "[$(TIMESTAMP)] packaging/base.sh: ERROR: Failed to create base log file: $create_output" >&2
+  # Don't exit - continue without detailed logging
+else
+  sudo chmod 666 "$BASE_LOG_FILE" 2>&1 || true
+fi
+
+# NOW define LOG functions (file exists, so they can write to it)
 LOG() {
   local msg="[$(TIMESTAMP)] packaging/base.sh: $*"
   # Write ONLY to the separate base log file
@@ -20,6 +31,7 @@ LOG_ERROR() {
   echo "$msg" >&2
 }
 
+# NOW safe to call LOG() - file exists
 LOG "=== BASE.SH STARTED ==="
 LOG "Detailed log file: $BASE_LOG_FILE"
 LOG "Main install log: ${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}"
@@ -28,17 +40,7 @@ LOG "Current directory: $(pwd)"
 LOG "User: $(whoami)"
 LOG "Sudo available: $(command -v sudo >/dev/null && echo 'YES' || echo 'NO')"
 LOG "Pacman available: $(command -v pacman >/dev/null && echo 'YES' || echo 'NO')"
-
-# Create the separate base log file
-LOG "Creating separate base log file: $BASE_LOG_FILE"
-create_output=$(sudo touch "$BASE_LOG_FILE" 2>&1)
-if [ $? -ne 0 ]; then
-  LOG_ERROR "Failed to create base log file: $create_output"
-  # Don't exit - continue without detailed logging
-else
-  sudo chmod 666 "$BASE_LOG_FILE" 2>&1 || true
-  LOG "Base log file created successfully"
-fi
+LOG "Base log file created successfully"
 
 PACKAGE_FILE="${OMARCHY_INSTALL}/omarchy-base.packages"
 LOG "Reading package list from: $PACKAGE_FILE"

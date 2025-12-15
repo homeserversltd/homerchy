@@ -7,6 +7,16 @@ set -euo pipefail
 
 PREBUILD_LOG_FILE="/var/log/omarchy-prebuild-install.log"
 TIMESTAMP() { date '+%Y-%m-%d %H:%M:%S'; }
+
+# Create the separate prebuild log file FIRST, before defining LOG functions
+create_output=$(sudo touch "$PREBUILD_LOG_FILE" 2>&1)
+if [ $? -ne 0 ]; then
+  echo "[$(TIMESTAMP)] post-install/prebuild.sh: ERROR: Failed to create prebuild log file: $create_output" >&2
+else
+  sudo chmod 666 "$PREBUILD_LOG_FILE" 2>&1 || true
+fi
+
+# NOW define LOG functions (file exists, so they can write to it)
 LOG() {
   local msg="[$(TIMESTAMP)] post-install/prebuild.sh: $*"
   # Write ONLY to the separate prebuild log file
@@ -22,21 +32,14 @@ LOG_ERROR() {
   echo "$msg" >&2
 }
 
-# Create the separate prebuild log file
+# NOW safe to call LOG() - file exists
 LOG "=== PREBUILD.SH STARTED ==="
 LOG "Detailed log file: $PREBUILD_LOG_FILE"
 LOG "Main install log: ${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}"
 LOG "OMARCHY_PATH: ${OMARCHY_PATH:-NOT SET}"
 LOG "Current directory: $(pwd)"
 LOG "User: $(whoami)"
-
-create_output=$(sudo touch "$PREBUILD_LOG_FILE" 2>&1)
-if [ $? -ne 0 ]; then
-  LOG_ERROR "Failed to create prebuild log file: $create_output"
-else
-  sudo chmod 666 "$PREBUILD_LOG_FILE" 2>&1 || true
-  LOG "Prebuild log file created successfully"
-fi
+LOG "Prebuild log file created successfully"
 
 # Determine prebuild directory location
 PREBUILD_DIR="${OMARCHY_PATH}/prebuild"

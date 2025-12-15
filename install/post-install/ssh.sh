@@ -5,6 +5,16 @@
 
 SSH_LOG_FILE="/var/log/omarchy-ssh-install.log"
 TIMESTAMP() { date '+%Y-%m-%d %H:%M:%S'; }
+
+# Create the separate ssh log file FIRST, before defining LOG functions
+create_output=$(sudo touch "$SSH_LOG_FILE" 2>&1)
+if [ $? -ne 0 ]; then
+  echo "[$(TIMESTAMP)] post-install/ssh.sh: ERROR: Failed to create ssh log file: $create_output" >&2
+else
+  sudo chmod 666 "$SSH_LOG_FILE" 2>&1 || true
+fi
+
+# NOW define LOG functions (file exists, so they can write to it)
 LOG() {
   local msg="[$(TIMESTAMP)] post-install/ssh.sh: $*"
   # Write ONLY to the separate ssh log file
@@ -20,21 +30,14 @@ LOG_ERROR() {
   echo "$msg" >&2
 }
 
-# Create the separate ssh log file
+# NOW safe to call LOG() - file exists
 LOG "=== SSH.SH STARTED ==="
 LOG "Detailed log file: $SSH_LOG_FILE"
 LOG "Main install log: ${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}"
 LOG "OMARCHY_VM_TEST: ${OMARCHY_VM_TEST:-NOT SET}"
 LOG "Current directory: $(pwd)"
 LOG "User: $(whoami)"
-
-create_output=$(sudo touch "$SSH_LOG_FILE" 2>&1)
-if [ $? -ne 0 ]; then
-  LOG_ERROR "Failed to create ssh log file: $create_output"
-else
-  sudo chmod 666 "$SSH_LOG_FILE" 2>&1 || true
-  LOG "SSH log file created successfully"
-fi
+LOG "SSH log file created successfully"
 
 # Check if we're in a VM by checking for VM test environment signal
 LOG "Checking if running in VM..."
