@@ -106,13 +106,38 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
     if offline_mirror_dir.exists():
         # Get list of existing package files (excluding .sig files)
         existing_files = [f for f in offline_mirror_dir.glob('*.pkg.tar.*') if not f.name.endswith('.sig')]
-        # Try to match package names from existing files
-        for pkg_name in package_list:
-            # Check if any existing file starts with this package name
+        # Extract package names from existing files using repo-query (most reliable)
+        # or filename parsing (fallback)
+        existing_package_names = set()
+        if shutil.which('repo-query'):
             for existing_file in existing_files:
-                if existing_file.name.startswith(f"{pkg_name}-"):
-                    existing_packages.add(pkg_name)
-                    break
+                result = subprocess.run(
+                    ['repo-query', '-f', '%n', str(existing_file)],
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    existing_package_names.add(result.stdout.strip())
+        else:
+            # Fallback: parse filenames (less reliable, may miss packages with dashes in version)
+            for existing_file in existing_files:
+                # Remove .pkg.tar.zst or .pkg.tar.xz extension
+                base_name = existing_file.name
+                if base_name.endswith('.pkg.tar.zst'):
+                    base_name = base_name[:-13]
+                elif base_name.endswith('.pkg.tar.xz'):
+                    base_name = base_name[:-11]
+                # Format: name-version-release-arch
+                # Split by '-' and assume last 3 parts are version-release-arch
+                parts = base_name.split('-')
+                if len(parts) >= 4:
+                    pkg_name = '-'.join(parts[:-3])
+                    existing_package_names.add(pkg_name)
+        
+        # Match package names exactly (not by prefix)
+        for pkg_name in package_list:
+            if pkg_name in existing_package_names:
+                existing_packages.add(pkg_name)
     
     # Filter out packages that already exist
     packages_to_download = [pkg for pkg in package_list if pkg not in existing_packages]

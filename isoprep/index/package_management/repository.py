@@ -59,7 +59,8 @@ def create_offline_repository(offline_mirror_dir: Path):
     # Check if offline database exists and is valid (don't require omarchy databases for cache check)
     # We'll create omarchy databases if they're missing
     if db_path.exists() and db_files_path.exists():
-        # Check if database is newer than all package files
+        # First check: Check if database is newer than all package files (mtime check)
+        mtime_check_passed = False
         try:
             db_mtime = db_path.stat().st_mtime
             db_files_mtime = db_files_path.stat().st_mtime
@@ -74,10 +75,105 @@ def create_offline_repository(offline_mirror_dir: Path):
                     break
             
             if not packages_changed:
-                cache_valid = True
-                print(f"{Colors.GREEN}✓ Repository database cache is valid (packages unchanged){Colors.NC}")
+                mtime_check_passed = True
         except (OSError, AttributeError):
-            # If we can't check mtimes, regenerate to be safe
+            # If we can't check mtimes, skip mtime check
+            mtime_check_passed = False
+        
+        # Second check: Verify all package files are actually in the database
+        # This catches cases where packages were added but database wasn't regenerated
+        if mtime_check_passed:
+            try:
+                # Extract package names from package files
+                # Package files are like: linux-firmware-20241215.1-1-x86_64.pkg.tar.zst
+                # We need to extract "linux-firmware" from the filename
+                # Use repo-query to get package names from files (most reliable method)
+                package_names_in_dir = set()
+                if shutil.which('repo-query'):
+                    # repo-query can query individual package files with -f flag
+                    for pkg_file in package_files:
+                        result = subprocess.run(
+                            ['repo-query', '-f', '%n', str(pkg_file)],
+                            capture_output=True,
+                            text=True
+                        )
+                        if result.returncode == 0 and result.stdout.strip():
+                            package_names_in_dir.add(result.stdout.strip())
+                        else:
+                            # Fallback: try to parse filename
+                            # Format: name-version-release-arch.pkg.tar.zst
+                            # Remove .pkg.tar.zst or .pkg.tar.xz extension
+                            base_name = pkg_file.name
+                            if base_name.endswith('.pkg.tar.zst'):
+                                base_name = base_name[:-13]
+                            elif base_name.endswith('.pkg.tar.xz'):
+                                base_name = base_name[:-11]
+                            # Try to find arch pattern (x86_64, any, etc.) and work backwards
+                            # Arch is usually the last part before .pkg.tar
+                            parts = base_name.split('-')
+                            if len(parts) >= 4:
+                                # Assume last 3 parts are version-release-arch
+                                # This is a heuristic and may fail for packages with dashes in version
+                                pkg_name = '-'.join(parts[:-3])
+                                package_names_in_dir.add(pkg_name)
+                            else:
+                                # Can't parse, skip this file (shouldn't happen)
+                                print(f"{Colors.YELLOW}⚠ Could not extract package name from {pkg_file.name}{Colors.NC}")
+                else:
+                    # repo-query not available, use filename parsing (less reliable)
+                    for pkg_file in package_files:
+                        # Remove .pkg.tar.zst or .pkg.tar.xz extension
+                        base_name = pkg_file.name
+                        if base_name.endswith('.pkg.tar.zst'):
+                            base_name = base_name[:-13]
+                        elif base_name.endswith('.pkg.tar.xz'):
+                            base_name = base_name[:-11]
+                        parts = base_name.split('-')
+                        if len(parts) >= 4:
+                            # Assume last 3 parts are version-release-arch
+                            pkg_name = '-'.join(parts[:-3])
+                            package_names_in_dir.add(pkg_name)
+                        else:
+                            package_names_in_dir.add(base_name)
+                
+                # Query database for all packages using repo-query
+                if shutil.which('repo-query'):
+                    result = subprocess.run(
+                        ['repo-query', '-l', str(db_path)],
+                        capture_output=True,
+                        text=True
+                    )
+                    if result.returncode == 0:
+                        # repo-query outputs one package name per line
+                        package_names_in_db = set()
+                        for line in result.stdout.strip().split('\n'):
+                            if line.strip():
+                                package_names_in_db.add(line.strip())
+                        
+                        # Check if all packages in directory are in database
+                        missing_packages = package_names_in_dir - package_names_in_db
+                        if missing_packages:
+                            print(f"{Colors.YELLOW}⚠ Repository database missing {len(missing_packages)} packages: {', '.join(sorted(missing_packages)[:5])}{'...' if len(missing_packages) > 5 else ''}{Colors.NC}")
+                            cache_valid = False
+                        else:
+                            cache_valid = True
+                            print(f"{Colors.GREEN}✓ Repository database cache is valid (all {len(package_names_in_dir)} packages present){Colors.NC}")
+                    else:
+                        # repo-query failed, can't verify - regenerate to be safe
+                        print(f"{Colors.YELLOW}⚠ Could not query repository database, regenerating...{Colors.NC}")
+                        cache_valid = False
+                else:
+                    # repo-query not available, fall back to mtime check only
+                    print(f"{Colors.YELLOW}⚠ repo-query not available, using mtime check only{Colors.NC}")
+                    cache_valid = mtime_check_passed
+                    if cache_valid:
+                        print(f"{Colors.GREEN}✓ Repository database cache is valid (packages unchanged){Colors.NC}")
+            except Exception as e:
+                # If verification fails, regenerate to be safe
+                print(f"{Colors.YELLOW}⚠ Error verifying repository database: {e}, regenerating...{Colors.NC}")
+                cache_valid = False
+        else:
+            # Mtime check failed, need to regenerate
             cache_valid = False
     
     if cache_valid:
