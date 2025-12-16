@@ -4,3 +4,4 @@
 *.theirs
 *.base
 *.qcow2
+*.cpython**

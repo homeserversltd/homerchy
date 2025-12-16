@@ -75,10 +75,13 @@ def main(phase_path: Path, config: dict) -> dict:
             shutil.move(str(temp_cache), str(cache_dir))
             print(f"{Colors.GREEN}✓ Restored offline mirror cache{Colors.NC}")
     
-    # Remove cached squashfs to force rebuild
+    # Clean up preserved archiso-tmp to avoid stale state issues
+    # We preserve it for package cache, but need to remove stale build artifacts
     if preserve_archiso_tmp:
         print(f"{Colors.BLUE}Preserving mkarchiso work directory for faster rebuild (package cache){Colors.NC}")
         import subprocess
+        
+        # Remove cached squashfs to force rebuild
         cached_squashfs = archiso_tmp_dir / 'iso' / 'arch' / 'x86_64' / 'airootfs.sfs'
         if cached_squashfs.exists():
             print(f"{Colors.BLUE}Removing cached squashfs to force rebuild...{Colors.NC}")
@@ -86,6 +89,42 @@ def main(phase_path: Path, config: dict) -> dict:
                 cached_squashfs.unlink()
             except PermissionError:
                 subprocess.run(['sudo', 'rm', '-f', str(cached_squashfs)], check=False)
+        
+        # Remove entire x86_64 directory to avoid initramfs errors
+        # mkarchiso uses state files to track progress, and stale state causes issues
+        stale_x86_64 = archiso_tmp_dir / 'x86_64'
+        if stale_x86_64.exists():
+            print(f"{Colors.BLUE}Removing stale x86_64 directory to avoid initramfs errors...{Colors.NC}")
+            try:
+                shutil.rmtree(stale_x86_64)
+            except PermissionError:
+                subprocess.run(['sudo', 'rm', '-rf', str(stale_x86_64)], check=False)
+        
+        # Remove mkarchiso state files that track build progress
+        # These cause mkarchiso to skip steps that need to be redone
+        state_files = [
+            'base._make_packages',
+            'base._make_custom_airootfs',
+            'base._make_customize_airootfs',
+            'base._check_if_initramfs_has_ucode',
+        ]
+        for state_file in state_files:
+            state_path = archiso_tmp_dir / state_file
+            if state_path.exists():
+                print(f"{Colors.BLUE}Removing stale state file: {state_file}...{Colors.NC}")
+                try:
+                    state_path.unlink()
+                except PermissionError:
+                    subprocess.run(['sudo', 'rm', '-f', str(state_path)], check=False)
+        
+        # Also clean up any stale boot directories in iso/arch
+        stale_boot = archiso_tmp_dir / 'iso' / 'arch' / 'boot'
+        if stale_boot.exists():
+            print(f"{Colors.BLUE}Removing stale boot directory...{Colors.NC}")
+            try:
+                shutil.rmtree(stale_boot)
+            except PermissionError:
+                subprocess.run(['sudo', 'rm', '-rf', str(stale_boot)], check=False)
     
     print(f"{Colors.GREEN}✓ Prepare phase complete{Colors.NC}")
     

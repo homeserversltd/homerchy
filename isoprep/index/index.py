@@ -70,11 +70,20 @@ class Orchestrator:
         
         # Import and execute phase
         import importlib.util
-        spec = importlib.util.spec_from_file_location(f"homerchy.isoprep.{phase_name}", phase_index)
+        # Add phase directory parent to path BEFORE loading (for relative imports to work)
+        # This ensures that when the module uses relative imports like "from .download import ...",
+        # Python can resolve them correctly
+        sys.path.insert(0, str(phase_dir.parent))
+        
+        # Use phase directory name as module name so relative imports resolve correctly
+        # The module name should match the directory structure for relative imports to work
+        module_name = f"{phase_name}.index"
+        spec = importlib.util.spec_from_file_location(module_name, phase_index)
         module = importlib.util.module_from_spec(spec)
         
-        # Add phase directory to path
-        sys.path.insert(0, str(phase_dir.parent))
+        # Set __package__ attribute so relative imports work
+        # This tells Python what package this module belongs to
+        module.__package__ = phase_name
         spec.loader.exec_module(module)
         
         # Prepare config for phase (include paths and previous phase results)
