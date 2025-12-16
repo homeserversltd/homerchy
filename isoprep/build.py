@@ -7,6 +7,7 @@ Builds Homerchy ISO from local repository source.
 """
 
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -549,7 +550,7 @@ def main():
             except PermissionError:
                 # File owned by root, use sudo to remove
                 subprocess.run(['sudo', 'rm', '-f', str(cached_squashfs)], check=False)
-    
+        
     print(f"{Colors.BLUE}Assembling ISO profile...{Colors.NC}")
     
     # 1. Copy base Releng config from submodule
@@ -641,12 +642,32 @@ def main():
         syslinux_cfg = profile_dir / 'syslinux' / 'archiso_sys.cfg'
         if syslinux_cfg.exists():
             content = syslinux_cfg.read_text()
-            import re
             content = re.sub(r'^TIMEOUT \d+', 'TIMEOUT 0', content, flags=re.MULTILINE)
             syslinux_cfg.write_text(content)
             print(f"{Colors.GREEN}Boot timeout set to 0 for instant VM boot{Colors.NC}")
     
-    # 3b. Configure pacman.conf for build vs ISO
+    # 3b. Ensure mirrorlist exists in airootfs/etc/pacman.d (required for pacman.conf Include directive)
+    # This must be done early so mkarchiso can copy it when it processes airootfs
+    airootfs_etc = profile_dir / 'airootfs' / 'etc'
+    airootfs_etc.mkdir(parents=True, exist_ok=True)
+    pacman_d_dir = airootfs_etc / 'pacman.d'
+    pacman_d_dir.mkdir(parents=True, exist_ok=True)
+    mirrorlist_file = pacman_d_dir / 'mirrorlist'
+    if not mirrorlist_file.exists():
+        # Create a minimal mirrorlist file with a valid Server entry
+        # This is needed for pacman.conf's Include directive to work during build
+        # The actual mirrorlist will be configured during installation
+        mirrorlist_content = """#
+# Arch Linux repository mirrorlist
+# Generated for ISO build
+# Actual mirrors will be configured during installation
+#
+Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch
+"""
+        mirrorlist_file.write_text(mirrorlist_content)
+        print(f"{Colors.GREEN}✓ Created mirrorlist file in airootfs{Colors.NC}")
+    
+    # 3c. Configure pacman.conf for build vs ISO
     # mkarchiso needs online repos during build to install base ISO packages
     # But the ISO itself should use offline mirror when booted
     # Use the releng pacman.conf as base (has standard Arch repos) and add omarchy repo
@@ -756,11 +777,21 @@ Server = https://pkgs.omarchy.org/stable/$arch
     # 5. Customize Package List
     packages_file = profile_dir / 'packages.x86_64'
     # Ensure syslinux is in the package list (required for BIOS boot)
+    # Read existing content, add syslinux if missing, then append custom packages
     if packages_file.exists():
         content = packages_file.read_text()
-        if 'syslinux' not in content:
+        lines = [line.strip() for line in content.split('\n') if line.strip() and not line.strip().startswith('#')]
+        # Check if syslinux is already in the file (case-insensitive)
+        has_syslinux = any('syslinux' in line.lower() for line in lines)
+        if not has_syslinux:
+            # Add syslinux before appending other packages
             with open(packages_file, 'a') as f:
                 f.write('syslinux\n')
+    else:
+        # File doesn't exist - create it with syslinux
+        packages_file.write_text('syslinux\n')
+    
+    # Append custom packages
     with open(packages_file, 'a') as f:
         f.write('git\ngum\njq\nopenssl\n')
     
@@ -786,8 +817,7 @@ Server = https://pkgs.omarchy.org/stable/$arch
     # 7b. CRITICAL: Ensure airootfs/etc/pacman.conf uses online repos (do this LAST, after all overlays)
     # mkarchiso reads airootfs/etc/pacman.conf and would try to use offline mirror if present
     # Copy the profile pacman.conf (online) to airootfs/etc so mkarchiso sees online repos
-    airootfs_etc = profile_dir / 'airootfs' / 'etc'
-    airootfs_etc.mkdir(parents=True, exist_ok=True)
+    # Note: mirrorlist was already created in step 3b, so it should exist here
     profile_pacman_conf = profile_dir / 'pacman.conf'
     if profile_pacman_conf.exists():
         # Remove any existing pacman.conf in airootfs/etc that might have offline config
@@ -832,6 +862,46 @@ Server = https://pkgs.omarchy.org/stable/$arch
     print(f"{Colors.BLUE}Creating symlink with sudo: {system_mirror_dir} -> {cache_dir_absolute}{Colors.NC}")
     subprocess.run(['sudo', 'ln', '-sf', str(cache_dir_absolute), str(system_mirror_dir)], check=True)
     print(f"{Colors.GREEN}✓ Created symlink{Colors.NC}")
+    
+    # Final verification: Ensure syslinux is in packages.x86_64 before mkarchiso runs
+    packages_file = profile_dir / 'packages.x86_64'
+    if packages_file.exists():
+        content = packages_file.read_text()
+        # Check if syslinux is present (as a whole word, case-insensitive)
+        if not re.search(r'\bsyslinux\b', content, re.IGNORECASE):
+            print(f"{Colors.YELLOW}WARNING: syslinux not found in packages.x86_64, adding it...{Colors.NC}")
+            with open(packages_file, 'a') as f:
+                f.write('syslinux\n')
+        else:
+            print(f"{Colors.GREEN}✓ Verified syslinux is in packages.x86_64{Colors.NC}")
+    else:
+        print(f"{Colors.RED}ERROR: packages.x86_64 does not exist!{Colors.NC}")
+        sys.exit(1)
+    
+    # CRITICAL: Ensure mirrorlist exists in archiso-tmp before mkarchiso runs
+    # If archiso-tmp is preserved, mkarchiso might use existing airootfs that doesn't have mirrorlist
+    # Copy mirrorlist from profile to preserved archiso-tmp to ensure it exists
+    profile_mirrorlist = profile_dir / 'airootfs' / 'etc' / 'pacman.d' / 'mirrorlist'
+    if profile_mirrorlist.exists() and preserve_archiso_tmp:
+        preserved_airootfs = archiso_tmp_dir / 'x86_64' / 'airootfs'
+        if preserved_airootfs.exists():
+            preserved_mirrorlist = preserved_airootfs / 'etc' / 'pacman.d' / 'mirrorlist'
+            preserved_mirrorlist_dir = preserved_mirrorlist.parent
+            try:
+                preserved_mirrorlist_dir.mkdir(parents=True, exist_ok=True)
+                # Copy mirrorlist from profile to preserved archiso-tmp
+                shutil.copy2(profile_mirrorlist, preserved_mirrorlist)
+                print(f"{Colors.GREEN}✓ Copied mirrorlist to preserved archiso-tmp{Colors.NC}")
+            except PermissionError:
+                # Directory might be owned by root from previous sudo mkarchiso
+                # Use sudo to create directory and copy file
+                subprocess.run(['sudo', 'mkdir', '-p', str(preserved_mirrorlist_dir)], check=True)
+                subprocess.run(['sudo', 'cp', str(profile_mirrorlist), str(preserved_mirrorlist)], check=True)
+                # Fix ownership to current user
+                current_uid = os.getuid()
+                current_gid = os.getgid()
+                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(preserved_mirrorlist)], check=True)
+                print(f"{Colors.GREEN}✓ Copied mirrorlist to preserved archiso-tmp (with sudo){Colors.NC}")
     
     print(f"{Colors.BLUE}Building ISO with mkarchiso (Requires Sudo)...{Colors.NC}")
     print(f"Output will be in: {Colors.GREEN}{out_dir}{Colors.NC}")
