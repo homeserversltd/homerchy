@@ -268,7 +268,7 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
         print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from archinstall.packages{Colors.NC}")
     
     # 5. Essential base system packages (always needed)
-    essential_packages = ['base', 'base-devel', 'linux', 'linux-firmware', 'linux-headers']
+    essential_packages = ['base', 'base-devel', 'linux', 'linux-firmware', 'linux-headers', 'syslinux']
     all_packages.update(essential_packages)
     print(f"{Colors.GREEN}  ✓ Added {len(essential_packages)} essential base packages{Colors.NC}")
     
@@ -590,10 +590,20 @@ def main():
     
     # 3. Apply Homerchy Custom Overlays
     # Note: We skip pacman.conf here because we'll configure it separately for build vs ISO
+    # Also skip any pacman.conf files in subdirectories (like airootfs/etc/pacman.conf)
     configs_source = repo_root / 'iso-builder' / 'configs'
     if configs_source.exists():
+        def should_skip_pacman_conf(src_path, dest_path):
+            """Check if this is a pacman.conf file we should skip."""
+            if src_path.name == 'pacman.conf':
+                return True
+            # Also skip pacman.conf in airootfs/etc/
+            if 'airootfs' in str(src_path) and 'etc' in str(src_path) and src_path.name == 'pacman.conf':
+                return True
+            return False
+        
         for item in configs_source.iterdir():
-            # Skip pacman.conf - we'll configure it separately
+            # Skip pacman.conf at root level - we'll configure it separately
             if item.name == 'pacman.conf':
                 continue
             # Skip if we can't stat the item (doesn't exist or permission error)
@@ -605,7 +615,16 @@ def main():
                 continue
             dest = profile_dir / item.name
             if item.is_dir():
-                safe_copytree(item, dest, dirs_exist_ok=True)
+                # Use custom copytree that skips pacman.conf files
+                def ignore_pacman_conf(dir_path, names):
+                    """Ignore function to skip pacman.conf files."""
+                    ignored = []
+                    for name in names:
+                        full_path = Path(dir_path) / name
+                        if should_skip_pacman_conf(full_path, dest / name):
+                            ignored.append(name)
+                    return ignored
+                safe_copytree(item, dest, dirs_exist_ok=True, ignore=ignore_pacman_conf)
             else:
                 # Copy file or symlink (even if broken)
                 try:
@@ -736,6 +755,12 @@ Server = https://pkgs.omarchy.org/stable/$arch
     
     # 5. Customize Package List
     packages_file = profile_dir / 'packages.x86_64'
+    # Ensure syslinux is in the package list (required for BIOS boot)
+    if packages_file.exists():
+        content = packages_file.read_text()
+        if 'syslinux' not in content:
+            with open(packages_file, 'a') as f:
+                f.write('syslinux\n')
     with open(packages_file, 'a') as f:
         f.write('git\ngum\njq\nopenssl\n')
     
@@ -757,6 +782,28 @@ Server = https://pkgs.omarchy.org/stable/$arch
     
     # 7. Create offline repository database
     create_offline_repository(cache_dir)
+    
+    # 7b. CRITICAL: Ensure airootfs/etc/pacman.conf uses online repos (do this LAST, after all overlays)
+    # mkarchiso reads airootfs/etc/pacman.conf and would try to use offline mirror if present
+    # Copy the profile pacman.conf (online) to airootfs/etc so mkarchiso sees online repos
+    airootfs_etc = profile_dir / 'airootfs' / 'etc'
+    airootfs_etc.mkdir(parents=True, exist_ok=True)
+    profile_pacman_conf = profile_dir / 'pacman.conf'
+    if profile_pacman_conf.exists():
+        # Remove any existing pacman.conf in airootfs/etc that might have offline config
+        airootfs_pacman_conf = airootfs_etc / 'pacman.conf'
+        if airootfs_pacman_conf.exists():
+            print(f"{Colors.BLUE}Removing existing pacman.conf from airootfs/etc (may have offline config){Colors.NC}")
+            airootfs_pacman_conf.unlink()
+        # Copy profile pacman.conf (online) to airootfs/etc
+        shutil.copy2(profile_pacman_conf, airootfs_pacman_conf)
+        print(f"{Colors.GREEN}✓ Using online pacman.conf in airootfs/etc for mkarchiso build{Colors.NC}")
+        
+        # Verify it doesn't have offline repos
+        content = airootfs_pacman_conf.read_text()
+        if 'file:///var/cache/omarchy/mirror/offline' in content:
+            print(f"{Colors.RED}ERROR: airootfs/etc/pacman.conf still has offline mirror config!{Colors.NC}")
+            sys.exit(1)
     
     # 8. Create symlink so mkarchiso can find the offline mirror during build
     # mkarchiso uses the pacman.conf from the profile, which references /var/cache/omarchy/mirror/offline
