@@ -48,10 +48,16 @@ def create_offline_repository(offline_mirror_dir: Path):
         print(f"{Colors.BLUE}Found {len(sig_files)} signature files{Colors.NC}")
     
     # Check if we can reuse existing database
+    # We need to create databases for both [offline] and [omarchy] repos
+    # They point to the same directory, so we create one and symlink/copy the other
     db_path = offline_mirror_dir / 'offline.db.tar.gz'
     db_files_path = offline_mirror_dir / 'offline.files.tar.gz'
+    omarchy_db_path = offline_mirror_dir / 'omarchy.db.tar.gz'
+    omarchy_db_files_path = offline_mirror_dir / 'omarchy.files.tar.gz'
     
     cache_valid = False
+    # Check if offline database exists and is valid (don't require omarchy databases for cache check)
+    # We'll create omarchy databases if they're missing
     if db_path.exists() and db_files_path.exists():
         # Check if database is newer than all package files
         try:
@@ -78,6 +84,54 @@ def create_offline_repository(offline_mirror_dir: Path):
         # Verify database file size for sanity check
         db_size = db_path.stat().st_size
         print(f"{Colors.GREEN}✓ Using cached repository database ({db_size / 1024:.1f} KB){Colors.NC}")
+        # Always ensure omarchy database exists (might be missing if cache was from old version)
+        current_uid = os.getuid()
+        current_gid = os.getgid()
+        
+        if not omarchy_db_path.exists() or not omarchy_db_files_path.exists():
+            print(f"{Colors.BLUE}Creating omarchy database symlinks...{Colors.NC}")
+            try:
+                if not omarchy_db_path.exists():
+                    omarchy_db_path.symlink_to('offline.db.tar.gz')
+                if not omarchy_db_files_path.exists():
+                    omarchy_db_files_path.symlink_to('offline.files.tar.gz')
+                print(f"{Colors.GREEN}✓ Created omarchy database symlinks{Colors.NC}")
+            except (OSError, PermissionError):
+                # If symlink fails, copy instead
+                shutil.copy2(db_path, omarchy_db_path)
+                shutil.copy2(db_files_path, omarchy_db_files_path)
+                # Fix ownership of copied files
+                for db_file in [omarchy_db_path, omarchy_db_files_path]:
+                    try:
+                        os.chown(db_file, current_uid, current_gid)
+                    except PermissionError:
+                        subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(db_file)], check=True)
+                print(f"{Colors.GREEN}✓ Created omarchy database copies{Colors.NC}")
+        else:
+            print(f"{Colors.GREEN}✓ Omarchy database already exists{Colors.NC}")
+        
+        # Create symlinks without .tar.gz extension (pacman needs both)
+        omarchy_db_short = offline_mirror_dir / 'omarchy.db'
+        omarchy_db_files_short = offline_mirror_dir / 'omarchy.files'
+        if not omarchy_db_short.exists():
+            try:
+                omarchy_db_short.symlink_to('omarchy.db.tar.gz')
+            except (OSError, PermissionError):
+                shutil.copy2(omarchy_db_path, omarchy_db_short)
+                try:
+                    os.chown(omarchy_db_short, current_uid, current_gid)
+                except PermissionError:
+                    subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(omarchy_db_short)], check=True)
+        
+        if not omarchy_db_files_short.exists():
+            try:
+                omarchy_db_files_short.symlink_to('omarchy.files.tar.gz')
+            except (OSError, PermissionError):
+                shutil.copy2(omarchy_db_files_path, omarchy_db_files_short)
+                try:
+                    os.chown(omarchy_db_files_short, current_uid, current_gid)
+                except PermissionError:
+                    subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(omarchy_db_files_short)], check=True)
         return
     
     # Need to regenerate database
@@ -96,6 +150,19 @@ def create_offline_repository(offline_mirror_dir: Path):
             db_files_path.unlink()
         except PermissionError:
             subprocess.run(['sudo', 'rm', '-f', str(db_files_path)], check=False)
+    
+    # Remove omarchy database files if they exist
+    if omarchy_db_path.exists():
+        try:
+            omarchy_db_path.unlink()
+        except PermissionError:
+            subprocess.run(['sudo', 'rm', '-f', str(omarchy_db_path)], check=False)
+    
+    if omarchy_db_files_path.exists():
+        try:
+            omarchy_db_files_path.unlink()
+        except PermissionError:
+            subprocess.run(['sudo', 'rm', '-f', str(omarchy_db_files_path)], check=False)
     
     # Run repo-add to create database
     # repo-add will automatically detect and add all .pkg.tar.* files in the directory
@@ -122,10 +189,55 @@ def create_offline_repository(offline_mirror_dir: Path):
             except PermissionError:
                 subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(db_file)], check=True)
     
+    # Create omarchy database (same content, different name for pacman.conf compatibility)
+    # Try symlink first (more efficient), fall back to copy if symlink fails
+    print(f"{Colors.BLUE}Creating omarchy repository database...{Colors.NC}")
+    try:
+        omarchy_db_path.symlink_to('offline.db.tar.gz')
+        omarchy_db_files_path.symlink_to('offline.files.tar.gz')
+        print(f"{Colors.GREEN}✓ Created omarchy database symlinks{Colors.NC}")
+    except (OSError, PermissionError):
+        # If symlink fails (e.g., cross-filesystem), copy instead
+        shutil.copy2(db_path, omarchy_db_path)
+        shutil.copy2(db_files_path, omarchy_db_files_path)
+        # Fix ownership of copied files
+        for db_file in [omarchy_db_path, omarchy_db_files_path]:
+            try:
+                os.chown(db_file, current_uid, current_gid)
+            except PermissionError:
+                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(db_file)], check=True)
+        print(f"{Colors.GREEN}✓ Created omarchy database copies{Colors.NC}")
+    
+    # Create symlinks without .tar.gz extension (pacman needs both)
+    # repo-add creates offline.db automatically, but we need omarchy.db
+    omarchy_db_short = offline_mirror_dir / 'omarchy.db'
+    omarchy_db_files_short = offline_mirror_dir / 'omarchy.files'
+    if not omarchy_db_short.exists():
+        try:
+            omarchy_db_short.symlink_to('omarchy.db.tar.gz')
+        except (OSError, PermissionError):
+            # If symlink fails, copy instead
+            shutil.copy2(omarchy_db_path, omarchy_db_short)
+            try:
+                os.chown(omarchy_db_short, current_uid, current_gid)
+            except PermissionError:
+                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(omarchy_db_short)], check=True)
+    
+    if not omarchy_db_files_short.exists():
+        try:
+            omarchy_db_files_short.symlink_to('omarchy.files.tar.gz')
+        except (OSError, PermissionError):
+            # If symlink fails, copy instead
+            shutil.copy2(omarchy_db_files_path, omarchy_db_files_short)
+            try:
+                os.chown(omarchy_db_files_short, current_uid, current_gid)
+            except PermissionError:
+                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(omarchy_db_files_short)], check=True)
+    
     print(f"{Colors.GREEN}✓ Created repository database: {db_path.name}{Colors.NC}")
     
     # Verify database was created
-    if db_path.exists():
+    if db_path.exists() and omarchy_db_path.exists():
         db_size = db_path.stat().st_size
         print(f"{Colors.GREEN}✓ Repository database size: {db_size / 1024:.1f} KB{Colors.NC}")
     else:

@@ -206,6 +206,10 @@ def chroot_bash(*args, stdout=None, stderr=None):
 
 def install_base_system():
     """Install base Arch Linux system via archinstall."""
+    # Ensure OMARCHY_PATH is set before we need it
+    if 'OMARCHY_PATH' not in os.environ:
+        get_helpers_path()
+    
     debug_log("install_base_system: Initializing pacman keyring")
     
     # Initialize keyring if needed
@@ -244,16 +248,60 @@ def install_base_system():
         if package_count == 0:
             log("install_base_system: WARNING: Offline mirror is empty!")
     
-    # Verify pacman.conf is configured for offline mirror
+    # CRITICAL: Configure pacman.conf to use offline mirror BEFORE archinstall runs
+    # archinstall syncs the package database before reading the config, so pacman.conf must be correct
     pacman_conf_path = Path('/etc/pacman.conf')
     if pacman_conf_path.exists():
         pacman_conf_content = pacman_conf_path.read_text()
         if 'file:///var/cache/omarchy/mirror/offline' not in pacman_conf_content:
-            log("install_base_system: WARNING: pacman.conf does not appear to use offline mirror")
+            log("install_base_system: Configuring pacman.conf for offline mirror...")
+            # Read the offline pacman.conf template
+            # Use OMARCHY_PATH if set, otherwise try common paths
+            omarchy_path = Path(os.environ.get('OMARCHY_PATH', '/root/omarchy'))
+            offline_pacman_conf = omarchy_path / 'iso-builder' / 'configs' / 'pacman.conf'
+            if not offline_pacman_conf.exists():
+                # Try alternative path structure
+                offline_pacman_conf = omarchy_path / 'configs' / 'pacman.conf'
+            if offline_pacman_conf.exists():
+                offline_content = offline_pacman_conf.read_text()
+                # Backup original
+                backup_path = pacman_conf_path.with_suffix('.conf.backup')
+                pacman_conf_path.rename(backup_path)
+                # Write offline configuration
+                pacman_conf_path.write_text(offline_content)
+                log("install_base_system: ✓ Configured pacman.conf for offline mirror")
+            else:
+                log(f"install_base_system: WARNING: Offline pacman.conf template not found at {offline_pacman_conf}")
+                log("install_base_system: WARNING: Offline pacman.conf template not found, trying to modify existing...")
+                # Fallback: Modify existing pacman.conf to add offline repos
+                import re
+                # Remove all existing repo sections
+                modified_content = re.sub(r'\[.*?\].*?(?=\n\[|\Z)', '', pacman_conf_content, flags=re.DOTALL)
+                # Keep only the [options] section
+                options_match = re.search(r'\[options\].*?(?=\n\[|\Z)', pacman_conf_content, re.DOTALL)
+                if options_match:
+                    modified_content = options_match.group() + "\n\n"
+                # Add offline repos
+                offline_repos = """
+[offline]
+SigLevel = Optional TrustAll
+Server = file:///var/cache/omarchy/mirror/offline/
+
+[omarchy]
+SigLevel = Optional TrustAll
+Server = file:///var/cache/omarchy/mirror/offline/
+"""
+                modified_content += offline_repos
+                # Backup and write
+                backup_path = pacman_conf_path.with_suffix('.conf.backup')
+                pacman_conf_path.rename(backup_path)
+                pacman_conf_path.write_text(modified_content)
+                log("install_base_system: ✓ Modified pacman.conf for offline mirror")
         else:
-            log("install_base_system: ✓ pacman.conf configured for offline mirror")
+            log("install_base_system: ✓ pacman.conf already configured for offline mirror")
     else:
-        log("install_base_system: WARNING: pacman.conf not found!")
+        log("install_base_system: ERROR: pacman.conf not found!")
+        return False
     
     debug_log("install_base_system: Cleaning up old mounts")
     # Unmount any existing mounts
