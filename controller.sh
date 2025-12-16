@@ -326,11 +326,11 @@ function do_build() {
         # Cleanup work directory
         cleanup_build_workdir
         trap - EXIT
-        exit $build_exit
+        return $build_exit
     else
         echo "Error: Build script not found at $BUILD_SCRIPT"
         cleanup_build_workdir
-        exit 1
+        return 1
     fi
 }
 
@@ -388,13 +388,23 @@ while [[ $# -gt 0 ]]; do
             ;;
         -f|--full)
             do_build
-            do_launch
+            if [ $? -eq 0 ]; then
+                do_launch
+            else
+                echo "Build failed, skipping VM launch."
+                exit 1
+            fi
             shift
             ;;
         -F|--full-clean)
             do_eject "true"
             do_build
-            do_launch
+            if [ $? -eq 0 ]; then
+                do_launch
+            else
+                echo "Build failed, skipping VM launch."
+                exit 1
+            fi
             shift
             ;;
         -d|--deploy)

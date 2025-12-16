@@ -136,6 +136,7 @@ def create_offline_repository(offline_mirror_dir: Path):
     
     # Need to regenerate database
     print(f"{Colors.BLUE}Regenerating repository database from {len(package_files)} package files...{Colors.NC}")
+    print(f"{Colors.YELLOW}⚠ This may take a minute for large package sets...{Colors.NC}")
     
     # Remove existing database if it exists
     if db_path.exists():

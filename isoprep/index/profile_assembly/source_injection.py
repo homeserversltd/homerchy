@@ -28,6 +28,7 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
         profile_dir: ISO profile directory
     """
     print(f"{Colors.BLUE}Injecting current repository source...{Colors.NC}")
+    print(f"{Colors.YELLOW}⚠ This operation may take several minutes for large repositories...{Colors.NC}")
     homerchy_target = profile_dir / 'airootfs' / 'root' / 'homerchy'
     homerchy_target.mkdir(parents=True, exist_ok=True)
     
@@ -49,7 +50,8 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
         # Use guaranteed copy to ensure all files are transferred and updated
         if item.is_dir():
             # guaranteed_copytree ensures all files are copied/updated
-            guaranteed_copytree(item, dest, ignore=shutil.ignore_patterns('.git'))
+            # Show progress for long-running copy operations
+            guaranteed_copytree(item, dest, ignore=shutil.ignore_patterns('.git'), show_progress=True)
         else:
             # For files, copy if source is newer or destination doesn't exist
             if not dest.exists() or item.stat().st_mtime > dest.stat().st_mtime:

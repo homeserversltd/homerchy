@@ -10,7 +10,7 @@ import json
 import os
 import sys
 from pathlib import Path
-
+import re
 # Add utils to path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -38,6 +38,8 @@ class Orchestrator:
     
     def _resolve_paths(self) -> dict:
         """Resolve paths from config, expanding environment variables."""
+
+        
         paths_config = self.config.get('paths', {})
         resolved = {}
         
@@ -47,9 +49,21 @@ class Orchestrator:
             default_repo_root = Path(__file__).parent.parent.parent.resolve()
             os.environ['ISOPREP_REPO_ROOT'] = str(default_repo_root)
         
+        def expand_bash_var(value: str) -> str:
+            """Expand bash-style ${VAR:-default} syntax."""
+            # Pattern to match ${VAR:-default}
+            pattern = r'\$\{([^:}]+):-([^}]+)\}'
+            def replacer(match):
+                var_name = match.group(1)
+                default = match.group(2)
+                return os.environ.get(var_name, default)
+            return re.sub(pattern, replacer, value)
+        
         for key, value in paths_config.items():
-            # Expand environment variables
-            resolved_value = os.path.expandvars(value)
+            # First expand bash-style ${VAR:-default} syntax
+            expanded = expand_bash_var(str(value))
+            # Then expand standard $VAR syntax
+            resolved_value = os.path.expandvars(expanded)
             # Convert to Path if it's a path
             resolved[key] = Path(resolved_value) if '/' in resolved_value or '\\' in resolved_value else resolved_value
         

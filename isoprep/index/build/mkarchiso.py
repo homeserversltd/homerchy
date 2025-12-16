@@ -25,9 +25,15 @@ def execute_mkarchiso(work_dir: Path, out_dir: Path, profile_dir: Path):
         out_dir: Output directory for ISO
         profile_dir: ISO profile directory
     """
+    print(f"{Colors.BLUE}=== Build Phase ==={Colors.NC}")
     print(f"{Colors.BLUE}Building ISO with mkarchiso (Requires Sudo)...{Colors.NC}")
     print(f"Output will be in: {Colors.GREEN}{out_dir}{Colors.NC}")
     print(f"{Colors.BLUE}Note: I/O errors reading /sys files are expected and harmless{Colors.NC}")
+    print()
+    print(f"{Colors.YELLOW}⚠ The 'Copying custom airootfs files...' step may take several minutes{Colors.NC}")
+    print(f"{Colors.YELLOW}   This happens every build as mkarchiso needs to ensure the airootfs structure is correct{Colors.NC}")
+    print(f"{Colors.YELLOW}   (We already cache the injected source, but mkarchiso still copies the entire airootfs structure){Colors.NC}")
+    print()
     
     # Run mkarchiso
     # Note: mkarchiso will produce I/O errors when trying to copy /sys and /proc virtual files
@@ -40,6 +46,7 @@ def execute_mkarchiso(work_dir: Path, out_dir: Path, profile_dir: Path):
     ])
     
     if result.returncode != 0:
+        print()
         print(f"{Colors.RED}Build failed with exit code {result.returncode}{Colors.NC}")
         print(f"{Colors.YELLOW}Check the output above for actual errors (I/O errors on /sys files are normal){Colors.NC}")
         sys.exit(1)
@@ -47,11 +54,13 @@ def execute_mkarchiso(work_dir: Path, out_dir: Path, profile_dir: Path):
     # Verify ISO was actually created
     iso_files = list(out_dir.glob('*.iso'))
     if not iso_files:
+        print()
         print(f"{Colors.RED}ERROR: Build reported success but no ISO file was created!{Colors.NC}")
         sys.exit(1)
     
-    print(f"{Colors.GREEN}Build complete! ISO is located in {out_dir}{Colors.NC}")
+    print()
+    print(f"{Colors.GREEN}✓ Build complete! ISO is located in {out_dir}{Colors.NC}")
     for iso_file in iso_files:
-        print(f"  {Colors.GREEN}{iso_file.name}{Colors.NC}")
+        print(f"  {Colors.GREEN}  {iso_file.name}{Colors.NC}")
     
     return iso_files

@@ -82,7 +82,7 @@ def safe_copytree(src, dst, dirs_exist_ok=False, ignore=None):
             raise shutil.Error(errors)
 
 
-def guaranteed_copytree(src, dst, ignore=None):
+def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
     """
     Copy directory tree with guaranteed file updates.
     
@@ -94,12 +94,42 @@ def guaranteed_copytree(src, dst, ignore=None):
         src: Source directory path
         dst: Destination directory path
         ignore: Optional ignore function (returns list/set of ignored names)
+        show_progress: If True, show progress indicator for long-running operations
     """
+    import sys
+    import time
+    from utils import Colors
+    
     src_path = Path(src)
     dst_path = Path(dst)
     
     # Create destination directory
     dst_path.mkdir(parents=True, exist_ok=True)
+    
+    # Count total files first for progress (if showing progress)
+    total_files = 0
+    if show_progress:
+        print(f"{Colors.YELLOW}⚠ This operation may take several minutes...{Colors.NC}")
+        print(f"{Colors.BLUE}Counting files to copy...{Colors.NC}", end='', flush=True)
+        for root, dirs, files in os.walk(src_path, followlinks=False):
+            if ignore:
+                ignored = ignore(root, dirs + files)
+                if isinstance(ignored, (list, tuple)):
+                    ignored_set = set(ignored)
+                elif isinstance(ignored, set):
+                    ignored_set = ignored
+                else:
+                    ignored_set = set()
+                files = [f for f in files if f not in ignored_set]
+            total_files += len(files)
+        if show_progress:
+            print(f"\r{Colors.GREEN}✓ Found {total_files} files to copy{Colors.NC}")
+            print(f"{Colors.BLUE}Copying files...{Colors.NC}", end='', flush=True)
+    
+    copied_files = 0
+    spinner_chars = ['|', '/', '-', '\\']
+    spinner_idx = 0
+    last_update = time.time()
     
     # Walk source directory and copy/update all files
     # Use followlinks=False to prevent following symlinks (avoids infinite loops from recursive symlinks)
@@ -167,6 +197,47 @@ def guaranteed_copytree(src, dst, ignore=None):
             # Check if source is a symlink (use lstat to avoid following)
             is_symlink = src_file.is_symlink()
             
+            # For symlinks, check if they would create problematic paths
+            if is_symlink:
+                try:
+                    symlink_target = src_file.readlink()
+                    # Check if symlink target would create a problematic path
+                    # Skip symlinks that point to paths containing work directory, profile, or archiso-tmp
+                    problematic_patterns = [
+                        'HOMERCHY_WORK_DIR',
+                        'homerchy-isoprep-work',
+                        '/profile/',
+                        '/archiso-tmp/',
+                        'archiso-tmp',
+                    ]
+                    target_str = str(symlink_target)
+                    if any(pattern in target_str for pattern in problematic_patterns):
+                        # Skip this symlink - it would create a problematic path
+                        continue
+                    
+                    # For relative symlinks, check if they would resolve to a very long path
+                    if not symlink_target.is_absolute():
+                        # Skip symlinks with too many ../ components (likely to cause issues)
+                        target_str = str(symlink_target)
+                        if target_str.count('../') > 3:
+                            # Too many parent directory references - skip to avoid issues
+                            continue
+                        
+                        # Try to resolve the symlink target relative to the source file's parent
+                        try:
+                            resolved_target = (src_file.parent / symlink_target).resolve()
+                            # Check if resolved path is suspiciously long or contains problematic patterns
+                            resolved_str = str(resolved_target)
+                            if len(resolved_str) > 1000 or any(pattern in resolved_str for pattern in problematic_patterns):
+                                # Skip this symlink - it would create a problematic path
+                                continue
+                        except (OSError, RuntimeError, ValueError):
+                            # If we can't resolve it, skip it to be safe
+                            continue
+                except (OSError, RuntimeError):
+                    # If we can't read the symlink, skip it to be safe
+                    continue
+            
             # Copy if destination doesn't exist or source is newer
             try:
                 # For symlinks, check existence without following (use lstat)
@@ -187,6 +258,25 @@ def guaranteed_copytree(src, dst, ignore=None):
                 
                 if not dst_exists:
                     shutil.copy2(src_file, dst_file, follow_symlinks=False)
+                    copied_files += 1
+                    # Update progress spinner more frequently for large file counts
+                    # Update every 1% progress, every 100 files, or every 0.2 seconds
+                    if show_progress:
+                        should_update = False
+                        if total_files > 0:
+                            progress_pct = int((copied_files / total_files) * 100)
+                            # Update every 1% or every 100 files
+                            should_update = (copied_files % 100 == 0) or (copied_files % max(1, total_files // 100) == 0)
+                        else:
+                            should_update = (copied_files % 100 == 0)
+                        # Also update based on time
+                        should_update = should_update or (time.time() - last_update > 0.2)
+                        
+                        if should_update:
+                            spinner_idx = (spinner_idx + 1) % len(spinner_chars)
+                            progress_pct = int((copied_files / total_files) * 100) if total_files > 0 else 0
+                            print(f"\r{Colors.BLUE}Copying files... {spinner_chars[spinner_idx]} {copied_files}/{total_files} ({progress_pct}%){Colors.NC}", end='', flush=True)
+                            last_update = time.time()
                 else:
                     # Check if source is newer (use lstat for symlinks to avoid following)
                     if is_symlink:
@@ -205,6 +295,12 @@ def guaranteed_copytree(src, dst, ignore=None):
                                 except OSError:
                                     pass  # Skip if we can't remove it
                                 shutil.copy2(src_file, dst_file, follow_symlinks=False)
+                                copied_files += 1
+                                if show_progress and (copied_files % 10 == 0 or time.time() - last_update > 0.1):
+                                    spinner_idx = (spinner_idx + 1) % len(spinner_chars)
+                                    progress_pct = int((copied_files / total_files) * 100) if total_files > 0 else 0
+                                    print(f"\r{Colors.BLUE}Copying files... {spinner_chars[spinner_idx]} {copied_files}/{total_files} ({progress_pct}%){Colors.NC}", end='', flush=True)
+                                    last_update = time.time()
                                 continue
                             # For other errors, try stat as fallback
                             try:
@@ -234,6 +330,13 @@ def guaranteed_copytree(src, dst, ignore=None):
                                 continue
                             raise
                         shutil.copy2(src_file, dst_file, follow_symlinks=False)
+                        copied_files += 1
+                        # Update progress spinner
+                        if show_progress and (copied_files % 10 == 0 or time.time() - last_update > 0.1):
+                            spinner_idx = (spinner_idx + 1) % len(spinner_chars)
+                            progress_pct = int((copied_files / total_files) * 100) if total_files > 0 else 0
+                            print(f"\r{Colors.BLUE}Copying files... {spinner_chars[spinner_idx]} {copied_files}/{total_files} ({progress_pct}%){Colors.NC}", end='', flush=True)
+                            last_update = time.time()
             except (OSError, shutil.Error) as e:
                 # Handle FileExistsError for symlinks (destination already exists)
                 if 'File exists' in str(e) or 'FileExistsError' in str(type(e).__name__):
@@ -253,6 +356,12 @@ def guaranteed_copytree(src, dst, ignore=None):
                             else:
                                 raise
                         shutil.copy2(src_file, dst_file, follow_symlinks=False)
+                        copied_files += 1
+                        if show_progress and (copied_files % 10 == 0 or time.time() - last_update > 0.1):
+                            spinner_idx = (spinner_idx + 1) % len(spinner_chars)
+                            progress_pct = int((copied_files / total_files) * 100) if total_files > 0 else 0
+                            print(f"\r{Colors.BLUE}Copying files... {spinner_chars[spinner_idx]} {copied_files}/{total_files} ({progress_pct}%){Colors.NC}", end='', flush=True)
+                            last_update = time.time()
                     except (OSError, shutil.Error):
                         # Skip if we still can't copy (broken symlink, permission, etc.)
                         pass
@@ -263,4 +372,15 @@ def guaranteed_copytree(src, dst, ignore=None):
                 # Skip missing files or broken symlinks
                 elif 'No such file or directory' not in str(e):
                     raise
+    
+    # Clear progress line and show completion
+    if show_progress:
+        # Clear the progress line
+        print(f"\r{' ' * 80}\r", end='', flush=True)
+        # Only show completion if files were actually copied
+        if copied_files > 0:
+            print(f"{Colors.GREEN}✓ Copied {copied_files} files{Colors.NC}")
+        else:
+            # If no files copied (all skipped), show a brief message
+            print(f"{Colors.BLUE}✓ No files needed copying (all up to date or skipped){Colors.NC}")
 

@@ -80,6 +80,7 @@ def main(phase_path: Path, config: dict) -> dict:
         # Preserve injected source
         if preserve_source:
             print(f"{Colors.BLUE}Preserving injected repository source (speeds up rebuild)...{Colors.NC}")
+            print(f"{Colors.YELLOW}⚠ Restoring this cache may take a minute...{Colors.NC}")
             temp_source = work_dir / 'injected-source-temp'
             if temp_source.exists():
                 shutil.rmtree(temp_source)
@@ -96,6 +97,7 @@ def main(phase_path: Path, config: dict) -> dict:
         
         # Restore injected source if it was preserved
         if preserve_source:
+            print(f"{Colors.BLUE}Restoring injected repository source...{Colors.NC}")
             injected_source.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(temp_source), str(injected_source))
             print(f"{Colors.GREEN}✓ Restored injected repository source{Colors.NC}")
