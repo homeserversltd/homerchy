@@ -361,10 +361,78 @@ class ChildExecutor:
                 self.logger.error(f"Failed to execute shell script {child_name}: {e}")
         
         else:
-            child_state.set_status(Status.SKIPPED)
-            self.logger.warning(f"No executable found for child: {child_name}")
+            child_state.set_status(Status.FAILED)
+            error_msg = self._generate_missing_executable_error(child_path, child_name)
+            child_state.add_error(f"No executable found for child: {child_name}")
+            self.logger.error(error_msg)
         
         return child_state
+    
+    def _generate_missing_executable_error(self, child_path: Path, child_name: str) -> str:
+        """Generate comprehensive error message when executable is not found."""
+        lines = [
+            "",
+            "═" * 64,
+            f"ERROR: No executable found for child: {child_name}",
+            "═" * 64,
+            "",
+            "Expected files (checked in order):",
+            f"  1. {child_path / 'index.py'}",
+            f"     [{'EXISTS' if (child_path / 'index.py').exists() else 'MISSING'}]",
+            f"  2. {child_path.parent / f'{child_name}.py'}",
+            f"     [{'EXISTS' if (child_path.parent / f'{child_name}.py').exists() else 'MISSING'}]",
+            f"  3. {child_path.parent / f'{child_name}.sh'}",
+            f"     [{'EXISTS' if (child_path.parent / f'{child_name}.sh').exists() else 'MISSING'}]",
+            "",
+            "Path information:",
+            f"  Child path: {child_path}",
+            f"  Child path exists: {'YES' if child_path.exists() else 'NO'}",
+            f"  Parent directory: {child_path.parent}",
+            f"  Parent directory exists: {'YES' if child_path.parent.exists() else 'NO'}",
+        ]
+        
+        # List directory contents
+        if child_path.exists() and child_path.is_dir():
+            lines.append("  Contents of child directory:")
+            try:
+                contents = list(child_path.iterdir())
+                for item in sorted(contents)[:20]:  # Limit to 20 items
+                    item_type = "DIR" if item.is_dir() else "FILE"
+                    lines.append(f"    {item_type:4} {item.name}")
+                if len(contents) > 20:
+                    lines.append(f"    ... and {len(contents) - 20} more items")
+            except Exception as e:
+                lines.append(f"    [Error listing directory: {e}]")
+        
+        # List parent directory contents if relevant
+        if child_path.parent.exists() and child_path.parent.is_dir():
+            lines.append("")
+            lines.append(f"  Contents of parent directory (looking for {child_name}.py/.sh):")
+            try:
+                parent_contents = [p for p in child_path.parent.iterdir() 
+                                 if p.name.startswith(child_name) and 
+                                 (p.suffix in ['.py', '.sh'] or p.is_dir())]
+                for item in sorted(parent_contents):
+                    item_type = "DIR" if item.is_dir() else "FILE"
+                    lines.append(f"    {item_type:4} {item.name}")
+                if not parent_contents:
+                    lines.append("    [No matching files found]")
+            except Exception as e:
+                lines.append(f"    [Error listing directory: {e}]")
+        
+        lines.extend([
+            "",
+            "Environment context:",
+            f"  Current working directory: {Path.cwd()}",
+            f"  HOME: {os.environ.get('HOME', '[NOT SET]')}",
+            f"  USER: {os.environ.get('USER', '[NOT SET]')}",
+            f"  Python version: {sys.version.split()[0]}",
+            "",
+            "═" * 64,
+            "",
+        ])
+        
+        return "\n".join(lines)
 
 
 class ErrorHandler:

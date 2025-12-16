@@ -40,83 +40,58 @@ export OMARCHY_INSTALL
 export OMARCHY_INSTALL_LOG_FILE="/var/log/omarchy-install.log"
 export PATH="$OMARCHY_PATH/bin:$PATH"
 
-# Call Python orchestrator (new Python-based system)
-# Fallback to shell scripts if Python orchestrator not available
+# Call Python orchestrator (Python-only installation system)
 INSTALL_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_INSTALL="$INSTALL_SCRIPT_DIR/install.py"
 
-if [ -f "$PYTHON_INSTALL" ] && command -v python3 >/dev/null 2>&1; then
-  # Use Python orchestrator
-  exec python3 "$PYTHON_INSTALL"
-else
-  # Fallback to legacy shell script system
-  echo "WARNING: Python orchestrator not found, using legacy shell scripts" >&2
-  
-  # Install
-  source "$OMARCHY_INSTALL/helpers/all.sh"
-
-  # Setup phase-specific log files - each phase gets its own dedicated log
-  setup_phase_log() {
-    local phase_name="$1"
-    local log_dir=$(dirname "${OMARCHY_INSTALL_LOG_FILE:-/var/log/omarchy-install.log}")
-    local phase_log_file="${log_dir}/omarchy-${phase_name}-install.log"
-    
-    # Check if we're root
-    if [ "$(id -u)" -eq 0 ]; then
-      # We're root - can create files directly
-      if [ ! -d "$log_dir" ]; then
-        mkdir -p "$log_dir" 2>&1 || true
-      fi
-      touch "$phase_log_file" 2>&1 || true
-      chmod 666 "$phase_log_file" 2>&1 || true
-    else
-      # Not root - try with sudo, or fall back to user-writable location
-      if [ ! -d "$log_dir" ]; then
-        sudo mkdir -p "$log_dir" 2>&1 || {
-          # sudo failed - use user-writable location
-          log_dir="$HOME/.local/share/omarchy/logs"
-          phase_log_file="${log_dir}/omarchy-${phase_name}-install.log"
-          mkdir -p "$log_dir" 2>&1 || true
-        }
-      fi
-      
-      # Try to create log file with sudo, fall back to user location
-      if ! sudo touch "$phase_log_file" 2>&1; then
-        # sudo failed - use user-writable location
-        log_dir="$HOME/.local/share/omarchy/logs"
-        phase_log_file="${log_dir}/omarchy-${phase_name}-install.log"
-        mkdir -p "$log_dir" 2>&1 || true
-        touch "$phase_log_file" 2>&1 || true
-        chmod 666 "$phase_log_file" 2>&1 || true
-      else
-        sudo chmod 666 "$phase_log_file" 2>&1 || true
-      fi
-    fi
-    
-    export OMARCHY_PHASE_LOG_FILE="$phase_log_file"
-  }
-
-  # Helper to run phase - prefers Python over shell
-  run_phase() {
-    local phase_name="$1"
-    setup_phase_log "$phase_name"
-    
-    local python_all="$OMARCHY_INSTALL/$phase_name/all.py"
-    local shell_all="$OMARCHY_INSTALL/$phase_name/all.sh"
-    
-    if [ -f "$python_all" ] && command -v python3 >/dev/null 2>&1; then
-      python3 "$python_all"
-    elif [ -f "$shell_all" ]; then
-      source "$shell_all"
-    else
-      echo "ERROR: No all.py or all.sh found for phase: $phase_name" >&2
-      return 1
-    fi
-  }
-
-  run_phase "preflight"
-  run_phase "packaging"
-  run_phase "config"
-  run_phase "login"
-  run_phase "post-install"
+# Check for Python
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "" >&2
+  echo "════════════════════════════════════════════════════════════════" >&2
+  echo "ERROR: Python 3 is required but not found" >&2
+  echo "════════════════════════════════════════════════════════════════" >&2
+  echo "" >&2
+  echo "Installation requires Python 3 to be available in PATH" >&2
+  echo "  PATH: $PATH" >&2
+  echo "" >&2
+  echo "Please install Python 3 and ensure it's in your PATH" >&2
+  echo "" >&2
+  echo "════════════════════════════════════════════════════════════════" >&2
+  echo "" >&2
+  exit 1
 fi
+
+# Check for install.py
+if [ ! -f "$PYTHON_INSTALL" ]; then
+  echo "" >&2
+  echo "════════════════════════════════════════════════════════════════" >&2
+  echo "ERROR: Python orchestrator (install.py) not found" >&2
+  echo "════════════════════════════════════════════════════════════════" >&2
+  echo "" >&2
+  echo "Expected file: $PYTHON_INSTALL" >&2
+  echo "  File exists: $(if [ -f "$PYTHON_INSTALL" ]; then echo "YES"; elif [ -e "$PYTHON_INSTALL" ]; then echo "EXISTS BUT NOT FILE"; else echo "NO"; fi)" >&2
+  echo "" >&2
+  echo "Script directory: $INSTALL_SCRIPT_DIR" >&2
+  echo "  Directory exists: $(if [ -d "$INSTALL_SCRIPT_DIR" ]; then echo "YES"; else echo "NO"; fi)" >&2
+  if [ -d "$INSTALL_SCRIPT_DIR" ]; then
+    echo "  Contents:" >&2
+    if command -v ls >/dev/null 2>&1; then
+      ls -la "$INSTALL_SCRIPT_DIR" 2>&1 | sed 's/^/    /' >&2
+    else
+      find "$INSTALL_SCRIPT_DIR" -maxdepth 1 2>/dev/null | sed 's/^/    /' >&2
+    fi
+  fi
+  echo "" >&2
+  echo "Environment context:" >&2
+  echo "  Current directory: $(pwd)" >&2
+  echo "  HOME: ${HOME:-[NOT SET]}" >&2
+  echo "  USER: ${USER:-[NOT SET]}" >&2
+  echo "  Python3 version: $(python3 --version 2>&1)" >&2
+  echo "" >&2
+  echo "════════════════════════════════════════════════════════════════" >&2
+  echo "" >&2
+  exit 1
+fi
+
+# Execute Python orchestrator
+exec python3 "$PYTHON_INSTALL"
