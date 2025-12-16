@@ -537,7 +537,7 @@ def install_homerchy():
     
     debug = os.environ.get('OMARCHY_DEBUG')
     
-    # Install gum in chroot
+    # Install gum in chroot (Python 3 is already in base image via archinstall.packages)
     debug_log("install_homerchy: Installing gum in chroot")
     cmd = ['bash', '-lc', 'sudo pacman -S --noconfirm --needed gum']
     if debug:

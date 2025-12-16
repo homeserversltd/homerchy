@@ -35,7 +35,7 @@ done
 git submodule update --init --recursive --jobs=8
 
 # Prepare build repo
-BUILD_SCRIPT="builder/build-iso.sh"
+BUILD_SCRIPT="builder/build-iso.py"
 BUILD_ROOT=$(realpath "${BASH_SOURCE[0]%/*}/..")
 BUILD_RELEASE_PATH="$BUILD_ROOT/release"
 mkdir -p "$BUILD_RELEASE_PATH"
@@ -77,8 +77,8 @@ if [[ -z "$NO_CACHE" ]]; then
   DOCKER_ARGS+=(-v "$OFFLINE_REPO_BUILD_CACHE_DIR:/var/cache/airootfs/var/cache/omarchy")
 fi
 
-# Run the builder with assembled args
-docker run "${DOCKER_ARGS[@]}" archlinux/archlinux:latest /$BUILD_SCRIPT
+# Run the builder with assembled args (Python script, execute directly)
+docker run "${DOCKER_ARGS[@]}" archlinux/archlinux:latest python3 /$BUILD_SCRIPT
 
 # Move as install ref
 latest_iso=$(\ls -t "$BUILD_RELEASE_PATH"/*.iso | head -n1)

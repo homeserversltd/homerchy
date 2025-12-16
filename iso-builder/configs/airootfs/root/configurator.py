@@ -726,6 +726,63 @@ Keyboard,{keyboard_code}"""
     if kernel_choice == "linux":
         debug_log("Using standard linux kernel")
     
+    # Load packages from archinstall.packages
+    def load_archinstall_packages() -> list:
+        """Load packages from archinstall.packages file."""
+        packages = []
+        # Try multiple possible paths
+        possible_paths = [
+            Path('/root/omarchy/iso-builder/builder/archinstall.packages'),
+            Path('/root/homerchy/iso-builder/builder/archinstall.packages'),
+            Path('/root/omarchy/iso-builder/archinstall.packages'),
+            Path('/root/homerchy/iso-builder/archinstall.packages'),
+        ]
+        
+        archinstall_packages_file = None
+        for path in possible_paths:
+            if path.exists():
+                archinstall_packages_file = path
+                break
+        
+        if archinstall_packages_file:
+            try:
+                with open(archinstall_packages_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        # Skip comments and empty lines
+                        if line and not line.startswith('#'):
+                            packages.append(line)
+                log(f"Loaded {len(packages)} packages from {archinstall_packages_file}")
+                debug_log(f"Packages loaded: {', '.join(packages)}")
+            except Exception as e:
+                log(f"WARNING: Failed to load archinstall.packages: {e}")
+                packages = []  # Fall back to defaults
+        else:
+            log("WARNING: archinstall.packages not found, using default packages only")
+        
+        # Filter out problematic packages that should be installed conditionally later:
+        # - intel-ucode/amd-ucode: CPU-specific, should be installed based on CPU detection
+        # - omarchy-keyring: Custom repo package, needs keyring populated first
+        # - sof-firmware/alsa-firmware: Optional audio firmware, not critical for base system
+        packages_to_exclude = {
+            'intel-ucode',      # CPU-specific, install based on CPU detection later
+            'amd-ucode',        # CPU-specific, install based on CPU detection later
+            'omarchy-keyring',  # Custom repo package, install via post-install if needed
+            'sof-firmware',     # Optional audio firmware, can be installed later
+            'alsa-firmware',    # Optional audio firmware, not in offline mirror, can be installed later
+        }
+        
+        filtered_packages = [pkg for pkg in packages if pkg not in packages_to_exclude]
+        if filtered_packages != packages:
+            excluded = [pkg for pkg in packages if pkg in packages_to_exclude]
+            log(f"Filtered out optional/CPU-specific packages: {', '.join(excluded)}")
+            log(f"These will be installed later if needed (via post-install phase)")
+        
+        return filtered_packages
+    
+    # Load packages from archinstall.packages
+    archinstall_packages = load_archinstall_packages()
+    
     # Generate user_configuration.json
     configuration = {
         "app_config": None,
@@ -826,7 +883,7 @@ Keyboard,{keyboard_code}"""
             "mirror_regions": {},
             "optional_repositories": []
         },
-        "packages": [
+        "packages": archinstall_packages if archinstall_packages else [
             "base-devel",
             "git"
         ],

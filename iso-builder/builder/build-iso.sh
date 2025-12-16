@@ -69,7 +69,30 @@ all_packages+=($(grep -v '^#' /builder/archinstall.packages | grep -v '^$'))
 
 # Download all the packages to the offline mirror inside the ISO
 mkdir -p /tmp/offlinedb
+echo "Downloading packages to offline mirror..."
 pacman --config /configs/pacman-online.conf --noconfirm -Syw "${all_packages[@]}" --cachedir $offline_mirror_dir/ --dbpath /tmp/offlinedb
+
+# Verify all packages were downloaded (pacman -Syw silently skips missing packages)
+echo "Verifying all packages were downloaded..."
+missing_packages=()
+for pkg in "${all_packages[@]}"; do
+  # Check if package file exists (handle versioned package names)
+  if ! ls "$offline_mirror_dir/${pkg}"*.pkg.tar.* 2>/dev/null | grep -v "\.sig$" >/dev/null; then
+    missing_packages+=("$pkg")
+  fi
+done
+
+if [ ${#missing_packages[@]} -gt 0 ]; then
+  echo "ERROR: The following packages were not downloaded to offline mirror:"
+  printf '  %s\n' "${missing_packages[@]}"
+  echo "This will cause installation failures. Please check:"
+  echo "  1. Package names are correct"
+  echo "  2. Packages exist in configured repositories"
+  echo "  3. Network connectivity during build"
+  exit 1
+fi
+
+echo "All packages verified in offline mirror"
 repo-add --new "$offline_mirror_dir/offline.db.tar.gz" "$offline_mirror_dir/"*.pkg.tar.zst
 
 # Create a symlink to the offline mirror instead of duplicating it.

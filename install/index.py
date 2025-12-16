@@ -125,23 +125,33 @@ class Orchestrator:
         
         for child_name in children:
             self.state.current_step = child_name
-            self.logger.info(f"Executing child: {child_name}")
+            self.logger.info(f"[PARENT-CHILD] Executing child: {child_name}")
             
             # Check for nested orchestrator (subdirectory with index.py)
             child_dir = self.install_path / child_name
-            if (child_dir / "index.py").exists():
+            nested_orchestrator = child_dir / "index.py"
+            direct_module = self.install_path / f"{child_name}.py"
+            
+            self.logger.info(f"[PARENT-CHILD] Checking paths for {child_name}:")
+            self.logger.info(f"  install_path: {self.install_path}")
+            self.logger.info(f"  child_dir: {child_dir}")
+            self.logger.info(f"  nested_orchestrator ({nested_orchestrator}): EXISTS={nested_orchestrator.exists()}")
+            self.logger.info(f"  direct_module ({direct_module}): EXISTS={direct_module.exists()}")
+            
+            if nested_orchestrator.exists():
+                self.logger.info(f"[PARENT-CHILD] {child_name} -> NESTED ORCHESTRATOR path")
                 child_state = self.executor.execute_child(child_dir, child_name, self.config)
             # Check for direct module (child_name.py in current directory)
-            elif (self.install_path / f"{child_name}.py").exists():
+            elif direct_module.exists():
+                self.logger.info(f"[PARENT-CHILD] {child_name} -> DIRECT MODULE path")
                 # Create a dummy path for the executor (it will use parent directory)
                 child_state = self.executor.execute_child(self.install_path, child_name, self.config)
-            # Check for shell script (hybrid mode)
-            elif (self.install_path / f"{child_name}.sh").exists():
-                child_state = self.executor.execute_child(self.install_path, child_name, self.config)
             else:
-                self.logger.warning(f"Child {child_name} not found (no index.py, {child_name}.py, or {child_name}.sh)")
+                self.logger.error(f"[PARENT-CHILD] {child_name} -> NOT FOUND")
+                self.logger.error(f"Child {child_name} not found (no index.py or {child_name}.py)")
                 child_state = StateManager(phase=child_name)
-                child_state.set_status(Status.SKIPPED)
+                child_state.set_status(Status.FAILED)
+                child_state.add_error(f"Child {child_name} not found - Python-only installation requires index.py or {child_name}.py")
             
             # Add child state
             self.state.add_child(child_name, child_state)

@@ -7,39 +7,33 @@ Pre-installation guard checks - validates system requirements.
 """
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Optional, Tuple
 
 
-def abort(message: str) -> None:
-    """Abort installation with user confirmation."""
-    print(f"\033[31mOmarchy install requires: {message}\033[0m")
-    print()
+def is_installation() -> bool:
+    """Check if running during installation (chroot context)."""
+    chroot_var = os.environ.get('OMARCHY_CHROOT_INSTALL')
+    is_root = os.geteuid() == 0
+    result = chroot_var == '1' or is_root
     
-    # Use gum confirm if available, otherwise prompt
-    try:
-        result = subprocess.run(
-            ['gum', 'confirm', 'Proceed anyway on your own accord and without assistance?'],
-            capture_output=True,
-            text=True
-        )
-        if result.returncode != 0:
-            sys.exit(1)
-    except FileNotFoundError:
-        # Fallback to Python input if gum not available
-        response = input("Proceed anyway? (yes/no): ")
-        if response.lower() != 'yes':
-            sys.exit(1)
+    # Debug output
+    print(f"[GUARD DEBUG] is_installation() check:")
+    print(f"  OMARCHY_CHROOT_INSTALL={chroot_var}")
+    print(f"  os.geteuid()={os.geteuid()}, is_root={is_root}")
+    print(f"  Result: {result}")
+    
+    return result
 
 
-def check_arch_release() -> bool:
+def check_arch_release() -> Tuple[bool, Optional[str]]:
     """Check if system is vanilla Arch Linux."""
     if not Path("/etc/arch-release").exists():
-        abort("Vanilla Arch")
-        return False
+        return False, "Vanilla Arch"
     
-    # Check for Arch derivatives
     derivative_markers = [
         "/etc/cachyos-release",
         "/etc/eos-release",
@@ -49,30 +43,29 @@ def check_arch_release() -> bool:
     
     for marker in derivative_markers:
         if Path(marker).exists():
-            abort("Vanilla Arch")
-            return False
+            return False, "Vanilla Arch"
     
-    return True
+    return True, None
 
 
-def check_not_root() -> bool:
-    """Check that we're not running as root."""
+def check_not_root() -> Tuple[bool, Optional[str]]:
+    """Check that we're not running as root (skip during installation)."""
+    if is_installation():
+        return True, None  # Root is expected during installation
     if os.geteuid() == 0:
-        abort("Running as root (not user)")
-        return False
-    return True
+        return False, "Running as root (not user)"
+    return True, None
 
 
-def check_architecture() -> bool:
+def check_architecture() -> Tuple[bool, Optional[str]]:
     """Check CPU architecture is x86_64."""
     import platform
     if platform.machine() != "x86_64":
-        abort("x86_64 CPU")
-        return False
-    return True
+        return False, "x86_64 CPU"
+    return True, None
 
 
-def check_secure_boot() -> bool:
+def check_secure_boot() -> Tuple[bool, Optional[str]]:
     """Check that secure boot is disabled."""
     try:
         result = subprocess.run(
@@ -82,15 +75,14 @@ def check_secure_boot() -> bool:
             timeout=5
         )
         if 'Secure Boot: enabled' in result.stdout:
-            abort("Secure Boot disabled")
-            return False
+            return False, "Secure Boot disabled"
     except (FileNotFoundError, subprocess.TimeoutExpired):
         # bootctl not available or timeout - assume OK
         pass
-    return True
+    return True, None
 
 
-def check_desktop_environment() -> bool:
+def check_desktop_environment() -> Tuple[bool, Optional[str]]:
     """Check that Gnome or KDE are not already installed."""
     try:
         result1 = subprocess.run(
@@ -105,28 +97,23 @@ def check_desktop_environment() -> bool:
         )
         
         if result1.returncode == 0 or result2.returncode == 0:
-            abort("Fresh + Vanilla Arch")
-            return False
+            return False, "Fresh + Vanilla Arch"
     except (FileNotFoundError, subprocess.TimeoutExpired):
         # pacman not available or timeout - assume OK
         pass
-    return True
+    return True, None
 
 
-def check_limine() -> bool:
-    """Check that Limine bootloader is installed."""
-    result = subprocess.run(
-        ['command', '-v', 'limine'],
-        shell=True,
-        capture_output=True
-    )
-    if result.returncode != 0:
-        abort("Limine bootloader")
-        return False
-    return True
+def check_limine() -> Tuple[bool, Optional[str]]:
+    """Check that Limine bootloader is installed (skip during installation)."""
+    if is_installation():
+        return True, None  # Limine installed later during installation
+    if not shutil.which('limine'):
+        return False, "Limine bootloader"
+    return True, None
 
 
-def check_btrfs() -> bool:
+def check_btrfs() -> Tuple[bool, Optional[str]]:
     """Check that root filesystem is btrfs."""
     try:
         result = subprocess.run(
@@ -136,12 +123,11 @@ def check_btrfs() -> bool:
             timeout=5
         )
         if result.stdout.strip() != 'btrfs':
-            abort("Btrfs root filesystem")
-            return False
+            return False, "Btrfs root filesystem"
     except (FileNotFoundError, subprocess.TimeoutExpired):
         # findmnt not available or timeout - assume OK
         pass
-    return True
+    return True, None
 
 
 def main(config: dict) -> dict:
@@ -154,19 +140,34 @@ def main(config: dict) -> dict:
     Returns:
         dict: Result dictionary with success status
     """
+    print(f"[GUARD DEBUG] main() called with config: {config}")
+    print(f"[GUARD DEBUG] __file__ = {__file__}")
+    print(f"[GUARD DEBUG] Current working directory: {os.getcwd()}")
+    print(f"[GUARD DEBUG] USER={os.environ.get('USER', 'NOT_SET')}, HOME={os.environ.get('HOME', 'NOT_SET')}")
+    
+    # During installation, skip most checks - they don't apply
+    installation_mode = is_installation()
+    if installation_mode:
+        print("[GUARD DEBUG] Installation mode detected - skipping checks")
+        print("Guards: OK (installation mode - checks skipped)")
+        return {"success": True, "message": "Guard checks skipped during installation"}
+    
     checks = [
-        check_arch_release,
-        check_not_root,
-        check_architecture,
-        check_secure_boot,
-        check_desktop_environment,
-        check_limine,
-        check_btrfs
+        ("Arch Release", check_arch_release),
+        ("Not Root", check_not_root),
+        ("Architecture", check_architecture),
+        ("Secure Boot", check_secure_boot),
+        ("Desktop Environment", check_desktop_environment),
+        ("Limine", check_limine),
+        ("Btrfs", check_btrfs)
     ]
     
-    for check in checks:
-        if not check():
-            return {"success": False, "message": f"Guard check failed: {check.__name__}"}
+    for check_name, check_func in checks:
+        passed, error_msg = check_func()
+        if not passed:
+            message = f"Guard check '{check_name}' failed: Omarchy install requires {error_msg}"
+            print(f"\033[31m{message}\033[0m")
+            return {"success": False, "message": message}
     
     print("Guards: OK")
     return {"success": True, "message": "All guard checks passed"}

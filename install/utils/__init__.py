@@ -265,7 +265,16 @@ class ChildExecutor:
         
         # Check for nested orchestrator (index.py)
         index_py = child_path / "index.py"
+        module_py_parent = child_path.parent / f"{child_name}.py"
+        
+        self.logger.info(f"[EXECUTOR] execute_child() called:")
+        self.logger.info(f"  child_path: {child_path}")
+        self.logger.info(f"  child_name: {child_name}")
+        self.logger.info(f"  index_py ({index_py}): EXISTS={index_py.exists()}")
+        self.logger.info(f"  module_py_parent ({module_py_parent}): EXISTS={module_py_parent.exists()}")
+        
         if index_py.exists():
+            self.logger.info(f"[EXECUTOR] {child_name} -> Executing as NESTED ORCHESTRATOR")
             self.logger.info(f"Executing nested orchestrator: {child_name}")
             child_state.set_status(Status.RUNNING)
             
@@ -279,21 +288,44 @@ class ChildExecutor:
                 
                 # Call main function if it exists
                 if hasattr(module, 'main'):
+                    self.logger.info(f"[EXECUTOR] Calling module.main() for {child_name}")
                     result = module.main(child_path, config.get(child_name, {}))
+                    self.logger.info(f"[EXECUTOR] {child_name} returned: type={type(result)}, value={result}")
+                    
                     if isinstance(result, StateManager):
+                        self.logger.info(f"[EXECUTOR] {child_name} returned StateManager")
                         child_state = result
                     elif isinstance(result, dict):
+                        self.logger.info(f"[EXECUTOR] {child_name} returned dict: {result}")
                         # Update child_state from result dict
                         if result.get("status"):
                             child_state.set_status(Status[result["status"].upper()])
+                            self.logger.info(f"[EXECUTOR] {child_name} status set from dict: {result.get('status')}")
+                        elif result.get("success") is False:
+                            self.logger.info(f"[EXECUTOR] {child_name} success=False, marking as FAILED")
+                            child_state.set_status(Status.FAILED)
+                            error_msg = result.get("message", "Unknown error")
+                            child_state.add_error(error_msg)
+                        elif result.get("success") is True:
+                            self.logger.info(f"[EXECUTOR] {child_name} success=True, marking as COMPLETED")
+                            child_state.set_status(Status.COMPLETED)
+                        else:
+                            self.logger.warning(f"[EXECUTOR] {child_name} dict has no status/success, defaulting to COMPLETED")
+                            child_state.set_status(Status.COMPLETED)
                         if result.get("errors"):
                             for err in result["errors"]:
                                 child_state.add_error(err.get("message", ""), err.get("step"))
+                    else:
+                        self.logger.warning(f"[EXECUTOR] {child_name} returned unexpected type, marking as COMPLETED")
+                        child_state.set_status(Status.COMPLETED)
                 else:
                     raise AttributeError(f"Module {child_name} has no main() function")
                 
-                child_state.set_status(Status.COMPLETED)
-                self.logger.info(f"Completed nested orchestrator: {child_name}")
+                # Only log completion if not already failed
+                if child_state.status != Status.FAILED:
+                    self.logger.info(f"[EXECUTOR] Completed nested orchestrator: {child_name} (status={child_state.status})")
+                else:
+                    self.logger.error(f"[EXECUTOR] Nested orchestrator {child_name} FAILED (status={child_state.status}, errors={child_state.has_errors()})")
                 
             except Exception as e:
                 child_state.set_status(Status.FAILED)
@@ -303,7 +335,8 @@ class ChildExecutor:
         # Check for direct module (child_name.py) in parent directory
         elif (child_path.parent / f"{child_name}.py").exists():
             module_py = child_path.parent / f"{child_name}.py"
-            self.logger.info(f"Executing module: {child_name}")
+            self.logger.info(f"[EXECUTOR] {child_name} -> Executing as DIRECT MODULE")
+            self.logger.info(f"  module_py: {module_py}")
             child_state.set_status(Status.RUNNING)
             
             try:
@@ -312,53 +345,42 @@ class ChildExecutor:
                 module = importlib.util.module_from_spec(spec)
                 sys.path.insert(0, str(module_py.parent))
                 spec.loader.exec_module(module)
+                self.logger.info(f"[EXECUTOR] {child_name} module loaded successfully")
                 
                 # Call main function if it exists
                 if hasattr(module, 'main'):
+                    self.logger.info(f"[EXECUTOR] Calling module.main() for {child_name} (direct module)")
                     result = module.main(config.get(child_name, {}))
-                    if isinstance(result, dict) and result.get("success"):
-                        child_state.set_status(Status.COMPLETED)
+                    self.logger.info(f"[EXECUTOR] {child_name} (direct) returned: type={type(result)}, value={result}")
+                    
+                    if isinstance(result, dict):
+                        if result.get("success") is True:
+                            self.logger.info(f"[EXECUTOR] {child_name} success=True, marking as COMPLETED")
+                            child_state.set_status(Status.COMPLETED)
+                        elif result.get("success") is False:
+                            self.logger.info(f"[EXECUTOR] {child_name} success=False, marking as FAILED")
+                            child_state.set_status(Status.FAILED)
+                            error_msg = result.get("message", "Unknown error")
+                            child_state.add_error(f"Module {child_name} failed: {error_msg}")
+                        else:
+                            self.logger.warning(f"[EXECUTOR] {child_name} dict has no success field, assuming success")
+                            child_state.set_status(Status.COMPLETED)
                     else:
+                        self.logger.warning(f"[EXECUTOR] {child_name} returned non-dict, assuming failure")
                         child_state.set_status(Status.FAILED)
-                        error_msg = result.get("message", "Unknown error") if isinstance(result, dict) else "Module returned failure"
-                        child_state.add_error(f"Module {child_name} failed: {error_msg}")
+                        child_state.add_error(f"Module {child_name} returned unexpected type: {type(result)}")
                 else:
                     raise AttributeError(f"Module {child_name} has no main() function")
                 
-                self.logger.info(f"Completed module: {child_name}")
+                if child_state.status != Status.FAILED:
+                    self.logger.info(f"[EXECUTOR] Completed module: {child_name} (status={child_state.status})")
+                else:
+                    self.logger.error(f"[EXECUTOR] Module {child_name} FAILED (status={child_state.status}, errors={child_state.has_errors()})")
                 
             except Exception as e:
                 child_state.set_status(Status.FAILED)
                 child_state.add_error(f"Failed to execute module {child_name}", exception=e)
                 self.logger.error(f"Failed to execute module {child_name}: {e}")
-        
-        # Check for shell script (hybrid mode during transition)
-        elif (child_path.parent / f"{child_name}.sh").exists():
-            script_path = child_path.parent / f"{child_name}.sh"
-            self.logger.info(f"Executing shell script: {child_name}")
-            child_state.set_status(Status.RUNNING)
-            
-            try:
-                result = subprocess.run(
-                    ['bash', str(script_path)],
-                    capture_output=True,
-                    text=True,
-                    cwd=str(script_path.parent)
-                )
-                
-                if result.returncode == 0:
-                    child_state.set_status(Status.COMPLETED)
-                    self.logger.info(f"Completed shell script: {child_name}")
-                else:
-                    child_state.set_status(Status.FAILED)
-                    error_msg = result.stderr or result.stdout or "Unknown error"
-                    child_state.add_error(f"Shell script {child_name} failed: {error_msg}")
-                    self.logger.error(f"Shell script {child_name} failed: {error_msg}")
-                
-            except Exception as e:
-                child_state.set_status(Status.FAILED)
-                child_state.add_error(f"Failed to execute shell script {child_name}", exception=e)
-                self.logger.error(f"Failed to execute shell script {child_name}: {e}")
         
         else:
             child_state.set_status(Status.FAILED)
@@ -381,8 +403,6 @@ class ChildExecutor:
             f"     [{'EXISTS' if (child_path / 'index.py').exists() else 'MISSING'}]",
             f"  2. {child_path.parent / f'{child_name}.py'}",
             f"     [{'EXISTS' if (child_path.parent / f'{child_name}.py').exists() else 'MISSING'}]",
-            f"  3. {child_path.parent / f'{child_name}.sh'}",
-            f"     [{'EXISTS' if (child_path.parent / f'{child_name}.sh').exists() else 'MISSING'}]",
             "",
             "Path information:",
             f"  Child path: {child_path}",
@@ -407,11 +427,11 @@ class ChildExecutor:
         # List parent directory contents if relevant
         if child_path.parent.exists() and child_path.parent.is_dir():
             lines.append("")
-            lines.append(f"  Contents of parent directory (looking for {child_name}.py/.sh):")
+            lines.append(f"  Contents of parent directory (looking for {child_name}.py):")
             try:
                 parent_contents = [p for p in child_path.parent.iterdir() 
                                  if p.name.startswith(child_name) and 
-                                 (p.suffix in ['.py', '.sh'] or p.is_dir())]
+                                 (p.suffix == '.py' or p.is_dir())]
                 for item in sorted(parent_contents):
                     item_type = "DIR" if item.is_dir() else "FILE"
                     lines.append(f"    {item_type:4} {item.name}")

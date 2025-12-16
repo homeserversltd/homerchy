@@ -50,24 +50,7 @@ def main():
             except Exception as e:
                 orchestrator.logger.error(f"Failed to execute finished.py: {e}")
         else:
-            # Fallback to shell script
-            finished_sh = phase_path / "finished.sh"
-            if finished_sh.exists():
-                orchestrator.logger.info("Executing finished.sh (fallback)")
-                import subprocess
-                try:
-                    result = subprocess.run(
-                        ['bash', str(finished_sh)],
-                        capture_output=True,
-                        text=True,
-                        cwd=str(phase_path)
-                    )
-                    if result.returncode == 0:
-                        orchestrator.logger.info("Finished script completed")
-                    else:
-                        orchestrator.logger.warning(f"Finished script failed: {result.stderr}")
-                except Exception as e:
-                    orchestrator.logger.error(f"Failed to execute finished.sh: {e}")
+            orchestrator.logger.warning("No finished.py found - finished step will be skipped")
     
     return state
 
