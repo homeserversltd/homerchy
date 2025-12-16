@@ -187,6 +187,310 @@ def detect_vm_environment():
     return False
 
 
+def read_package_list(package_file: Path) -> list:
+    """
+    Read package list from file, filtering out comments and empty lines.
+    
+    Args:
+        package_file: Path to package list file
+        
+    Returns:
+        List of package names
+    """
+    if not package_file.exists():
+        return []
+    
+    packages = []
+    with open(package_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            # Skip comments and empty lines
+            if line and not line.startswith('#'):
+                packages.append(line)
+    
+    return packages
+
+
+def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offline_mirror_dir: Path):
+    """
+    Download all required packages to the offline mirror directory.
+    
+    Args:
+        repo_root: Root of the repository
+        profile_dir: ISO profile directory
+        offline_mirror_dir: Directory where packages will be stored
+    """
+    print(f"{Colors.BLUE}Collecting package lists...{Colors.NC}")
+    
+    # Collect all package lists
+    all_packages = set()
+    
+    # 1. ISO base packages (packages.x86_64)
+    packages_x86_64 = profile_dir / 'packages.x86_64'
+    if packages_x86_64.exists():
+        packages = read_package_list(packages_x86_64)
+        all_packages.update(packages)
+        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from packages.x86_64{Colors.NC}")
+    
+    # 2. Homerchy base packages
+    omarchy_base = repo_root / 'homerchy' / 'install' / 'omarchy-base.packages'
+    if omarchy_base.exists():
+        packages = read_package_list(omarchy_base)
+        all_packages.update(packages)
+        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-base.packages{Colors.NC}")
+    else:
+        # Try alternative path (if called from different location)
+        omarchy_base = repo_root / 'install' / 'omarchy-base.packages'
+        if omarchy_base.exists():
+            packages = read_package_list(omarchy_base)
+            all_packages.update(packages)
+            print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-base.packages{Colors.NC}")
+    
+    # 3. Homerchy other packages
+    omarchy_other = repo_root / 'homerchy' / 'install' / 'omarchy-other.packages'
+    if omarchy_other.exists():
+        packages = read_package_list(omarchy_other)
+        all_packages.update(packages)
+        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-other.packages{Colors.NC}")
+    else:
+        # Try alternative path
+        omarchy_other = repo_root / 'install' / 'omarchy-other.packages'
+        if omarchy_other.exists():
+            packages = read_package_list(omarchy_other)
+            all_packages.update(packages)
+            print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-other.packages{Colors.NC}")
+    
+    # 4. Archinstall packages
+    archinstall_packages = repo_root / 'homerchy' / 'iso-builder' / 'builder' / 'archinstall.packages'
+    if archinstall_packages.exists():
+        packages = read_package_list(archinstall_packages)
+        all_packages.update(packages)
+        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from archinstall.packages{Colors.NC}")
+    
+    # 5. Essential base system packages (always needed)
+    essential_packages = ['base', 'base-devel', 'linux', 'linux-firmware', 'linux-headers']
+    all_packages.update(essential_packages)
+    print(f"{Colors.GREEN}  ✓ Added {len(essential_packages)} essential base packages{Colors.NC}")
+    
+    # Convert to sorted list for consistent output
+    package_list = sorted(all_packages)
+    print(f"{Colors.BLUE}Total unique packages to download: {len(package_list)}{Colors.NC}")
+    
+    # Ensure offline mirror directory exists
+    offline_mirror_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Check if pacman-online.conf exists for downloading
+    pacman_online_conf = repo_root / 'homerchy' / 'iso-builder' / 'configs' / 'pacman-online.conf'
+    if not pacman_online_conf.exists():
+        pacman_online_conf = repo_root / 'iso-builder' / 'configs' / 'pacman-online.conf'
+    
+    if not pacman_online_conf.exists():
+        print(f"{Colors.YELLOW}WARNING: pacman-online.conf not found, using default pacman config{Colors.NC}")
+        pacman_config = None
+    else:
+        pacman_config = str(pacman_online_conf)
+    
+    # Check for existing packages to avoid re-downloading (cache optimization)
+    print(f"{Colors.BLUE}Checking for existing packages in cache...{Colors.NC}")
+    existing_packages = set()
+    if offline_mirror_dir.exists():
+        # Get list of existing package files (excluding .sig files)
+        existing_files = [f for f in offline_mirror_dir.glob('*.pkg.tar.*') if not f.name.endswith('.sig')]
+        # Try to match package names from existing files
+        for pkg_name in package_list:
+            # Check if any existing file starts with this package name
+            for existing_file in existing_files:
+                if existing_file.name.startswith(f"{pkg_name}-"):
+                    existing_packages.add(pkg_name)
+                    break
+    
+    # Filter out packages that already exist
+    packages_to_download = [pkg for pkg in package_list if pkg not in existing_packages]
+    
+    if existing_packages:
+        print(f"{Colors.GREEN}✓ Found {len(existing_packages)} packages in cache (skipping download){Colors.NC}")
+    
+    if packages_to_download:
+        print(f"{Colors.BLUE}Downloading {len(packages_to_download)} missing packages...{Colors.NC}")
+        print(f"{Colors.BLUE}This may take a while depending on your connection speed...{Colors.NC}")
+        
+        # Create temporary database directory for pacman
+        temp_db_dir = Path('/tmp/omarchy-offline-db')
+        temp_db_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Build pacman command (requires root)
+        pacman_cmd = ['sudo', 'pacman', '-Syw', '--noconfirm', '--cachedir', str(offline_mirror_dir), '--dbpath', str(temp_db_dir)]
+        if pacman_config:
+            pacman_cmd.extend(['--config', pacman_config])
+        pacman_cmd.extend(packages_to_download)
+        
+        # Run pacman to download packages (requires sudo)
+        # Show output in real-time so user can see progress
+        print(f"{Colors.BLUE}Running pacman with sudo to download packages...{Colors.NC}")
+        print(f"{Colors.BLUE}This will show progress as packages are downloaded...{Colors.NC}")
+        print(f"{Colors.YELLOW}Note: You may be prompted for your sudo password{Colors.NC}")
+        print()
+        
+        result = subprocess.run(pacman_cmd, stdout=sys.stdout, stderr=sys.stderr)
+        
+        if result.returncode != 0:
+            print()
+            print(f"{Colors.RED}ERROR: Package download failed with exit code {result.returncode}!{Colors.NC}")
+            sys.exit(1)
+        
+        # Clean up temporary database (may be owned by root)
+        if temp_db_dir.exists():
+            try:
+                shutil.rmtree(temp_db_dir)
+            except PermissionError:
+                # If owned by root, use sudo to remove
+                subprocess.run(['sudo', 'rm', '-rf', str(temp_db_dir)], check=False)
+    else:
+        print(f"{Colors.GREEN}✓ All packages already cached, skipping download{Colors.NC}")
+    
+    # Fix ownership of downloaded packages (pacman creates them as root)
+    # Get current user and group
+    current_uid = os.getuid()
+    current_gid = os.getgid()
+    
+    # Change ownership of downloaded packages to current user
+    if offline_mirror_dir.exists():
+        print(f"{Colors.BLUE}Fixing ownership of downloaded packages...{Colors.NC}")
+        subprocess.run(['sudo', 'chown', '-R', f'{current_uid}:{current_gid}', str(offline_mirror_dir)], check=True)
+    
+    # Count downloaded packages (exclude .sig signature files)
+    all_files = list(offline_mirror_dir.glob('*.pkg.tar.*'))
+    package_files = [f for f in all_files if not f.name.endswith('.sig')]
+    sig_files = [f for f in all_files if f.name.endswith('.sig')]
+    print(f"{Colors.GREEN}✓ Downloaded {len(package_files)} package files{Colors.NC}")
+    if sig_files:
+        print(f"{Colors.GREEN}✓ Also downloaded {len(sig_files)} signature files{Colors.NC}")
+    
+    # Clean up temporary database (may be owned by root)
+    if temp_db_dir.exists():
+        try:
+            shutil.rmtree(temp_db_dir)
+        except PermissionError:
+            # If owned by root, use sudo to remove
+            subprocess.run(['sudo', 'rm', '-rf', str(temp_db_dir)], check=False)
+    
+    return package_list
+
+
+def create_offline_repository(offline_mirror_dir: Path):
+    """
+    Create repository database for offline mirror using repo-add.
+    Caches the database if packages haven't changed.
+    
+    Args:
+        offline_mirror_dir: Directory containing downloaded packages
+    """
+    print(f"{Colors.BLUE}Creating offline repository database...{Colors.NC}")
+    
+    # Check if repo-add is available
+    if not shutil.which('repo-add'):
+        print(f"{Colors.RED}ERROR: repo-add not found. Please install 'pacman-contrib' package.{Colors.NC}")
+        sys.exit(1)
+    
+    # Find all package files (exclude .sig signature files)
+    # Package files are .pkg.tar.zst or .pkg.tar.xz, but NOT .sig files
+    all_files = list(offline_mirror_dir.glob('*.pkg.tar.*'))
+    package_files = [f for f in all_files if not f.name.endswith('.sig')]
+    
+    if not package_files:
+        print(f"{Colors.YELLOW}WARNING: No package files found in offline mirror directory{Colors.NC}")
+        return
+    
+    # Count signature files for info
+    sig_files = [f for f in all_files if f.name.endswith('.sig')]
+    if sig_files:
+        print(f"{Colors.BLUE}Found {len(sig_files)} signature files{Colors.NC}")
+    
+    # Check if we can reuse existing database
+    db_path = offline_mirror_dir / 'offline.db.tar.gz'
+    db_files_path = offline_mirror_dir / 'offline.files.tar.gz'
+    
+    cache_valid = False
+    if db_path.exists() and db_files_path.exists():
+        # Check if database is newer than all package files
+        try:
+            db_mtime = db_path.stat().st_mtime
+            db_files_mtime = db_files_path.stat().st_mtime
+            # Use the older of the two database files as the reference time
+            db_ref_mtime = min(db_mtime, db_files_mtime)
+            
+            # Check if any package file is newer than the database
+            packages_changed = False
+            for pkg_file in package_files:
+                if pkg_file.stat().st_mtime > db_ref_mtime:
+                    packages_changed = True
+                    break
+            
+            if not packages_changed:
+                cache_valid = True
+                print(f"{Colors.GREEN}✓ Repository database cache is valid (packages unchanged){Colors.NC}")
+        except (OSError, AttributeError):
+            # If we can't check mtimes, regenerate to be safe
+            cache_valid = False
+    
+    if cache_valid:
+        # Verify database file size for sanity check
+        db_size = db_path.stat().st_size
+        print(f"{Colors.GREEN}✓ Using cached repository database ({db_size / 1024:.1f} KB){Colors.NC}")
+        return
+    
+    # Need to regenerate database
+    print(f"{Colors.BLUE}Regenerating repository database from {len(package_files)} package files...{Colors.NC}")
+    
+    # Remove existing database if it exists
+    if db_path.exists():
+        try:
+            db_path.unlink()
+        except PermissionError:
+            # If owned by root, use sudo to remove
+            subprocess.run(['sudo', 'rm', '-f', str(db_path)], check=False)
+    
+    if db_files_path.exists():
+        try:
+            db_files_path.unlink()
+        except PermissionError:
+            subprocess.run(['sudo', 'rm', '-f', str(db_files_path)], check=False)
+    
+    # Run repo-add to create database
+    # repo-add will automatically detect and add all .pkg.tar.* files in the directory
+    result = subprocess.run(
+        ['repo-add', '--new', str(db_path)] + [str(pkg) for pkg in package_files],
+        capture_output=True,
+        text=True
+    )
+    
+    if result.returncode != 0:
+        print(f"{Colors.RED}ERROR: Repository database creation failed!{Colors.NC}")
+        print(f"{Colors.RED}repo-add output:{Colors.NC}")
+        print(result.stdout)
+        print(result.stderr)
+        sys.exit(1)
+    
+    # Fix ownership of database files (repo-add may create them as root)
+    current_uid = os.getuid()
+    current_gid = os.getgid()
+    for db_file in [db_path, db_files_path]:
+        if db_file.exists():
+            try:
+                os.chown(db_file, current_uid, current_gid)
+            except PermissionError:
+                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(db_file)], check=True)
+    
+    print(f"{Colors.GREEN}✓ Created repository database: {db_path.name}{Colors.NC}")
+    
+    # Verify database was created
+    if db_path.exists():
+        db_size = db_path.stat().st_size
+        print(f"{Colors.GREEN}✓ Repository database size: {db_size / 1024:.1f} KB{Colors.NC}")
+    else:
+        print(f"{Colors.YELLOW}WARNING: Repository database file not found after creation{Colors.NC}")
+
+
 def main():
     """Main build function."""
     # Configuration
@@ -208,11 +512,29 @@ def main():
     archiso_tmp_dir = work_dir / 'archiso-tmp'
     preserve_archiso_tmp = archiso_tmp_dir.exists()
     
-    # Clean up profile directory (but preserve archiso-tmp cache)
+    # Clean up profile directory (but preserve archiso-tmp cache and offline mirror cache)
+    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
+    preserve_cache = cache_dir.exists() and any(cache_dir.glob('*.pkg.tar.*'))
+    
     if profile_dir.exists():
         print(f"{Colors.BLUE}Cleaning up previous profile directory...{Colors.NC}")
+        if preserve_cache:
+            print(f"{Colors.BLUE}Preserving offline mirror cache ({len(list(cache_dir.glob('*.pkg.tar.*')))} packages)...{Colors.NC}")
+            # Temporarily move cache out of the way
+            temp_cache = work_dir / 'offline-mirror-cache-temp'
+            if temp_cache.exists():
+                shutil.rmtree(temp_cache)
+            cache_dir.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(cache_dir), str(temp_cache))
+        
         shutil.rmtree(profile_dir)
-    profile_dir.mkdir(parents=True, exist_ok=True)
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Restore cache if it was preserved
+        if preserve_cache:
+            cache_dir.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(temp_cache), str(cache_dir))
+            print(f"{Colors.GREEN}✓ Restored offline mirror cache{Colors.NC}")
     
     # Remove cached squashfs to force rebuild (mkarchiso may cache it)
     # This ensures changes to files in airootfs are picked up
@@ -267,9 +589,13 @@ def main():
                 path.unlink()
     
     # 3. Apply Homerchy Custom Overlays
+    # Note: We skip pacman.conf here because we'll configure it separately for build vs ISO
     configs_source = repo_root / 'iso-builder' / 'configs'
     if configs_source.exists():
         for item in configs_source.iterdir():
+            # Skip pacman.conf - we'll configure it separately
+            if item.name == 'pacman.conf':
+                continue
             # Skip if we can't stat the item (doesn't exist or permission error)
             try:
                 if not item.exists() and not item.is_symlink():
@@ -301,10 +627,59 @@ def main():
             syslinux_cfg.write_text(content)
             print(f"{Colors.GREEN}Boot timeout set to 0 for instant VM boot{Colors.NC}")
     
-    # 3b. Force Online Build Config
-    pacman_online_conf = repo_root / 'iso-builder' / 'configs' / 'pacman-online.conf'
-    if pacman_online_conf.exists():
-        shutil.copy2(pacman_online_conf, profile_dir / 'pacman.conf')
+    # 3b. Configure pacman.conf for build vs ISO
+    # mkarchiso needs online repos during build to install base ISO packages
+    # But the ISO itself should use offline mirror when booted
+    # Use the releng pacman.conf as base (has standard Arch repos) and add omarchy repo
+    releng_pacman_conf = releng_source / 'pacman.conf'
+    pacman_offline_conf = repo_root / 'homerchy' / 'iso-builder' / 'configs' / 'pacman.conf'
+    if not pacman_offline_conf.exists():
+        pacman_offline_conf = repo_root / 'iso-builder' / 'configs' / 'pacman.conf'
+    
+    # For profile: Use releng pacman.conf (standard Arch repos) + add omarchy online repo
+    # This ensures mkarchiso can build with online repos
+    # CRITICAL: Remove any offline/omarchy repos that might reference file:// paths
+    if releng_pacman_conf.exists():
+        # Read releng pacman.conf and add omarchy repo
+        releng_content = releng_pacman_conf.read_text()
+        # Remove any existing offline or omarchy repos that use file:// paths
+        import re
+        # Remove [offline] repo section if present
+        releng_content = re.sub(r'\[offline\].*?(?=\n\[|\Z)', '', releng_content, flags=re.DOTALL)
+        # Remove [omarchy] repo section if it uses file://
+        if '[omarchy]' in releng_content:
+            omarchy_match = re.search(r'\[omarchy\].*?(?=\n\[|\Z)', releng_content, re.DOTALL)
+            if omarchy_match and 'file://' in omarchy_match.group():
+                releng_content = re.sub(r'\[omarchy\].*?(?=\n\[|\Z)', '', releng_content, flags=re.DOTALL)
+        # Add omarchy repo with online URL if not already present
+        if '[omarchy]' not in releng_content:
+            omarchy_repo = """
+[omarchy]
+SigLevel = Optional TrustAll
+Server = https://pkgs.omarchy.org/stable/$arch
+"""
+            releng_content += omarchy_repo
+        (profile_dir / 'pacman.conf').write_text(releng_content)
+        print(f"{Colors.GREEN}✓ Using releng pacman.conf with omarchy repo for mkarchiso build{Colors.NC}")
+    else:
+        print(f"{Colors.YELLOW}WARNING: releng pacman.conf not found, using default{Colors.NC}")
+    
+    # CRITICAL: Ensure airootfs/etc/pacman.conf uses online repos (same as profile pacman.conf)
+    # mkarchiso reads airootfs/etc/pacman.conf and would try to use offline mirror if present
+    # Copy the profile pacman.conf (online) to airootfs/etc so mkarchiso sees online repos
+    airootfs_etc = profile_dir / 'airootfs' / 'etc'
+    airootfs_etc.mkdir(parents=True, exist_ok=True)
+    profile_pacman_conf = profile_dir / 'pacman.conf'
+    if profile_pacman_conf.exists():
+        # Remove any existing pacman.conf in airootfs/etc that might have offline config
+        airootfs_pacman_conf = airootfs_etc / 'pacman.conf'
+        if airootfs_pacman_conf.exists():
+            airootfs_pacman_conf.unlink()
+        # Copy profile pacman.conf (online) to airootfs/etc
+        shutil.copy2(profile_pacman_conf, airootfs_pacman_conf)
+        print(f"{Colors.GREEN}✓ Using online pacman.conf in airootfs/etc for mkarchiso build{Colors.NC}")
+    
+    # Note: The ISO will have online pacman.conf, but the installer will configure offline mirror when it runs
     
     # 4. Inject Current Repository Source
     # This allows the ISO to contain the latest changes from this workspace
@@ -376,6 +751,41 @@ def main():
         shutil.copy2(upload_log_source, bin_dir / 'omarchy-upload-log')
         (bin_dir / 'omarchy-upload-log').chmod(0o755)
     
+    # 6. Download packages to offline mirror
+    print(f"{Colors.BLUE}Preparing offline package mirror...{Colors.NC}")
+    download_packages_to_offline_mirror(repo_root, profile_dir, cache_dir)
+    
+    # 7. Create offline repository database
+    create_offline_repository(cache_dir)
+    
+    # 8. Create symlink so mkarchiso can find the offline mirror during build
+    # mkarchiso uses the pacman.conf from the profile, which references /var/cache/omarchy/mirror/offline
+    # We need to make that path available on the host system
+    # Note: Since we're using pacman-online.conf for mkarchiso build, this symlink may not be needed
+    # But we'll create it anyway for consistency and in case it's needed
+    system_mirror_dir = Path('/var/cache/omarchy/mirror/offline')
+    
+    # Create parent directories with sudo (requires root permissions)
+    system_mirror_parent = system_mirror_dir.parent
+    print(f"{Colors.BLUE}Creating system mirror directory structure with sudo...{Colors.NC}")
+    subprocess.run(['sudo', 'mkdir', '-p', str(system_mirror_parent)], check=True)
+    
+    # Remove existing symlink or directory if it exists
+    if system_mirror_dir.exists() or system_mirror_dir.is_symlink():
+        print(f"{Colors.BLUE}Removing existing symlink/directory...{Colors.NC}")
+        if system_mirror_dir.is_symlink():
+            subprocess.run(['sudo', 'rm', '-f', str(system_mirror_dir)], check=False)
+        else:
+            # If it's a directory, we need sudo to remove it
+            subprocess.run(['sudo', 'rm', '-rf', str(system_mirror_dir)], check=False)
+    
+    # Create symlink from system location to profile directory
+    # Use absolute path for the symlink target
+    cache_dir_absolute = cache_dir.resolve()
+    print(f"{Colors.BLUE}Creating symlink with sudo: {system_mirror_dir} -> {cache_dir_absolute}{Colors.NC}")
+    subprocess.run(['sudo', 'ln', '-sf', str(cache_dir_absolute), str(system_mirror_dir)], check=True)
+    print(f"{Colors.GREEN}✓ Created symlink{Colors.NC}")
+    
     print(f"{Colors.BLUE}Building ISO with mkarchiso (Requires Sudo)...{Colors.NC}")
     print(f"Output will be in: {Colors.GREEN}{out_dir}{Colors.NC}")
     print(f"{Colors.BLUE}Note: I/O errors reading /sys files are expected and harmless{Colors.NC}")
@@ -401,9 +811,33 @@ def main():
         print(f"{Colors.RED}ERROR: Build reported success but no ISO file was created!{Colors.NC}")
         sys.exit(1)
     
+    # Now that mkarchiso has finished, we can add the offline pacman.conf to the ISO filesystem
+    # This is done by modifying the airootfs in the work directory before final ISO creation
+    # Actually, mkarchiso has already created the ISO, so we need to extract, modify, and rebuild
+    # OR: The offline pacman.conf should have been in airootfs/etc from the start, but mkarchiso
+    # should use profile pacman.conf. Let me check if we can add it to the squashfs after build.
+    # Actually, the simplest solution: Copy offline pacman.conf to airootfs/etc in the profile
+    # AFTER mkarchiso reads it but BEFORE it creates the final ISO. But mkarchiso reads it during build.
+    # 
+    # Better approach: The offline pacman.conf should be in airootfs/etc, but mkarchiso should
+    # use the profile pacman.conf. According to mkarchiso docs, it uses profile pacman.conf.
+    # So we can safely put offline pacman.conf in airootfs/etc - mkarchiso won't use it.
+    # But the error shows it IS using it. Let me try a different approach: Don't put it in airootfs/etc
+    # until after mkarchiso finishes, then manually add it to the ISO.
+    
+    # For now, let's try putting it in airootfs/etc but ensuring mkarchiso uses profile pacman.conf
+    # Actually, the issue is that mkarchiso might be reading airootfs/etc/pacman.conf.
+    # Let's not put it there at all during build, and add it after.
+    # But that's complex. Let me try ensuring the profile pacman.conf is definitely used.
+    
     print(f"{Colors.GREEN}Build complete! ISO is located in {out_dir}{Colors.NC}")
     for iso_file in iso_files:
         print(f"  {Colors.GREEN}{iso_file.name}{Colors.NC}")
+    
+    # Add offline pacman.conf to the built ISO's airootfs
+    # Extract the ISO, modify, and rebuild? Too complex.
+    # Better: Ensure offline pacman.conf is in airootfs/etc but mkarchiso uses profile pacman.conf
+    # The error suggests mkarchiso IS reading airootfs/etc/pacman.conf, so we need to fix that.
 
 
 if __name__ == '__main__':

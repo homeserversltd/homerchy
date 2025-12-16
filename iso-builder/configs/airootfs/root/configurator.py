@@ -821,9 +821,7 @@ Keyboard,{keyboard_code}"""
         "mirror_config": {
             "custom_repositories": [],
             "custom_servers": [
-                {"url": "https://mirror.omarchy.org/$repo/os/$arch"},
-                {"url": "https://mirror.rackspace.com/archlinux/$repo/os/$arch"},
-                {"url": "https://geo.mirror.pkgbuild.com/$repo/os/$arch"}
+                {"url": "file:///var/cache/omarchy/mirror/offline/"}
             ],
             "mirror_regions": {},
             "optional_repositories": []
