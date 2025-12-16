@@ -145,15 +145,19 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
     if existing_packages:
         print(f"{Colors.GREEN}✓ Found {len(existing_packages)} packages in cache (skipping download){Colors.NC}")
     
-    # Track if we downloaded new packages (needed for database regeneration)
-    packages_were_downloaded = len(packages_to_download) > 0
+    # Count existing package files BEFORE running pacman (to detect if new files are created)
+    package_files_before = set()
+    if offline_mirror_dir.exists():
+        package_files_before = {f.name for f in offline_mirror_dir.glob('*.pkg.tar.*') if not f.name.endswith('.sig')}
+    
+    # Initialize temp_db_dir (may or may not be created depending on whether we download)
+    temp_db_dir = Path('/tmp/omarchy-offline-db')
     
     if packages_to_download:
         print(f"{Colors.BLUE}Downloading {len(packages_to_download)} missing packages...{Colors.NC}")
         print(f"{Colors.BLUE}This may take a while depending on your connection speed...{Colors.NC}")
         
         # Create temporary database directory for pacman
-        temp_db_dir = Path('/tmp/omarchy-offline-db')
         temp_db_dir.mkdir(parents=True, exist_ok=True)
         
         # Build pacman command (requires root)
@@ -186,6 +190,21 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
     else:
         print(f"{Colors.GREEN}✓ All packages already cached, skipping download{Colors.NC}")
     
+    # Check if new package files were actually created (pacman might skip if already in cache)
+    package_files_after = set()
+    if offline_mirror_dir.exists():
+        package_files_after = {f.name for f in offline_mirror_dir.glob('*.pkg.tar.*') if not f.name.endswith('.sig')}
+    
+    # Track if we actually downloaded new packages (needed for database regeneration)
+    # Only set to True if new files were actually created
+    new_files_created = package_files_after - package_files_before
+    packages_were_downloaded = len(new_files_created) > 0
+    
+    if packages_were_downloaded:
+        print(f"{Colors.BLUE}✓ Actually downloaded {len(new_files_created)} new package files{Colors.NC}")
+    elif packages_to_download:
+        print(f"{Colors.BLUE}✓ Pacman skipped download (packages already in cache){Colors.NC}")
+    
     # Fix ownership of downloaded packages (pacman creates them as root)
     # Get current user and group
     current_uid = os.getuid()
@@ -196,13 +215,13 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
         print(f"{Colors.BLUE}Fixing ownership of downloaded packages...{Colors.NC}")
         subprocess.run(['sudo', 'chown', '-R', f'{current_uid}:{current_gid}', str(offline_mirror_dir)], check=True)
     
-    # Count downloaded packages (exclude .sig signature files)
+    # Count total package files in cache (exclude .sig signature files)
     all_files = list(offline_mirror_dir.glob('*.pkg.tar.*'))
     package_files = [f for f in all_files if not f.name.endswith('.sig')]
     sig_files = [f for f in all_files if f.name.endswith('.sig')]
-    print(f"{Colors.GREEN}✓ Downloaded {len(package_files)} package files{Colors.NC}")
+    print(f"{Colors.GREEN}✓ Total {len(package_files)} package files in cache{Colors.NC}")
     if sig_files:
-        print(f"{Colors.GREEN}✓ Also downloaded {len(sig_files)} signature files{Colors.NC}")
+        print(f"{Colors.GREEN}✓ Total {len(sig_files)} signature files in cache{Colors.NC}")
     
     # Clean up temporary database (may be owned by root)
     if temp_db_dir.exists():

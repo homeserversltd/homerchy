@@ -134,12 +134,47 @@ class Logger:
         self.phase = phase
         self.console = console
         
+        # Check if we're root
+        is_root = os.geteuid() == 0
+        
+        # Track if we fell back to user-writable location
+        using_user_location = False
+        
         # Ensure log directory exists
-        self.log_file.parent.mkdir(parents=True, exist_ok=True)
+        log_dir = self.log_file.parent
+        if not log_dir.exists():
+            if is_root:
+                log_dir.mkdir(parents=True, exist_ok=True)
+            else:
+                # Not root - try with sudo, or fall back to user-writable location
+                try:
+                    result = subprocess.run(['sudo', 'mkdir', '-p', str(log_dir)], check=True, capture_output=True)
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    # sudo failed or not available - use user-writable location
+                    user_log_dir = Path.home() / '.local' / 'share' / 'omarchy' / 'logs'
+                    user_log_dir.mkdir(parents=True, exist_ok=True)
+                    self.log_file = user_log_dir / f"{phase}-{self.log_file.name}"
+                    log_dir = self.log_file.parent
+                    using_user_location = True
         
         # Create log file if it doesn't exist
         if not self.log_file.exists():
-            self.log_file.touch(mode=0o666)
+            if is_root:
+                self.log_file.touch(mode=0o666)
+            elif using_user_location:
+                # Already using user location - create directly
+                self.log_file.touch(mode=0o666)
+            else:
+                # Not root - try with sudo, or fall back to user location
+                try:
+                    subprocess.run(['sudo', 'touch', str(self.log_file)], check=True, capture_output=True)
+                    subprocess.run(['sudo', 'chmod', '666', str(self.log_file)], check=True, capture_output=True)
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    # sudo failed - use user-writable location
+                    user_log_dir = Path.home() / '.local' / 'share' / 'omarchy' / 'logs'
+                    user_log_dir.mkdir(parents=True, exist_ok=True)
+                    self.log_file = user_log_dir / f"{phase}-{self.log_file.name}"
+                    self.log_file.touch(mode=0o666)
         
         # Setup Python logging
         self.logger = logging.getLogger(f"homerchy.{phase}")

@@ -16,12 +16,71 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from utils import Colors, guaranteed_copytree
 
 
+def _remove_orphaned_files(src_dir: Path, dst_dir: Path, ignore=None):
+    """
+    Remove files from destination that no longer exist in source.
+    This prevents accumulation of orphaned files when files are deleted or renamed in source.
+    
+    Recursively processes subdirectories to clean up orphaned files at all levels.
+    
+    Args:
+        src_dir: Source directory path
+        dst_dir: Destination directory path
+        ignore: Optional ignore function (returns list/set of ignored names)
+    """
+    import os
+    
+    if not dst_dir.exists() or not src_dir.exists():
+        return
+    
+    try:
+        # Get set of files/dirs that exist in source (excluding ignored items)
+        src_items = set()
+        for item in src_dir.iterdir():
+            if ignore:
+                ignored = ignore(str(src_dir), [item.name])
+                if isinstance(ignored, (list, tuple, set)):
+                    if item.name in ignored:
+                        continue
+                elif ignored:  # truthy value means ignore
+                    continue
+            src_items.add(item.name)
+    except (OSError, PermissionError):
+        # Can't read source directory - skip cleanup to be safe
+        return
+    
+    # Remove items from destination that don't exist in source
+    try:
+        for item in dst_dir.iterdir():
+            if item.name not in src_items:
+                try:
+                    # Remove entire directory tree or file
+                    if item.is_dir() and not item.is_symlink():
+                        shutil.rmtree(item)
+                    else:
+                        item.unlink()
+                except (OSError, PermissionError):
+                    # Skip files we can't remove (permissions, etc.)
+                    # This is non-fatal - worst case is some orphaned files remain
+                    pass
+            elif item.is_dir() and not item.is_symlink():
+                # Item exists in both - recursively clean subdirectories
+                src_subdir = src_dir / item.name
+                if src_subdir.exists():
+                    _remove_orphaned_files(src_subdir, item, ignore=ignore)
+    except (OSError, PermissionError):
+        # Can't iterate destination - skip cleanup to be safe
+        pass
+
+
 def inject_repository_source(repo_root: Path, profile_dir: Path):
     """
     Inject current repository source into ISO profile.
     
     This allows the ISO to contain the latest changes from this workspace.
     Use guaranteed copy to ensure all new/changed files are transferred.
+    Also removes orphaned files from destination that no longer exist in source
+    to prevent file count growth between builds.
     
     Args:
         repo_root: Root of the repository
@@ -34,6 +93,7 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
     
     # Copy excluding build artifacts and .git
     exclude_patterns = ['isoprep/work', 'isoprep/isoout', '.git']
+    ignore_fn = shutil.ignore_patterns('.git')
     
     for item in repo_root.iterdir():
         if item.name in ['isoprep', '.git', '.build-swap']:
@@ -47,11 +107,16 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
             continue
         dest = homerchy_target / item.name
         
+        # Clean up orphaned files in destination before copying
+        # This prevents accumulation of deleted/renamed files
+        if dest.exists() and item.is_dir():
+            _remove_orphaned_files(item, dest, ignore=ignore_fn)
+        
         # Use guaranteed copy to ensure all files are transferred and updated
         if item.is_dir():
             # guaranteed_copytree ensures all files are copied/updated
             # Show progress for long-running copy operations
-            guaranteed_copytree(item, dest, ignore=shutil.ignore_patterns('.git'), show_progress=True)
+            guaranteed_copytree(item, dest, ignore=ignore_fn, show_progress=True)
         else:
             # For files, copy if source is newer or destination doesn't exist
             if not dest.exists() or item.stat().st_mtime > dest.stat().st_mtime:
@@ -64,6 +129,16 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
                         continue
                     elif 'No such file or directory' not in str(e):
                         raise
+    
+    # Clean up top-level orphaned directories/files in destination
+    def top_level_ignore(d, names):
+        """Ignore patterns that should not be copied from repo root."""
+        ignored = set()
+        for name in names:
+            if name in ['isoprep', '.git', '.build-swap']:
+                ignored.add(name)
+        return ignored
+    _remove_orphaned_files(repo_root, homerchy_target, ignore=top_level_ignore)
     
     # Create symlink for backward compatibility (installer expects /root/omarchy)
     omarchy_link = profile_dir / 'airootfs' / 'root' / 'omarchy'

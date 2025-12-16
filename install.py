@@ -14,9 +14,27 @@ from pathlib import Path
 
 def setup_environment():
     """Set up environment variables for installation."""
-    # Set OMARCHY_PATH if not already set
+    # Set OMARCHY_PATH if not already set - try multiple possible locations
     if 'OMARCHY_PATH' not in os.environ:
-        omarchy_path = Path.home() / '.local' / 'share' / 'omarchy'
+        omarchy_path = None
+        
+        # Try user's home directory first (normal installation)
+        candidate = Path.home() / '.local' / 'share' / 'omarchy'
+        if (candidate / 'install').exists():
+            omarchy_path = candidate
+        # Try /root/omarchy (ISO location)
+        elif (Path('/root/omarchy') / 'install').exists():
+            omarchy_path = Path('/root/omarchy')
+        # Try script's parent directory (if run from repo)
+        else:
+            script_dir = Path(__file__).parent
+            if (script_dir / 'install').exists():
+                omarchy_path = script_dir
+        
+        if omarchy_path is None:
+            # Will be caught by verification below
+            omarchy_path = Path.home() / '.local' / 'share' / 'omarchy'
+        
         os.environ['OMARCHY_PATH'] = str(omarchy_path)
     
     # Set OMARCHY_INSTALL
@@ -44,7 +62,11 @@ def main():
     
     # Verify install directory exists
     if not install_path.exists():
-        print(f"ERROR: Installation directory not found: {install_path}", file=sys.stderr)
+        print("ERROR: Installation directory not found!", file=sys.stderr)
+        print("ERROR: Tried:", file=sys.stderr)
+        print(f"ERROR:   {Path.home() / '.local' / 'share' / 'omarchy' / 'install'}", file=sys.stderr)
+        print(f"ERROR:   {Path('/root/omarchy/install')}", file=sys.stderr)
+        print(f"ERROR:   {Path(__file__).parent / 'install'}", file=sys.stderr)
         print(f"ERROR: OMARCHY_PATH={os.environ.get('OMARCHY_PATH')}", file=sys.stderr)
         print(f"ERROR: HOME={os.environ.get('HOME')}", file=sys.stderr)
         sys.exit(1)
