@@ -6,3 +6,5 @@ fi
 ~/.automated_script.py
 
 
+
+

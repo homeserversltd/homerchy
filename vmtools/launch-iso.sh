@@ -26,6 +26,15 @@ qemu-img create -f qcow2 "$DISK_FILE" 100G
 echo "Launching ISO: $ISO_FILE"
 echo "Using disk: $DISK_FILE"
 
+# Check which profile will be used
+INDEX_FILE="${REPO_ROOT}/vmtools/index.json"
+if [ -f "$INDEX_FILE" ]; then
+    PROFILE=$(jq -r '.default_profile // "homerchy-test"' "$INDEX_FILE" 2>/dev/null || echo "homerchy-test")
+    echo "VM Profile: $PROFILE"
+else
+    echo "VM Profile: default (no index.json found)"
+fi
+
 qemu-system-x86_64 \
     -enable-kvm \
     -machine q35,accel=kvm \

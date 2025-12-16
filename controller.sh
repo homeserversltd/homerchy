@@ -12,7 +12,7 @@ function usage() {
     echo "Options:"
     echo "  -b, --build       Generate a new Homerchy ISO"
     echo "  -l, --launch      Launch the VM using the filtered ISO"
-    echo "  -f, --full        Rebuild the ISO and then launch the VM"
+    echo "  -f, --full        Build the ISO (reusing cache) and then launch the VM"
     echo "  -d, --deploy DEV  Deploy (dd) the ISO to a device (e.g. /dev/sdX)"
     echo "  -e, --eject       Cleanup (unmount and remove) the build work directory"
     echo "  -h, --help        Show this help message"
@@ -116,7 +116,6 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -f|--full)
-            do_eject
             do_build
             do_launch
             shift
