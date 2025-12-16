@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "schema_version": "1.0.0",
+    "name": "package_management",
+    "description": "Package download and repository creation phase"
+  },
+  "children": [
+    "download",
+    "repository"
+  ]
+}
+

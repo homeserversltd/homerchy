@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "schema_version": "1.0.0",
+    "name": "profile_assembly",
+    "description": "ISO profile assembly phase"
+  },
+  "children": [
+    "releng",
+    "overlays",
+    "source_injection",
+    "pacman_config"
+  ]
+}
+

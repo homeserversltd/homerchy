@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""
+HOMESERVER Homerchy ISO Builder - Prepare Phase
+Copyright (C) 2024 HOMESERVER LLC
+
+Setup and validation phase for ISO build process.
+"""
+
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+# Add parent directory to path for utils
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from utils import Colors, check_dependencies
+
+
+def main(phase_path: Path, config: dict) -> dict:
+    """
+    Main prepare phase function.
+    
+    Args:
+        phase_path: Path to this phase directory
+        config: Phase configuration
+        
+    Returns:
+        dict: Execution result
+    """
+    print(f"{Colors.BLUE}=== Prepare Phase: Setup and Validation ==={Colors.NC}")
+    
+    # Get paths from parent config
+    repo_root = Path(config.get('repo_root', Path(phase_path).parent.parent.parent))
+    work_dir = Path(config.get('work_dir', repo_root / 'isoprep' / 'work'))
+    out_dir = Path(config.get('out_dir', repo_root / 'isoprep' / 'isoout'))
+    profile_dir = Path(config.get('profile_dir', work_dir / 'profile'))
+    
+    # Check dependencies
+    print(f"{Colors.BLUE}Checking dependencies...{Colors.NC}")
+    check_dependencies()
+    print(f"{Colors.GREEN}✓ Dependencies satisfied{Colors.NC}")
+    
+    # Ensure output directory exists
+    print(f"{Colors.BLUE}Ensuring output directory exists...{Colors.NC}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    print(f"{Colors.GREEN}✓ Output directory ready: {out_dir}{Colors.NC}")
+    
+    # Clean up profile directory (but preserve caches)
+    print(f"{Colors.BLUE}Preparing profile directory...{Colors.NC}")
+    archiso_tmp_dir = work_dir / 'archiso-tmp'
+    preserve_archiso_tmp = archiso_tmp_dir.exists()
+    
+    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
+    preserve_cache = cache_dir.exists() and any(cache_dir.glob('*.pkg.tar.*'))
+    
+    if profile_dir.exists():
+        print(f"{Colors.BLUE}Cleaning up previous profile directory...{Colors.NC}")
+        if preserve_cache:
+            print(f"{Colors.BLUE}Preserving offline mirror cache ({len(list(cache_dir.glob('*.pkg.tar.*')))} packages)...{Colors.NC}")
+            import shutil
+            temp_cache = work_dir / 'offline-mirror-cache-temp'
+            if temp_cache.exists():
+                shutil.rmtree(temp_cache)
+            cache_dir.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(cache_dir), str(temp_cache))
+        
+        shutil.rmtree(profile_dir)
+        profile_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Restore cache if it was preserved
+        if preserve_cache:
+            cache_dir.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(temp_cache), str(cache_dir))
+            print(f"{Colors.GREEN}✓ Restored offline mirror cache{Colors.NC}")
+    
+    # Remove cached squashfs to force rebuild
+    if preserve_archiso_tmp:
+        print(f"{Colors.BLUE}Preserving mkarchiso work directory for faster rebuild (package cache){Colors.NC}")
+        import subprocess
+        cached_squashfs = archiso_tmp_dir / 'iso' / 'arch' / 'x86_64' / 'airootfs.sfs'
+        if cached_squashfs.exists():
+            print(f"{Colors.BLUE}Removing cached squashfs to force rebuild...{Colors.NC}")
+            try:
+                cached_squashfs.unlink()
+            except PermissionError:
+                subprocess.run(['sudo', 'rm', '-f', str(cached_squashfs)], check=False)
+    
+    print(f"{Colors.GREEN}✓ Prepare phase complete{Colors.NC}")
+    
+    return {
+        "success": True,
+        "preserve_archiso_tmp": preserve_archiso_tmp,
+        "preserve_cache": preserve_cache
+    }
+
+
+if __name__ == '__main__':
+    import json
+    phase_path = Path(__file__).parent
+    config_path = phase_path / 'index.json'
+    config = json.load(open(config_path)) if config_path.exists() else {}
+    result = main(phase_path, config)
+    sys.exit(0 if result.get('success') else 1)
+
