@@ -40,10 +40,11 @@ def main(phase_path: Path, config: dict) -> dict:
     
     # Download packages to offline mirror
     print(f"{Colors.BLUE}Preparing offline package mirror...{Colors.NC}")
-    package_list = download_packages_to_offline_mirror(repo_root, profile_dir, cache_dir)
+    package_list, packages_were_downloaded = download_packages_to_offline_mirror(repo_root, profile_dir, cache_dir)
     
     # Create offline repository database
-    create_offline_repository(cache_dir)
+    # Force regeneration if new packages were downloaded
+    create_offline_repository(cache_dir, force_regenerate=packages_were_downloaded)
     
     print(f"{Colors.GREEN}✓ Package management phase complete{Colors.NC}")
     

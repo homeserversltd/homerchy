@@ -145,6 +145,9 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
     if existing_packages:
         print(f"{Colors.GREEN}✓ Found {len(existing_packages)} packages in cache (skipping download){Colors.NC}")
     
+    # Track if we downloaded new packages (needed for database regeneration)
+    packages_were_downloaded = len(packages_to_download) > 0
+    
     if packages_to_download:
         print(f"{Colors.BLUE}Downloading {len(packages_to_download)} missing packages...{Colors.NC}")
         print(f"{Colors.BLUE}This may take a while depending on your connection speed...{Colors.NC}")
@@ -209,5 +212,5 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
             # If owned by root, use sudo to remove
             subprocess.run(['sudo', 'rm', '-rf', str(temp_db_dir)], check=False)
     
-    return package_list
+    return package_list, packages_were_downloaded
 

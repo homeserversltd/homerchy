@@ -18,13 +18,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from utils import Colors
 
 
-def create_offline_repository(offline_mirror_dir: Path):
+def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool = False):
     """
     Create repository database for offline mirror using repo-add.
     Caches the database if packages haven't changed.
     
     Args:
         offline_mirror_dir: Directory containing downloaded packages
+        force_regenerate: If True, force database regeneration even if cache appears valid
     """
     print(f"{Colors.BLUE}Creating offline repository database...{Colors.NC}")
     
@@ -58,7 +59,10 @@ def create_offline_repository(offline_mirror_dir: Path):
     cache_valid = False
     # Check if offline database exists and is valid (don't require omarchy databases for cache check)
     # We'll create omarchy databases if they're missing
-    if db_path.exists() and db_files_path.exists():
+    # If force_regenerate is True, skip cache check entirely
+    if force_regenerate:
+        print(f"{Colors.BLUE}New packages were downloaded, forcing repository database regeneration...{Colors.NC}")
+    elif db_path.exists() and db_files_path.exists():
         # First check: Check if database is newer than all package files (mtime check)
         mtime_check_passed = False
         try:
