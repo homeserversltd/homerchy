@@ -9,9 +9,9 @@ run_logged $OMARCHY_INSTALL/config/increase-lockout-limit.sh
 run_logged $OMARCHY_INSTALL/config/ssh-flakiness.sh
 run_logged $OMARCHY_INSTALL/config/detect-keyboard-layout.sh
 run_logged $OMARCHY_INSTALL/config/xcompose.sh
-run_logged $OMARCHY_INSTALL/config/mise-work.sh
+# mise-work.sh removed - no developer tools needed for TV receiver
 run_logged $OMARCHY_INSTALL/config/fix-powerprofilesctl-shebang.sh
-run_logged $OMARCHY_INSTALL/config/docker.sh
+# docker.sh removed - no developer tools needed for TV receiver
 run_logged $OMARCHY_INSTALL/config/mimetypes.sh
 run_logged $OMARCHY_INSTALL/config/localdb.sh
 run_logged $OMARCHY_INSTALL/config/walker-elephant.sh

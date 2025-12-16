@@ -446,11 +446,7 @@ Server = file:///var/cache/omarchy/mirror/offline/
     
     log("install_base_system: ✓ Offline mirror mounted successfully")
     
-    debug_log("install_base_system: Mounting packages directory")
-    # Mount packages dir
-    packages_target = Path('/mnt/opt/packages')
-    packages_target.mkdir(parents=True, exist_ok=True)
-    subprocess.run(['mount', '--bind', '/opt/packages', str(packages_target)], check=True)
+    # /opt/packages mount removed - no developer tools needed for TV receiver
     
     debug_log("install_base_system: Setting up sudoers")
     # Setup sudoers
