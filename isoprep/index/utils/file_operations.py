@@ -102,7 +102,27 @@ def guaranteed_copytree(src, dst, ignore=None):
     dst_path.mkdir(parents=True, exist_ok=True)
     
     # Walk source directory and copy/update all files
-    for root, dirs, files in os.walk(src_path):
+    # Use followlinks=False to prevent following symlinks (avoids infinite loops from recursive symlinks)
+    for root, dirs, files in os.walk(src_path, followlinks=False):
+        # Skip if root path is suspiciously long (might be recursive symlink)
+        # Linux max path length is 4096, but we'll be more conservative
+        if len(str(root)) > 2000:
+            continue
+        
+        # Filter out symlinks from dirs to prevent following them
+        # Check each directory to see if it's a symlink
+        dirs_to_remove = []
+        for d in dirs:
+            dir_path = Path(root) / d
+            try:
+                if dir_path.is_symlink():
+                    dirs_to_remove.append(d)
+            except OSError:
+                # If we can't check (recursive symlink, etc.), skip it
+                dirs_to_remove.append(d)
+        for d in dirs_to_remove:
+            dirs.remove(d)
+        
         # Apply ignore function to filter dirs and files
         if ignore:
             ignored = ignore(root, dirs + files)
@@ -116,11 +136,24 @@ def guaranteed_copytree(src, dst, ignore=None):
             files = [f for f in files if f not in ignored_set]
         
         # Calculate relative path from source root
-        rel_path = Path(root).relative_to(src_path)
-        dst_dir = dst_path / rel_path
+        try:
+            rel_path = Path(root).relative_to(src_path)
+            dst_dir = dst_path / rel_path
+        except (ValueError, OSError) as e:
+            # If path resolution fails (recursive symlink), skip this directory
+            if 'File name too long' in str(e) or 'ENAMETOOLONG' in str(e):
+                continue
+            raise
         
-        # Create destination directory
-        dst_dir.mkdir(parents=True, exist_ok=True)
+        # Create destination directory (handle recursive symlink errors)
+        try:
+            dst_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            # If directory creation fails due to recursive symlink, skip this path
+            if 'File name too long' in str(e) or 'ENAMETOOLONG' in str(e):
+                continue
+            # Re-raise if it's a different error (permission, etc.)
+            raise
         
         # Copy/update all files
         for file in files:
@@ -131,18 +164,103 @@ def guaranteed_copytree(src, dst, ignore=None):
             if not src_file.exists():
                 continue
             
+            # Check if source is a symlink (use lstat to avoid following)
+            is_symlink = src_file.is_symlink()
+            
             # Copy if destination doesn't exist or source is newer
             try:
-                if not dst_file.exists():
+                # For symlinks, check existence without following (use lstat)
+                # This prevents infinite loops from recursive symlinks
+                # Wrap in try/except to handle recursive symlinks gracefully
+                if is_symlink:
+                    try:
+                        dst_exists = dst_file.is_symlink() or dst_file.exists()
+                    except OSError as check_err:
+                        # If checking existence fails (recursive symlink), assume it doesn't exist
+                        # and we'll copy it (which will fail gracefully if needed)
+                        if 'File name too long' in str(check_err) or 'ENAMETOOLONG' in str(check_err):
+                            dst_exists = False
+                        else:
+                            raise
+                else:
+                    dst_exists = dst_file.exists()
+                
+                if not dst_exists:
                     shutil.copy2(src_file, dst_file, follow_symlinks=False)
                 else:
-                    # Check if source is newer
-                    src_mtime = src_file.stat().st_mtime
-                    dst_mtime = dst_file.stat().st_mtime
+                    # Check if source is newer (use lstat for symlinks to avoid following)
+                    if is_symlink:
+                        src_mtime = src_file.lstat().st_mtime
+                        # For destination, try lstat first (if it's a symlink), fallback to stat
+                        # Handle recursive symlinks that cause "File name too long"
+                        try:
+                            dst_mtime = dst_file.lstat().st_mtime
+                        except OSError as lstat_err:
+                            # If lstat fails due to recursive symlink, skip timestamp check and copy
+                            if 'File name too long' in str(lstat_err) or 'ENAMETOOLONG' in str(lstat_err):
+                                # Remove destination and copy (skip timestamp check)
+                                try:
+                                    if dst_file.is_symlink() or dst_file.exists():
+                                        dst_file.unlink()
+                                except OSError:
+                                    pass  # Skip if we can't remove it
+                                shutil.copy2(src_file, dst_file, follow_symlinks=False)
+                                continue
+                            # For other errors, try stat as fallback
+                            try:
+                                dst_mtime = dst_file.stat().st_mtime
+                            except (OSError, RuntimeError):
+                                # If both fail, skip this file
+                                continue
+                        except (RuntimeError, ValueError):
+                            # Non-OS errors, try stat as fallback
+                            try:
+                                dst_mtime = dst_file.stat().st_mtime
+                            except (OSError, RuntimeError):
+                                continue
+                    else:
+                        src_mtime = src_file.stat().st_mtime
+                        dst_mtime = dst_file.stat().st_mtime
+                    
                     if src_mtime > dst_mtime:
+                        # Remove existing destination before copying
+                        # Wrap in try/except to handle recursive symlinks
+                        try:
+                            if dst_file.exists() or dst_file.is_symlink():
+                                dst_file.unlink()
+                        except OSError as unlink_err:
+                            # If checking/removing fails due to recursive symlink, skip
+                            if 'File name too long' in str(unlink_err) or 'ENAMETOOLONG' in str(unlink_err):
+                                continue
+                            raise
                         shutil.copy2(src_file, dst_file, follow_symlinks=False)
             except (OSError, shutil.Error) as e:
+                # Handle FileExistsError for symlinks (destination already exists)
+                if 'File exists' in str(e) or 'FileExistsError' in str(type(e).__name__):
+                    # Remove existing destination and retry (use unlink which works for symlinks)
+                    try:
+                        # Wrap existence check in try/except for recursive symlinks
+                        try:
+                            if dst_file.is_symlink() or dst_file.exists():
+                                dst_file.unlink()
+                        except OSError as check_err:
+                            # If checking fails due to recursive symlink, try unlink anyway
+                            if 'File name too long' in str(check_err) or 'ENAMETOOLONG' in str(check_err):
+                                try:
+                                    dst_file.unlink()
+                                except OSError:
+                                    pass  # Skip if we can't remove it
+                            else:
+                                raise
+                        shutil.copy2(src_file, dst_file, follow_symlinks=False)
+                    except (OSError, shutil.Error):
+                        # Skip if we still can't copy (broken symlink, permission, etc.)
+                        pass
+                # Handle "File name too long" - indicates recursive symlink loop
+                elif 'File name too long' in str(e) or 'ENAMETOOLONG' in str(e):
+                    # Skip recursive symlinks that create infinite paths
+                    pass
                 # Skip missing files or broken symlinks
-                if 'No such file or directory' not in str(e):
+                elif 'No such file or directory' not in str(e):
                     raise
 

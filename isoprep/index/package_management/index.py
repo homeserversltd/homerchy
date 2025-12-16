@@ -32,7 +32,10 @@ def main(phase_path: Path, config: dict) -> dict:
     
     # Get paths from parent config
     repo_root = Path(config.get('repo_root', Path(phase_path).parent.parent.parent))
-    profile_dir = Path(config.get('profile_dir', repo_root / 'isoprep' / 'work' / 'profile'))
+    # Use environment variable if set, otherwise fall back to config or default
+    import os
+    work_dir = Path(os.environ.get('HOMERCHY_WORK_DIR', config.get('work_dir', '/mnt/work/homerchy-isoprep-work')))
+    profile_dir = Path(config.get('profile_dir', work_dir / 'profile'))
     cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
     
     # Download packages to offline mirror

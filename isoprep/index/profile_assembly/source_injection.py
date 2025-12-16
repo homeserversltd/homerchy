@@ -35,7 +35,7 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
     exclude_patterns = ['isoprep/work', 'isoprep/isoout', '.git']
     
     for item in repo_root.iterdir():
-        if item.name in ['isoprep', '.git']:
+        if item.name in ['isoprep', '.git', '.build-swap']:
             continue
         # Skip if we can't stat the item (doesn't exist or permission error)
         try:
@@ -55,9 +55,12 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
             if not dest.exists() or item.stat().st_mtime > dest.stat().st_mtime:
                 try:
                     shutil.copy2(item, dest, follow_symlinks=False)
-                except (OSError, shutil.Error) as e:
-                    # Skip missing files or broken symlinks
-                    if 'No such file or directory' not in str(e):
+                except (OSError, PermissionError, shutil.Error) as e:
+                    # Skip files that can't be accessed (permission denied, missing, broken symlinks)
+                    if 'Permission denied' in str(e) or 'PermissionError' in str(type(e).__name__):
+                        # Silently skip files we can't read (like .build-swap owned by root)
+                        continue
+                    elif 'No such file or directory' not in str(e):
                         raise
     
     # Create symlink for backward compatibility (installer expects /root/omarchy)

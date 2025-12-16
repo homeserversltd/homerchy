@@ -13,38 +13,184 @@ function usage() {
     echo "  -b, --build       Generate a new Homerchy ISO"
     echo "  -l, --launch      Launch the VM using the filtered ISO"
     echo "  -f, --full        Build the ISO (reusing cache) and then launch the VM"
+    echo "  -F, --full-clean  Full clean rebuild (eject all caches, build, then launch)"
     echo "  -d, --deploy DEV  Deploy (dd) the ISO to a device (e.g. /dev/sdX)"
-    echo "  -e, --eject       Cleanup (unmount and remove) the build work directory"
+    echo "  -e, --eject       Eject cartridge (preserves caches for faster rebuilds)"
+    echo "  -E, --eject-full  Full eject (removes all caches, completely clean)"
     echo "  -h, --help        Show this help message"
 }
 
 function do_eject() {
-    echo ">>> Ejecting Cartridge (Cleaning up)..."
-    local WORK_DIR="${REPO_ROOT}/isoprep/work"
+    local FULL_CLEANUP="${1:-false}"
+    
+    if [ "$FULL_CLEANUP" = "true" ]; then
+        echo ">>> Full Eject Cartridge (Removing ALL caches)..."
+    else
+        echo ">>> Ejecting Cartridge (Preserving caches for faster rebuilds)..."
+    fi
+    
+    # Check both old location and new dedicated tmpfs location
+    local WORK_DIR_OLD="/tmp/homerchy-isoprep-work"
+    local WORK_DIR_NEW="/mnt/work/homerchy-isoprep-work"
+    local WORK_DIR="$WORK_DIR_NEW"
+    
+    # Use new location if it exists, otherwise fall back to old location
+    if [ ! -d "$WORK_DIR_NEW" ] && [ -d "$WORK_DIR_OLD" ]; then
+        WORK_DIR="$WORK_DIR_OLD"
+    fi
     
     if [ -d "$WORK_DIR" ]; then
         echo "Safely cleaning up mount points in $WORK_DIR..."
         
-        # Safe, targeted unmount of specific mkarchiso structures
-        # We sort by length (descending) to unmount deepest paths first
-        find "$WORK_DIR" -maxdepth 6 -name "work" -type d -prune -o -type d -mountpoint -print | \
-        awk '{ print length($0) " " $0; }' | sort -rn | cut -d ' ' -f 2- | \
-        while read -r mountpoint; do
-            echo "Unmounting: $mountpoint"
-            sudo umount "$mountpoint" || true
-        done
-
-        # One final targeted pass for stubborn known locations
-        sudo umount "$WORK_DIR/archiso-tmp/x86_64/airootfs/proc" 2>/dev/null || true
-        sudo umount "$WORK_DIR/archiso-tmp/x86_64/airootfs/sys" 2>/dev/null || true
-        sudo umount "$WORK_DIR/archiso-tmp/x86_64/airootfs/dev" 2>/dev/null || true
-        sudo umount "$WORK_DIR/archiso-tmp/x86_64/airootfs/run" 2>/dev/null || true
+        # Step 1: Kill any processes using the work directory
+        echo "Checking for processes using work directory..."
+        local pids=$(lsof +D "$WORK_DIR" 2>/dev/null | awk 'NR>1 {print $2}' | sort -u)
+        if [ -n "$pids" ]; then
+            echo "Found processes using work directory, terminating..."
+            echo "$pids" | while read -r pid; do
+                if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                    echo "  Killing PID $pid"
+                    sudo kill -TERM "$pid" 2>/dev/null || true
+                fi
+            done
+            sleep 2
+            # Force kill any remaining processes
+            pids=$(lsof +D "$WORK_DIR" 2>/dev/null | awk 'NR>1 {print $2}' | sort -u)
+            if [ -n "$pids" ]; then
+                echo "$pids" | while read -r pid; do
+                    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                        echo "  Force killing PID $pid"
+                        sudo kill -KILL "$pid" 2>/dev/null || true
+                    fi
+                done
+                sleep 1
+            fi
+        fi
         
-        echo "Removing work directory..."
-        # Only remove if strictly inside the repo to be safe
-        if [[ "$WORK_DIR" == *"/homerchy/isoprep/work" ]]; then
-            sudo rm -rf "$WORK_DIR"
-            echo "Cartridge ejected."
+        # Step 2: Use findmnt to find ALL mounts recursively (more reliable than find)
+        echo "Finding all mount points in work directory..."
+        local mounts=$(findmnt -rn -o TARGET -T "$WORK_DIR" 2>/dev/null | grep "^$WORK_DIR" | sort -r)
+        
+        if [ -n "$mounts" ]; then
+            echo "$mounts" | while read -r mountpoint; do
+                if [ -n "$mountpoint" ]; then
+                    echo "Unmounting: $mountpoint"
+                    # Try normal unmount first
+                    sudo umount "$mountpoint" 2>/dev/null || {
+                        # If that fails, try lazy unmount (detaches immediately, cleans up later)
+                        echo "  Normal unmount failed, trying lazy unmount..."
+                        sudo umount -l "$mountpoint" 2>/dev/null || true
+                    }
+                fi
+            done
+        fi
+        
+        # Step 3: Fallback - find any remaining mountpoints with find
+        echo "Checking for any remaining mount points..."
+        find "$WORK_DIR" -type d -mountpoint 2>/dev/null | sort -r | while read -r mountpoint; do
+            if [ -n "$mountpoint" ]; then
+                echo "Unmounting (fallback): $mountpoint"
+                sudo umount -l "$mountpoint" 2>/dev/null || true
+            fi
+        done
+        
+        # Step 4: Targeted unmount of known mkarchiso locations (with lazy fallback)
+        echo "Unmounting known mkarchiso locations..."
+        for mountpoint in \
+            "$WORK_DIR/archiso-tmp/x86_64/airootfs/proc" \
+            "$WORK_DIR/archiso-tmp/x86_64/airootfs/sys" \
+            "$WORK_DIR/archiso-tmp/x86_64/airootfs/dev" \
+            "$WORK_DIR/archiso-tmp/x86_64/airootfs/dev/pts" \
+            "$WORK_DIR/archiso-tmp/x86_64/airootfs/run" \
+            "$WORK_DIR/archiso-tmp/x86_64/airootfs/tmp"; do
+            if mountpoint -q "$mountpoint" 2>/dev/null; then
+                echo "  Unmounting: $mountpoint"
+                sudo umount "$mountpoint" 2>/dev/null || sudo umount -l "$mountpoint" 2>/dev/null || true
+            fi
+        done
+        
+        # Step 5: Clean up system-wide symlink created during build
+        echo "Cleaning up system-wide symlink..."
+        local system_mirror_link="/var/cache/omarchy/mirror/offline"
+        if [ -L "$system_mirror_link" ]; then
+            echo "  Removing symlink: $system_mirror_link"
+            sudo rm -f "$system_mirror_link" 2>/dev/null || true
+        fi
+        
+        # Step 6: Final check - ensure no mounts remain
+        sleep 1
+        local remaining_mounts=$(findmnt -rn -o TARGET -T "$WORK_DIR" 2>/dev/null | grep "^$WORK_DIR" || true)
+        if [ -n "$remaining_mounts" ]; then
+            echo "WARNING: Some mounts may still be active:"
+            echo "$remaining_mounts"
+            echo "Attempting lazy unmount of remaining mounts..."
+            echo "$remaining_mounts" | while read -r mountpoint; do
+                if [ -n "$mountpoint" ]; then
+                    sudo umount -l "$mountpoint" 2>/dev/null || true
+                fi
+            done
+        fi
+        
+        # Step 7: Remove work directory (with cache preservation logic)
+        if [[ "$WORK_DIR" == "/tmp/homerchy-isoprep-work" ]] || [[ "$WORK_DIR" == "/mnt/work/homerchy-isoprep-work" ]]; then
+            if [ "$FULL_CLEANUP" = "true" ]; then
+                # Full cleanup: remove everything including caches
+                echo "Removing work directory and ALL caches..."
+                local final_pids=$(lsof +D "$WORK_DIR" 2>/dev/null | awk 'NR>1 {print $2}' | sort -u || true)
+                if [ -n "$final_pids" ]; then
+                    echo "WARNING: Processes still using work directory, forcing removal..."
+                fi
+                sudo rm -rf "$WORK_DIR"
+                echo "✓ Cartridge fully ejected (all caches removed)"
+            else
+                # Normal cleanup: preserve caches
+                echo "Removing work directory (preserving caches)..."
+                
+                # Preserve cacheable directories
+                local PROFILE_DIR="$WORK_DIR/profile"
+                local ARCHISO_TMP="$WORK_DIR/archiso-tmp"
+                local PRESERVE_DIR="/mnt/work/.homerchy-cache-preserve"
+                
+                if [ -d "$PROFILE_DIR" ] || [ -d "$ARCHISO_TMP" ]; then
+                    echo "Preserving caches for faster rebuilds..."
+                    sudo mkdir -p "$PRESERVE_DIR"
+                    
+                    # Preserve profile (injected source + package cache)
+                    if [ -d "$PROFILE_DIR" ]; then
+                        echo "  Preserving profile directory..."
+                        sudo mv "$PROFILE_DIR" "$PRESERVE_DIR/profile" 2>/dev/null || true
+                    fi
+                    
+                    # Preserve archiso-tmp package cache
+                    if [ -d "$ARCHISO_TMP" ]; then
+                        echo "  Preserving archiso-tmp package cache..."
+                        sudo mv "$ARCHISO_TMP" "$PRESERVE_DIR/archiso-tmp" 2>/dev/null || true
+                    fi
+                fi
+                
+                # Remove work directory
+                local final_pids=$(lsof +D "$WORK_DIR" 2>/dev/null | awk 'NR>1 {print $2}' | sort -u || true)
+                if [ -n "$final_pids" ]; then
+                    echo "WARNING: Processes still using work directory, forcing removal..."
+                fi
+                sudo rm -rf "$WORK_DIR"
+                
+                # Restore preserved caches
+                if [ -d "$PRESERVE_DIR" ]; then
+                    echo "Restoring preserved caches..."
+                    if [ -d "$PRESERVE_DIR/profile" ]; then
+                        sudo mkdir -p "$WORK_DIR"
+                        sudo mv "$PRESERVE_DIR/profile" "$WORK_DIR/profile" 2>/dev/null || true
+                    fi
+                    if [ -d "$PRESERVE_DIR/archiso-tmp" ]; then
+                        sudo mkdir -p "$WORK_DIR"
+                        sudo mv "$PRESERVE_DIR/archiso-tmp" "$WORK_DIR/archiso-tmp" 2>/dev/null || true
+                    fi
+                    sudo rmdir "$PRESERVE_DIR" 2>/dev/null || true
+                fi
+                
+                echo "✓ Cartridge ejected (caches preserved for faster rebuilds)"
+            fi
         else
              echo "Safety check failed: WORK_DIR path looks suspicious ($WORK_DIR). Skipping rm -rf."
         fi
@@ -53,12 +199,137 @@ function do_eject() {
     fi
 }
 
+function setup_build_workdir() {
+    # Create work directory on disk (not tmpfs, no swap)
+    local WORK_DIR="/mnt/work/homerchy-isoprep-work"
+    
+    # Create work directory with proper ownership
+    if [ ! -d "$WORK_DIR" ]; then
+        echo "Creating build work directory at $WORK_DIR..."
+        sudo mkdir -p "$WORK_DIR"
+        # Set ownership to current user
+        sudo chown -R "$(id -u):$(id -g)" "$WORK_DIR"
+        echo "✓ Build work directory created"
+    else
+        echo "Build work directory already exists at $WORK_DIR"
+    fi
+    
+    # Export work directory location
+    export HOMERCHY_WORK_DIR="$WORK_DIR"
+}
+
+function cleanup_build_workdir() {
+    # Clean up work directory, but preserve cacheable parts
+    local WORK_DIR="/mnt/work/homerchy-isoprep-work"
+    
+    if [ -d "$WORK_DIR" ]; then
+        echo "Cleaning up build work directory (preserving caches)..."
+        
+        # Kill any processes using the directory
+        local pids=$(lsof +D "$WORK_DIR" 2>/dev/null | awk 'NR>1 {print $2}' | sort -u || true)
+        if [ -n "$pids" ]; then
+            echo "Terminating processes using work directory..."
+            echo "$pids" | while read -r pid; do
+                if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                    sudo kill -TERM "$pid" 2>/dev/null || true
+                fi
+            done
+            sleep 2
+            # Force kill if still running
+            pids=$(lsof +D "$WORK_DIR" 2>/dev/null | awk 'NR>1 {print $2}' | sort -u || true)
+            if [ -n "$pids" ]; then
+                echo "$pids" | while read -r pid; do
+                    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                        sudo kill -KILL "$pid" 2>/dev/null || true
+                    fi
+                done
+            fi
+        fi
+        
+        # Unmount any mounts in the directory
+        local mounts=$(findmnt -rn -o TARGET -T "$WORK_DIR" 2>/dev/null | grep "^$WORK_DIR" | sort -r || true)
+        if [ -n "$mounts" ]; then
+            echo "$mounts" | while read -r mountpoint; do
+                if [ -n "$mountpoint" ]; then
+                    sudo umount -l "$mountpoint" 2>/dev/null || true
+                fi
+            done
+        fi
+        
+        # Preserve cacheable directories:
+        # - profile/airootfs/root/homerchy (injected source - takes ages to copy)
+        # - profile/airootfs/var/cache/omarchy/mirror/offline (package cache)
+        # - archiso-tmp (package cache for mkarchiso)
+        # Remove only the build artifacts that change each time
+        
+        local PROFILE_DIR="$WORK_DIR/profile"
+        local ARCHISO_TMP="$WORK_DIR/archiso-tmp"
+        
+        # Remove only the parts that need to be rebuilt
+        if [ -d "$ARCHISO_TMP" ]; then
+            echo "Preserving archiso-tmp for package cache..."
+            # Remove only the x86_64 build directory, keep package cache
+            sudo rm -rf "$ARCHISO_TMP/x86_64" 2>/dev/null || true
+            sudo rm -rf "$ARCHISO_TMP/iso" 2>/dev/null || true
+            # Remove state files that cause stale build issues
+            sudo rm -f "$ARCHISO_TMP"/*.state 2>/dev/null || true
+            sudo rm -f "$ARCHISO_TMP"/base.* 2>/dev/null || true
+        fi
+        
+        if [ -d "$PROFILE_DIR" ]; then
+            echo "Preserving profile directory (injected source cached)..."
+            # The prepare phase will handle cleaning up stale parts while preserving cache
+            # We just need to make sure mounts are cleaned up
+        fi
+        
+        # Only remove work directory if it's completely empty (shouldn't happen with preserved caches)
+        if [ -z "$(ls -A "$WORK_DIR" 2>/dev/null)" ]; then
+            sudo rmdir "$WORK_DIR" 2>/dev/null || true
+        else
+            echo "✓ Preserved cacheable directories for faster rebuild"
+        fi
+    fi
+}
+
 function do_build() {
     echo ">>> Starting Build..."
+    
+    # Setup work directory on disk
+    setup_build_workdir
+    
+    # Use work directory
+    local WORK_DIR="${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-isoprep-work}"
+    
+    # Clean up any stale mounts/processes before building to prevent accumulation
+    if [ -d "$WORK_DIR" ]; then
+        echo "Pre-build cleanup: Checking for stale mounts..."
+        local stale_mounts=$(findmnt -rn -o TARGET -T "$WORK_DIR" 2>/dev/null | grep "^$WORK_DIR" || true)
+        if [ -n "$stale_mounts" ]; then
+            echo "Found stale mounts from previous build, cleaning up..."
+            # Quick cleanup - just unmount, don't remove directory
+            echo "$stale_mounts" | sort -r | while read -r mountpoint; do
+                if [ -n "$mountpoint" ]; then
+                    sudo umount -l "$mountpoint" 2>/dev/null || true
+                fi
+            done
+        fi
+    fi
+    
+    # Run build with cleanup on exit
     if [ -f "$BUILD_SCRIPT" ]; then
+        # Use trap to ensure work directory cleanup even on error
+        trap cleanup_build_workdir EXIT
+        # Set environment variable for work directory location
+        export HOMERCHY_WORK_DIR="$WORK_DIR"
         python3 "$BUILD_SCRIPT"
+        local build_exit=$?
+        # Cleanup work directory
+        cleanup_build_workdir
+        trap - EXIT
+        exit $build_exit
     else
         echo "Error: Build script not found at $BUILD_SCRIPT"
+        cleanup_build_workdir
         exit 1
     fi
 }
@@ -120,13 +391,23 @@ while [[ $# -gt 0 ]]; do
             do_launch
             shift
             ;;
+        -F|--full-clean)
+            do_eject "true"
+            do_build
+            do_launch
+            shift
+            ;;
         -d|--deploy)
             TARGET_DEVICE="$2"
             do_deploy "$TARGET_DEVICE"
             shift 2
             ;;
         -e|--eject)
-            do_eject
+            do_eject "false"
+            shift
+            ;;
+        -E|--eject-full)
+            do_eject "true"
             shift
             ;;
         -h|--help)

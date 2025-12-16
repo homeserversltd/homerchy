@@ -6,9 +6,9 @@
   },
   "paths": {
     "repo_root": "${ISOPREP_REPO_ROOT}",
-    "work_dir": "${ISOPREP_REPO_ROOT}/isoprep/work",
+    "work_dir": "${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-isoprep-work}",
     "out_dir": "${ISOPREP_REPO_ROOT}/isoprep/isoout",
-    "profile_dir": "${ISOPREP_REPO_ROOT}/isoprep/work/profile"
+    "profile_dir": "${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-isoprep-work}/profile"
   },
   "children": [
     "prepare",

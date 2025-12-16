@@ -33,7 +33,8 @@ def main(phase_path: Path, config: dict) -> dict:
     
     # Get paths from parent config
     repo_root = Path(config.get('repo_root', Path(phase_path).parent.parent.parent))
-    work_dir = Path(config.get('work_dir', repo_root / 'isoprep' / 'work'))
+    # Use environment variable if set, otherwise fall back to config or default
+    work_dir = Path(os.environ.get('HOMERCHY_WORK_DIR', config.get('work_dir', '/mnt/work/homerchy-isoprep-work')))
     out_dir = Path(config.get('out_dir', repo_root / 'isoprep' / 'isoout'))
     profile_dir = Path(config.get('profile_dir', work_dir / 'profile'))
     
@@ -47,6 +48,11 @@ def main(phase_path: Path, config: dict) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     print(f"{Colors.GREEN}✓ Output directory ready: {out_dir}{Colors.NC}")
     
+    # Ensure work directory exists (in dedicated tmpfs for build isolation)
+    print(f"{Colors.BLUE}Ensuring work directory exists (in dedicated build tmpfs)...{Colors.NC}")
+    work_dir.mkdir(parents=True, exist_ok=True)
+    print(f"{Colors.GREEN}✓ Work directory ready: {work_dir}{Colors.NC}")
+    
     # Clean up profile directory (but preserve caches)
     print(f"{Colors.BLUE}Preparing profile directory...{Colors.NC}")
     archiso_tmp_dir = work_dir / 'archiso-tmp'
@@ -55,16 +61,29 @@ def main(phase_path: Path, config: dict) -> dict:
     cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
     preserve_cache = cache_dir.exists() and any(cache_dir.glob('*.pkg.tar.*'))
     
+    # Preserve injected source (takes a long time to copy)
+    injected_source = profile_dir / 'airootfs' / 'root' / 'homerchy'
+    preserve_source = injected_source.exists() and injected_source.is_dir()
+    
     if profile_dir.exists():
         print(f"{Colors.BLUE}Cleaning up previous profile directory...{Colors.NC}")
+        
+        # Preserve package cache
         if preserve_cache:
             print(f"{Colors.BLUE}Preserving offline mirror cache ({len(list(cache_dir.glob('*.pkg.tar.*')))} packages)...{Colors.NC}")
-            import shutil
             temp_cache = work_dir / 'offline-mirror-cache-temp'
             if temp_cache.exists():
                 shutil.rmtree(temp_cache)
             cache_dir.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(cache_dir), str(temp_cache))
+        
+        # Preserve injected source
+        if preserve_source:
+            print(f"{Colors.BLUE}Preserving injected repository source (speeds up rebuild)...{Colors.NC}")
+            temp_source = work_dir / 'injected-source-temp'
+            if temp_source.exists():
+                shutil.rmtree(temp_source)
+            shutil.move(str(injected_source), str(temp_source))
         
         shutil.rmtree(profile_dir)
         profile_dir.mkdir(parents=True, exist_ok=True)
@@ -74,6 +93,12 @@ def main(phase_path: Path, config: dict) -> dict:
             cache_dir.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(temp_cache), str(cache_dir))
             print(f"{Colors.GREEN}✓ Restored offline mirror cache{Colors.NC}")
+        
+        # Restore injected source if it was preserved
+        if preserve_source:
+            injected_source.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(temp_source), str(injected_source))
+            print(f"{Colors.GREEN}✓ Restored injected repository source{Colors.NC}")
     
     # Clean up preserved archiso-tmp to avoid stale state issues
     # We preserve it for package cache, but need to remove stale build artifacts

@@ -5,3 +5,5 @@
 *.base
 *.qcow2
 *.cpython**
+.build-swap
+**${HOMERCHY_WORK_DIR**
