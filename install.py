@@ -9,6 +9,7 @@ Replaces install.sh with Python-based orchestrator.
 
 import os
 import sys
+import subprocess
 from pathlib import Path
 
 
@@ -52,6 +53,37 @@ def setup_environment():
         os.environ['PATH'] = f"{omarchy_bin}:{current_path}"
 
 
+def lockout_and_reboot():
+    """Lock out login and force reboot on installation failure."""
+    print("INSTALLATION FAILED - Locking out login and rebooting...", file=sys.stderr)
+    
+    try:
+        # Disable SDDM (login manager) to prevent login
+        subprocess.run(['systemctl', 'disable', 'sddm.service'], 
+                      check=False, capture_output=True)
+        subprocess.run(['systemctl', 'stop', 'sddm.service'], 
+                      check=False, capture_output=True)
+        
+        # Also lock the user account as additional protection
+        username = os.environ.get('USER', 'owner')
+        subprocess.run(['passwd', '-l', username], 
+                      check=False, capture_output=True)
+        
+        print("Login locked. Rebooting in 5 seconds...", file=sys.stderr)
+        
+        # Force reboot after short delay
+        subprocess.run(['sleep', '5'], check=False)
+        subprocess.run(['reboot', '-f'], check=False)
+        
+    except Exception as e:
+        print(f"WARNING: Failed to lock out login: {e}", file=sys.stderr)
+        # Still try to reboot even if lockout fails
+        try:
+            subprocess.run(['reboot', '-f'], check=False)
+        except Exception:
+            pass
+
+
 def main():
     """Main entry point."""
     # Setup environment
@@ -69,6 +101,7 @@ def main():
         print(f"ERROR:   {Path(__file__).parent / 'install'}", file=sys.stderr)
         print(f"ERROR: OMARCHY_PATH={os.environ.get('OMARCHY_PATH')}", file=sys.stderr)
         print(f"ERROR: HOME={os.environ.get('HOME')}", file=sys.stderr)
+        lockout_and_reboot()
         sys.exit(1)
     
     # Import and run root orchestrator
@@ -84,12 +117,15 @@ def main():
         if state.status == Status.COMPLETED:
             sys.exit(0)
         else:
+            # Installation failed - lock out login and reboot
+            lockout_and_reboot()
             sys.exit(1)
     
     except Exception as e:
         print(f"ERROR: Failed to run orchestrator: {e}", file=sys.stderr)
         import traceback
         traceback.print_exc()
+        lockout_and_reboot()
         sys.exit(1)
 
 

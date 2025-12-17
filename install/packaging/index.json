@@ -9,8 +9,7 @@
         "fonts",
         "icons",
         "nvim",
-        "tuis",
-        "webapps"
+        "tuis"
     ],
     "execution": {
         "mode": "sequential",
