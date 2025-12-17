@@ -13,6 +13,9 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# Import log viewer TUI
+from .log_viewer import launch_log_viewer
+
 
 def stop_install_log():
     """Stop log monitoring and write final summary to log file."""
@@ -262,38 +265,70 @@ def main(config: dict) -> dict:
         for tty_num in range(1, 7):
             subprocess.run(['systemctl', 'unmask', f'getty@tty{tty_num}.service'], 
                          check=False, capture_output=True)
+        
+        # Take direct control of TTY1 to display completion message
+        # This prevents reboot by ensuring TTY has visible content
+        try:
+            # Switch to TTY1
+            subprocess.run(['chvt', '1'], check=False, timeout=5)
+        except Exception:
+            pass
+        
+        # Write completion message directly to TTY1, then launch log viewer
+        completion_message = f"""
+{'=' * 70}
+HOMERCHY INSTALLATION COMPLETED
+{'=' * 70}
+
+Logs have been dumped to /root/ for debugging.
+Launching log viewer...
+
+{'=' * 70}
+"""
+        
+        # Write to TTY1 directly (takes control of the TTY)
+        try:
+            with open('/dev/tty1', 'w') as tty1:
+                tty1.write('\033[2J\033[H')  # Clear screen (ANSI escape codes)
+                tty1.write(completion_message)
+                tty1.flush()
+        except Exception as e:
+            # Fallback to stderr if TTY1 write fails
+            print(f"Warning: Could not write to /dev/tty1: {e}", file=sys.stderr)
+            print(completion_message, file=sys.stderr)
+        
+        # Launch log viewer on TTY1
+        # Create a wrapper script that can be executed to view logs
+        try:
+            viewer_script = Path('/tmp/omarchy-log-viewer.py')
+            script_content = f"""#!/usr/bin/env python3
+import sys
+import os
+os.environ['TERM'] = 'linux'
+sys.path.insert(0, '{Path(__file__).parent.parent.parent}')
+from install.post_install.log_viewer import launch_log_viewer
+launch_log_viewer()
+"""
+            with open(viewer_script, 'w') as f:
+                f.write(script_content)
+            viewer_script.chmod(0o755)
+            
+            # Use openvt to launch viewer on TTY1 (switches to TTY1 and runs)
+            # This should work even from systemd service context
+            subprocess.Popen(
+                ['openvt', '-c', '1', '-s', '-w', '--', 'python3', str(viewer_script)],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
+        except Exception as e:
+            # If openvt fails, that's okay - user can still view logs manually
+            print(f"Note: Could not auto-launch log viewer (run: python3 /tmp/omarchy-log-viewer.py): {e}", file=sys.stderr)
+        
+        # Start getty after displaying message (so message is visible first)
         subprocess.run(['systemctl', 'start', 'getty@tty1.service'], 
                       check=False, capture_output=True)
-        
-        # Clear screen and show completion message
-        subprocess.run(['clear'], check=False)
-        print()
-        print("=" * 70)
-        print("HOMERCHY INSTALLATION COMPLETED")
-        print("=" * 70)
-        print()
-        print("Logs have been dumped to /root/ for debugging:")
-        print("  - a.txt (full installation log)")
-        print("  - b.txt (ERROR/FAILED)")
-        print("  - c.txt (Permission denied)")
-        print("  - d.txt (timeout)")
-        print("  - e.txt (Traceback/Exception)")
-        print("  - f.txt (systemd/service)")
-        print("  - g.txt (getty/TTY)")
-        print("  - h.txt (plymouth)")
-        print("  - i.txt (lockout/passwd)")
-        print("  - j.txt (reboot)")
-        print("  - k.txt (marker file)")
-        print("  - l.txt (orchestrator)")
-        print("  - m.txt (module)")
-        print("  - z.txt (full service journal)")
-        print()
-        print("TTY login has been re-enabled.")
-        print("You can now log in to check logs and debug.")
-        print()
-        print("NOTE: Future enhancement - automatic reboot after installation.")
-        print("=" * 70)
-        print()
         
         # Drop to TTY (don't reboot)
         # The service will complete and TTY will be available for login

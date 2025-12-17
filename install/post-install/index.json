@@ -8,8 +8,7 @@
         "pacman",
         "prebuild",
         "ssh",
-        "allow-reboot",
-        "finished"
+        "allow-reboot"
     ],
     "execution": {
         "mode": "sequential",

@@ -77,9 +77,16 @@ def main(phase_path: Path, config: dict) -> dict:
             print(f"{Colors.BLUE}Preserving offline mirror cache ({len(list(cache_dir.glob('*.pkg.tar.*')))} packages)...{Colors.NC}")
             temp_cache = work_dir / 'offline-mirror-cache-temp'
             if temp_cache.exists():
-                shutil.rmtree(temp_cache)
+                try:
+                    shutil.rmtree(temp_cache)
+                except PermissionError:
+                    subprocess.run(['sudo', 'rm', '-rf', str(temp_cache)], check=False)
             cache_dir.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(cache_dir), str(temp_cache))
+            try:
+                shutil.move(str(cache_dir), str(temp_cache))
+            except PermissionError:
+                # Use sudo to move if permission denied
+                subprocess.run(['sudo', 'mv', str(cache_dir), str(temp_cache)], check=True)
         
         # Preserve injected source
         if preserve_source:
@@ -87,23 +94,50 @@ def main(phase_path: Path, config: dict) -> dict:
             print(f"{Colors.YELLOW}⚠ Restoring this cache may take a minute...{Colors.NC}")
             temp_source = work_dir / 'injected-source-temp'
             if temp_source.exists():
-                shutil.rmtree(temp_source)
-            shutil.move(str(injected_source), str(temp_source))
+                try:
+                    shutil.rmtree(temp_source)
+                except PermissionError:
+                    subprocess.run(['sudo', 'rm', '-rf', str(temp_source)], check=False)
+            try:
+                shutil.move(str(injected_source), str(temp_source))
+            except PermissionError:
+                # Use sudo to move if permission denied
+                subprocess.run(['sudo', 'mv', str(injected_source), str(temp_source)], check=True)
         
-        shutil.rmtree(profile_dir)
+        try:
+            shutil.rmtree(profile_dir)
+        except PermissionError:
+            subprocess.run(['sudo', 'rm', '-rf', str(profile_dir)], check=True)
         profile_dir.mkdir(parents=True, exist_ok=True)
         
         # Restore cache if it was preserved
         if preserve_cache:
             cache_dir.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(temp_cache), str(cache_dir))
+            try:
+                shutil.move(str(temp_cache), str(cache_dir))
+            except PermissionError:
+                # Use sudo to move if permission denied
+                subprocess.run(['sudo', 'mv', str(temp_cache), str(cache_dir)], check=True)
+            # Fix ownership of restored cache (may be owned by root if moved with sudo)
+            # This ensures the package check can read the files
+            current_uid = os.getuid()
+            current_gid = os.getgid()
+            subprocess.run(['sudo', 'chown', '-R', f'{current_uid}:{current_gid}', str(cache_dir)], check=True)
             print(f"{Colors.GREEN}✓ Restored offline mirror cache{Colors.NC}")
         
         # Restore injected source if it was preserved
         if preserve_source:
             print(f"{Colors.BLUE}Restoring injected repository source...{Colors.NC}")
             injected_source.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(temp_source), str(injected_source))
+            try:
+                shutil.move(str(temp_source), str(injected_source))
+            except PermissionError:
+                # Use sudo to move if permission denied
+                subprocess.run(['sudo', 'mv', str(temp_source), str(injected_source)], check=True)
+            # Fix ownership of restored source (may be owned by root if moved with sudo)
+            current_uid = os.getuid()
+            current_gid = os.getgid()
+            subprocess.run(['sudo', 'chown', '-R', f'{current_uid}:{current_gid}', str(injected_source)], check=True)
             print(f"{Colors.GREEN}✓ Restored injected repository source{Colors.NC}")
     
     # Clean up preserved archiso-tmp to avoid stale state issues
@@ -117,7 +151,6 @@ def main(phase_path: Path, config: dict) -> dict:
             subprocess.run(['sudo', 'rm', '-rf', str(archiso_tmp_dir)], check=False)
     elif preserve_archiso_tmp:
         print(f"{Colors.BLUE}Preserving mkarchiso work directory for faster rebuild (package cache){Colors.NC}")
-        import subprocess
         
         # Remove cached squashfs to force rebuild
         cached_squashfs = archiso_tmp_dir / 'iso' / 'arch' / 'x86_64' / 'airootfs.sfs'
