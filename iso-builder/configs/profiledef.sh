@@ -20,7 +20,7 @@ file_permissions=(
   ["/root/.automated_script.py"]="0:0:755"
   ["/root/.gnupg"]="0:0:700"
   ["/usr/local/bin/choose-mirror"]="0:0:755"
-  ["/root/configurator.py"]="0:0:755"
+  ["/root/configurator"]="0:0:755"
   ["/var/cache/omarchy/mirror/offline/"]="0:0:775"
   ["/usr/local/bin/omarchy-upload-log"]="0:0:755"
 )

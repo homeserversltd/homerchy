@@ -673,23 +673,6 @@ def install_homerchy():
 
 def main():
     """Main installation orchestration."""
-    # JOB'S DONE SCREEN - ONE THING ONLY - RUN PERPETUALLY
-    try:
-        subprocess.run(['chvt', '1'], check=False, timeout=5)
-        time.sleep(0.5)
-        while True:
-            with open('/dev/tty1', 'w') as tty1:
-                tty1.write('\033[2J\033[H')  # Clear screen
-                tty1.write('\n' * 10)  # Space
-                tty1.write(' ' * 20 + 'JOB\'S DONE\n')
-                tty1.write('\n' * 15)  # More space
-                tty1.flush()
-            time.sleep(1)  # Keep running perpetually
-    except Exception as e:
-        print(f"JOB'S DONE (TTY write failed: {e})")
-        while True:
-            time.sleep(1)  # Still run perpetually even on error
-    
     # Only run on tty1
     tty = os.ttyname(sys.stdout.fileno()) if hasattr(os, 'ttyname') else None
     if tty != '/dev/tty1':
@@ -738,19 +721,12 @@ def main():
     
     log("Arch Linux installation complete!")
     log("Homerchy will be installed on first boot of the installed system.")
-    
-    # JOB'S DONE SCREEN - ONE THING ONLY
-    try:
-        subprocess.run(['chvt', '1'], check=False, timeout=5)
-        time.sleep(0.5)
-        with open('/dev/tty1', 'w') as tty1:
-            tty1.write('\033[2J\033[H')  # Clear screen
-            tty1.write('\n' * 10)  # Space
-            tty1.write(' ' * 20 + 'JOB\'S DONE\n')
-            tty1.write('\n' * 15)  # More space
-            tty1.flush()
-    except Exception as e:
-        print(f"JOB'S DONE (TTY write failed: {e})")
+    print("\n" + "="*60)
+    print("Arch Linux installation completed successfully!")
+    print("Homerchy will be installed automatically on first boot.")
+    print("="*60)
+    print("\nYou may reboot when ready:")
+    print("  sudo reboot\n")
 
 
 if __name__ == '__main__':
