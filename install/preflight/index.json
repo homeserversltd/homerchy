@@ -6,6 +6,7 @@
     },
     "children": [
         "guard",
+        "tty-control",
         "begin",
         "show-env",
         "pacman",

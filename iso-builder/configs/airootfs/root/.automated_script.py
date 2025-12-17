@@ -516,10 +516,9 @@ Server = file:///var/cache/omarchy/mirror/offline/
     service_content = f"""[Unit]
 Description=Homerchy First-Boot Installation
 # Wait for system to be fully booted (including encrypted root unlock and filesystem mount)
-After=multi-user.target network-online.target plymouth-start.service
+After=multi-user.target network-online.target
 # Don't block boot - start after system is ready
 Wants=network-online.target
-Before=plymouth-quit.service
 # Only run if marker file exists AND root filesystem is mounted
 ConditionPathExists=/var/lib/omarchy-install-needed
 ConditionPathIsMountPoint=/
