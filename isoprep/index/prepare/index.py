@@ -70,10 +70,6 @@ def main(phase_path: Path, config: dict) -> dict:
         (system_temp_cache.exists() and any(system_temp_cache.glob('*.pkg.tar.*')))
     ) and not full_clean
     
-    # Preserve injected source (takes a long time to copy)
-    injected_source = profile_dir / 'airootfs' / 'root' / 'homerchy'
-    preserve_source = injected_source.exists() and injected_source.is_dir() and not full_clean
-    
     # Handle cache preservation even if profile_dir doesn't exist (cache in system temp from cleanup)
     if preserve_cache and not profile_dir.exists() and system_temp_cache.exists() and any(system_temp_cache.glob('*.pkg.tar.*')):
         print(f"{Colors.BLUE}Restoring cache from system temp location (profile directory doesn't exist yet)...{Colors.NC}")
@@ -121,22 +117,6 @@ def main(phase_path: Path, config: dict) -> dict:
                     # Use sudo to move if permission denied
                     subprocess.run(['sudo', 'mv', str(cache_dir), str(temp_cache)], check=True)
         
-        # Preserve injected source
-        if preserve_source:
-            print(f"{Colors.BLUE}Preserving injected repository source (speeds up rebuild)...{Colors.NC}")
-            print(f"{Colors.YELLOW}⚠ Restoring this cache may take a minute...{Colors.NC}")
-            temp_source = work_dir / 'injected-source-temp'
-            if temp_source.exists():
-                try:
-                    shutil.rmtree(temp_source)
-                except PermissionError:
-                    subprocess.run(['sudo', 'rm', '-rf', str(temp_source)], check=False)
-            try:
-                shutil.move(str(injected_source), str(temp_source))
-            except PermissionError:
-                # Use sudo to move if permission denied
-                subprocess.run(['sudo', 'mv', str(injected_source), str(temp_source)], check=True)
-        
         try:
             shutil.rmtree(profile_dir)
         except PermissionError:
@@ -157,21 +137,6 @@ def main(phase_path: Path, config: dict) -> dict:
             current_gid = os.getgid()
             subprocess.run(['sudo', 'chown', '-R', f'{current_uid}:{current_gid}', str(cache_dir)], check=True)
             print(f"{Colors.GREEN}✓ Restored offline mirror cache{Colors.NC}")
-        
-        # Restore injected source if it was preserved
-        if preserve_source:
-            print(f"{Colors.BLUE}Restoring injected repository source...{Colors.NC}")
-            injected_source.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                shutil.move(str(temp_source), str(injected_source))
-            except PermissionError:
-                # Use sudo to move if permission denied
-                subprocess.run(['sudo', 'mv', str(temp_source), str(injected_source)], check=True)
-            # Fix ownership of restored source (may be owned by root if moved with sudo)
-            current_uid = os.getuid()
-            current_gid = os.getgid()
-            subprocess.run(['sudo', 'chown', '-R', f'{current_uid}:{current_gid}', str(injected_source)], check=True)
-            print(f"{Colors.GREEN}✓ Restored injected repository source{Colors.NC}")
     
     # Clean up preserved archiso-tmp to avoid stale state issues
     # We preserve it for package cache, but need to remove stale build artifacts

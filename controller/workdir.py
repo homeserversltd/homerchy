@@ -215,15 +215,11 @@ def cleanup_build_workdir(full_clean: bool = False, cache_db_only: bool = False)
             print("Cleaning up profile directory (preserving only caches)...")
             
             cache_dir = profile_dir / "airootfs/var/cache/omarchy/mirror/offline"
-            injected_source = profile_dir / "airootfs/root/homerchy"
             temp_cache = work_path / "offline-mirror-cache-temp"
-            temp_source = work_path / "injected-source-temp"
             
             # Clean up any stale temp directories
             if temp_cache.exists():
                 run_command(['rm', '-rf', str(temp_cache)], sudo=True)
-            if temp_source.exists():
-                run_command(['rm', '-rf', str(temp_source)], sudo=True)
             
             # Preserve package cache if it exists and has packages
             if cache_dir.exists():
@@ -233,26 +229,15 @@ def cleanup_build_workdir(full_clean: bool = False, cache_db_only: bool = False)
                     run_command(['mkdir', '-p', str(temp_cache.parent)], sudo=True)
                     run_command(['mv', str(cache_dir), str(temp_cache)], sudo=True)
             
-            # Preserve injected source if it exists
-            if injected_source.exists():
-                print("  Preserving injected source...")
-                run_command(['mkdir', '-p', str(temp_source.parent)], sudo=True)
-                run_command(['mv', str(injected_source), str(temp_source)], sudo=True)
-            
             # Remove entire profile directory
             print("  Removing profile directory...")
             run_command(['rm', '-rf', str(profile_dir)], sudo=True)
             
-            # Restore preserved caches
+            # Restore preserved cache
             if temp_cache.exists():
                 print("  Restoring package cache...")
                 run_command(['mkdir', '-p', str(cache_dir.parent)], sudo=True)
                 run_command(['mv', str(temp_cache), str(cache_dir)], sudo=True)
-            
-            if temp_source.exists():
-                print("  Restoring injected source...")
-                run_command(['mkdir', '-p', str(injected_source.parent)], sudo=True)
-                run_command(['mv', str(temp_source), str(injected_source)], sudo=True)
         
         # Only remove work directory if it's completely empty
         if work_path.exists() and not any(work_path.iterdir()):
