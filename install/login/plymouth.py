@@ -46,7 +46,7 @@ def main(config: dict) -> dict:
         if not plymouth_source.exists():
             return {"success": False, "message": f"Plymouth theme source not found: {plymouth_source}"}
         
-        # Create destination directory
+        # Create destination directory (running as root, no sudo needed)
         plymouth_dest.mkdir(parents=True, exist_ok=True)
         
         # Copy all files from source to destination
@@ -59,9 +59,21 @@ def main(config: dict) -> dict:
             else:
                 shutil.copy2(item, dest_item)
         
-        # Set Plymouth theme
+        # Set ownership and permissions on copied files
+        subprocess.run(
+            ['chown', '-R', 'root:root', str(plymouth_dest)],
+            capture_output=True,
+            check=False
+        )
+        subprocess.run(
+            ['chmod', '-R', '755', str(plymouth_dest)],
+            capture_output=True,
+            check=False
+        )
+        
+        # Set Plymouth theme (running as root, no sudo needed)
         result = subprocess.run(
-            ['sudo', 'plymouth-set-default-theme', 'omarchy'],
+            ['plymouth-set-default-theme', 'omarchy'],
             capture_output=True,
             text=True,
             timeout=10

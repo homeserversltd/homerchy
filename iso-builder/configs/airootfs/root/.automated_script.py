@@ -519,16 +519,25 @@ After=network-online.target plymouth-start.service
 Wants=network-online.target
 Before=plymouth-quit.service
 ConditionPathExists=/var/lib/omarchy-install-needed
+Conflicts=getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
 
 [Service]
 Type=oneshot
-User={omarchy_user}
-Group={omarchy_user}
+# Run entire orchestrator as root - simplifies permissions for system operations
 WorkingDirectory={installed_omarchy_path}
 Environment="HOME=/home/{omarchy_user}"
 Environment="USER={omarchy_user}"
 Environment="OMARCHY_PATH={installed_omarchy_path}"
+Environment="OMARCHY_INSTALL_USER={omarchy_user}"
+# Block TTY login during installation
+ExecStartPre=/bin/systemctl stop getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
+ExecStartPre=/bin/systemctl mask getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
+# Run installation as root (orchestrator handles user-specific operations internally)
 ExecStart=/bin/bash {installed_omarchy_path}/install.sh
+# Re-enable TTY login after installation (success or failure)
+ExecStartPost=/bin/systemctl unmask getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
+ExecStartPost=/bin/systemctl start getty@tty1.service
+# Remove marker file
 ExecStartPost=/bin/rm -f /var/lib/omarchy-install-needed
 StandardOutput=journal
 StandardError=journal

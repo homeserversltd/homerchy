@@ -53,6 +53,16 @@ def setup_environment():
         os.environ['PATH'] = f"{omarchy_bin}:{current_path}"
 
 
+def unlock_account():
+    """Unlock user account on successful installation."""
+    try:
+        username = os.environ.get('OMARCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
+        subprocess.run(['passwd', '-u', username], 
+                      check=False, capture_output=True)
+    except Exception as e:
+        print(f"WARNING: Failed to unlock account: {e}", file=sys.stderr)
+
+
 def lockout_and_reboot():
     """Lock out login and force reboot on installation failure."""
     print("INSTALLATION FAILED - Locking out login and rebooting...", file=sys.stderr)
@@ -63,27 +73,27 @@ def lockout_and_reboot():
         marker_file = Path('/var/lib/omarchy-install-needed')
         if marker_file.exists():
             try:
-                subprocess.run(['sudo', 'rm', '-f', str(marker_file)], 
-                             check=False, capture_output=True)
+                marker_file.unlink()
             except Exception:
                 pass  # Ignore errors removing marker
         
         # Disable SDDM (login manager) to prevent login
-        subprocess.run(['sudo', 'systemctl', 'disable', 'sddm.service'], 
+        subprocess.run(['systemctl', 'disable', 'sddm.service'], 
                       check=False, capture_output=True)
-        subprocess.run(['sudo', 'systemctl', 'stop', 'sddm.service'], 
+        subprocess.run(['systemctl', 'stop', 'sddm.service'], 
                       check=False, capture_output=True)
         
-        # Also lock the user account as additional protection
-        username = os.environ.get('USER', 'owner')
-        subprocess.run(['sudo', 'passwd', '-l', username], 
+        # Lock the user account
+        username = os.environ.get('OMARCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
+        subprocess.run(['passwd', '-l', username], 
                       check=False, capture_output=True)
         
         print("Login locked. Rebooting in 5 seconds...", file=sys.stderr)
+        print("NOTE: Account is locked. Boot from ISO to recover.", file=sys.stderr)
         
         # Force reboot after short delay
         subprocess.run(['sleep', '5'], check=False)
-        subprocess.run(['sudo', 'reboot', '-f'], check=False)
+        subprocess.run(['reboot', '-f'], check=False)
         
     except Exception as e:
         print(f"WARNING: Failed to lock out login: {e}", file=sys.stderr)
@@ -91,9 +101,8 @@ def lockout_and_reboot():
         try:
             marker_file = Path('/var/lib/omarchy-install-needed')
             if marker_file.exists():
-                subprocess.run(['sudo', 'rm', '-f', str(marker_file)], 
-                             check=False, capture_output=True)
-            subprocess.run(['sudo', 'reboot', '-f'], check=False)
+                marker_file.unlink()
+            subprocess.run(['reboot', '-f'], check=False)
         except Exception:
             pass
 
@@ -102,6 +111,15 @@ def main():
     """Main entry point."""
     # Setup environment
     setup_environment()
+    
+    # Ensure account is unlocked at start (in case it was locked from previous failed attempt)
+    # This allows installation to proceed even if account was locked before
+    try:
+        username = os.environ.get('OMARCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
+        subprocess.run(['passwd', '-u', username], 
+                      check=False, capture_output=True)
+    except Exception:
+        pass  # Ignore errors - account might not exist yet or might not be locked
     
     # Get install path
     install_path = Path(os.environ.get('OMARCHY_INSTALL', Path(__file__).parent / 'install'))
@@ -129,9 +147,11 @@ def main():
         
         # Exit with appropriate code
         if state.status == Status.COMPLETED:
+            # Installation succeeded - unlock account (TTY already unblocked by service)
+            unlock_account()
             sys.exit(0)
         else:
-            # Installation failed - lock out login and reboot
+            # Installation failed - lockout (TTY already unblocked by service)
             lockout_and_reboot()
             sys.exit(1)
     
