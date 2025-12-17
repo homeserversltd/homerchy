@@ -81,7 +81,9 @@ def stop_install_log():
                     pass
             
             f.write("=================================\n")
-            f.write("Rebooting system...\n")
+            # NOTE: Future enhancement - we want to restart at the end of homerchy installation
+            # For now, we dump logs and drop to TTY instead of rebooting
+            f.write("Installation completed - dropping to TTY (no reboot yet)\n")
     
     except Exception as e:
         # Don't fail installation if log writing fails
@@ -138,9 +140,100 @@ def echo_in_style(text):
         print(text)
 
 
+def dump_logs_to_root():
+    """Dump useful logs to /root for debugging - one grep pattern per file."""
+    root_logs = Path('/root')
+    root_logs.mkdir(parents=True, exist_ok=True)
+    
+    print("Dumping logs to /root for debugging...", file=sys.stderr)
+    
+    # Get service journal output once
+    journal_output = None
+    try:
+        result = subprocess.run(
+            ['journalctl', '-u', 'omarchy-first-boot-install.service', '--no-pager'],
+            capture_output=True, text=True, check=False
+        )
+        journal_output = result.stdout
+    except Exception:
+        pass
+    
+    # Get installation log content
+    install_log = os.environ.get('OMARCHY_INSTALL_LOG_FILE', '/var/log/omarchy-install.log')
+    install_log_content = None
+    if os.path.exists(install_log):
+        try:
+            with open(install_log, 'r') as f:
+                install_log_content = f.read()
+            subprocess.run(['cp', install_log, '/root/a.txt'], check=False)
+            print("  Created: /root/a.txt (full installation log)", file=sys.stderr)
+        except Exception:
+            pass
+    
+    # Create focused log files with grep patterns
+    log_patterns = [
+        ('b.txt', 'ERROR|FAILED|Failed|Error|error|FAIL|fail'),
+        ('c.txt', 'Permission denied|permission denied|EACCES|EAGAIN'),
+        ('d.txt', 'timeout|Timeout|TIMEOUT|timed out'),
+        ('e.txt', 'Traceback|traceback|Exception|exception'),
+        ('f.txt', 'systemd|systemctl|service'),
+        ('g.txt', 'getty|TTY|tty'),
+        ('h.txt', 'plymouth|Plymouth|PLYMOUTH'),
+        ('i.txt', 'lockout|Lock|lock|passwd'),
+        ('j.txt', 'reboot|Reboot|REBOOT'),
+        ('k.txt', 'marker|Marker|MARKER|omarchy-install-needed'),
+        ('l.txt', 'orchestrator|Orchestrator|ORCHESTRATOR'),
+        ('m.txt', 'module|Module|MODULE'),
+    ]
+    
+    # Combine all log sources for grepping
+    all_logs = ""
+    if journal_output:
+        all_logs += journal_output + "\n"
+    if install_log_content:
+        all_logs += install_log_content + "\n"
+    
+    # Create grep'd log files
+    for filename, pattern in log_patterns:
+        try:
+            with open(f'/root/{filename}', 'w') as f:
+                if all_logs:
+                    # Use grep to filter
+                    grep_proc = subprocess.Popen(
+                        ['grep', '-i', '-E', pattern],
+                        stdin=subprocess.PIPE,
+                        stdout=f,
+                        stderr=subprocess.DEVNULL,
+                        text=True
+                    )
+                    grep_proc.communicate(input=all_logs)
+            print(f"  Created: /root/{filename} (grep: {pattern})", file=sys.stderr)
+        except Exception:
+            pass
+    
+    # Also dump full service journal
+    if journal_output:
+        try:
+            with open('/root/z.txt', 'w') as f:
+                f.write(journal_output)
+            print("  Created: /root/z.txt (full service journal)", file=sys.stderr)
+        except Exception:
+            pass
+    
+    print("Logs dumped to /root/", file=sys.stderr)
+    print("Files:", file=sys.stderr)
+    try:
+        subprocess.run(['ls', '-lh', '/root/[a-z].txt'], check=False, stderr=sys.stderr)
+    except Exception:
+        pass
+
+
 def main(config: dict) -> dict:
     """
-    Main function - displays completion screen and handles reboot.
+    Main function - displays completion screen and dumps logs to /root.
+    
+    NOTE: Future enhancement - we want to restart at the end of homerchy installation.
+    For now, we dump logs and drop to TTY for debugging.
     
     Args:
         config: Configuration dictionary
@@ -152,100 +245,59 @@ def main(config: dict) -> dict:
         # Stop install log
         stop_install_log()
         
-        # Clear screen
-        subprocess.run(['clear'], check=False)
-        print()
-        
-        # Display logo
-        omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy'))
-        logo_path = omarchy_path / 'logo.txt'
-        
-        if logo_path.exists():
-            try:
-                subprocess.run(
-                    ['tte', '-i', str(logo_path), '--canvas-width', '0', '--anchor-text', 'c', '--frame-rate', '920', 'laseretch'],
-                    check=False
-                )
-            except Exception:
-                # Fallback: just print logo text
-                with open(logo_path, 'r') as f:
-                    print(f.read())
-        print()
-        
-        # Display installation time if available
-        log_file = os.environ.get('OMARCHY_INSTALL_LOG_FILE', '/var/log/omarchy-install.log')
-        total_time = None
-        
-        if os.path.exists(log_file):
-            try:
-                with open(log_file, 'r') as f:
-                    # Read last 20 lines
-                    lines = f.readlines()
-                    for line in reversed(lines[-20:]):
-                        if 'Total:' in line:
-                            match = re.search(r'Total:\s*(.+)', line)
-                            if match:
-                                total_time = match.group(1).strip()
-                                break
-            except Exception:
-                pass
-        
-        if total_time:
-            echo_in_style(f"Installed in {total_time}")
-        else:
-            echo_in_style("Finished installing")
+        # Dump useful logs to /root for debugging
+        dump_logs_to_root()
         
         # Remove sudoers file if it exists
         sudoers_file = Path('/etc/sudoers.d/99-omarchy-installer')
         if sudoers_file.exists():
             try:
-                subprocess.run(['sudo', 'rm', '-f', str(sudoers_file)], 
-                             capture_output=True, check=False)
+                subprocess.run(['rm', '-f', str(sudoers_file)], 
+                             check=False, capture_output=True)
             except Exception:
                 pass
         
-        # Prompt for reboot
-        term_width = get_terminal_width()
-        logo_width = get_logo_width()
-        padding_left = max(0, (term_width - logo_width) // 2)
+        # Re-enable TTY login (service already does this, but ensure it's done)
+        print("Re-enabling TTY login...", file=sys.stderr)
+        for tty_num in range(1, 7):
+            subprocess.run(['systemctl', 'unmask', f'getty@tty{tty_num}.service'], 
+                         check=False, capture_output=True)
+        subprocess.run(['systemctl', 'start', 'getty@tty1.service'], 
+                      check=False, capture_output=True)
         
-        # Calculate padding for gum confirm (original: PADDING_LEFT + 32)
-        confirm_padding = padding_left + 32
+        # Clear screen and show completion message
+        subprocess.run(['clear'], check=False)
+        print()
+        print("=" * 70)
+        print("HOMERCHY INSTALLATION COMPLETED")
+        print("=" * 70)
+        print()
+        print("Logs have been dumped to /root/ for debugging:")
+        print("  - a.txt (full installation log)")
+        print("  - b.txt (ERROR/FAILED)")
+        print("  - c.txt (Permission denied)")
+        print("  - d.txt (timeout)")
+        print("  - e.txt (Traceback/Exception)")
+        print("  - f.txt (systemd/service)")
+        print("  - g.txt (getty/TTY)")
+        print("  - h.txt (plymouth)")
+        print("  - i.txt (lockout/passwd)")
+        print("  - j.txt (reboot)")
+        print("  - k.txt (marker file)")
+        print("  - l.txt (orchestrator)")
+        print("  - m.txt (module)")
+        print("  - z.txt (full service journal)")
+        print()
+        print("TTY login has been re-enabled.")
+        print("You can now log in to check logs and debug.")
+        print()
+        print("NOTE: Future enhancement - automatic reboot after installation.")
+        print("=" * 70)
+        print()
         
-        try:
-            result = subprocess.run(
-                ['gum', 'confirm',
-                 '--padding', f'0 0 0 {confirm_padding}',
-                 '--show-help=false',
-                 '--default',
-                 '--affirmative', 'Reboot Now',
-                 '--negative', '', ''],
-                check=False
-            )
-            
-            if result.returncode == 0:
-                # User chose to reboot
-                subprocess.run(['clear'], check=False)
-                
-                if os.environ.get('OMARCHY_CHROOT_INSTALL'):
-                    # In chroot mode, just create completion marker
-                    completion_marker = Path('/var/tmp/omarchy-install-completed')
-                    completion_marker.touch()
-                    return {"success": True, "message": "Installation completed (chroot mode)"}
-                else:
-                    # Reboot system
-                    subprocess.run(['sudo', 'reboot'], check=False, 
-                                 capture_output=True, stderr=subprocess.DEVNULL)
-                    return {"success": True, "message": "Rebooting system"}
-            else:
-                # User chose not to reboot
-                return {"success": True, "message": "Installation completed (user chose not to reboot)"}
-        
-        except FileNotFoundError:
-            # gum not available, skip prompt
-            return {"success": True, "message": "Installation completed (gum not available, skipping reboot prompt)"}
-        except Exception as e:
-            return {"success": False, "message": f"Failed to prompt for reboot: {e}"}
+        # Drop to TTY (don't reboot)
+        # The service will complete and TTY will be available for login
+        return {"success": True, "message": "Installation completed - logs dumped to /root/, TTY enabled"}
     
     except Exception as e:
         return {"success": False, "message": f"Unexpected error: {e}"}
