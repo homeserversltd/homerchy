@@ -541,7 +541,7 @@ TimeoutStopSec=30
 ExecStartPre=/bin/systemctl stop getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
 ExecStartPre=/bin/systemctl mask getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
 # Run installation as root (orchestrator handles user-specific operations internally)
-ExecStart=/bin/bash {installed_omarchy_path}/install.sh
+ExecStart=/usr/bin/python3 {installed_omarchy_path}/install.py
 # Re-enable TTY login after installation (success or failure)
 # Use ExecStartPost with - to ignore errors (ensures TTY is restored even on failure)
 # NOTE: finished.py keeps getty masked to preserve completion message - unmask only on failure
