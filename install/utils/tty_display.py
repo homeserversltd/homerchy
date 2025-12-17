@@ -89,3 +89,4 @@ def show_tty_message(message: str, clear_first: bool = False):
         # Silently fail - TTY updates are non-critical
         pass
 
+

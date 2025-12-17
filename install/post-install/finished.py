@@ -261,14 +261,21 @@ def main(config: dict) -> dict:
             except Exception:
                 pass
         
-        # Release TTY control and show completion message
-        # Switch to TTY1 and display completion message
+        # Take control of TTY1 ONE TIME - show completion message
+        # This is the ONLY place we take TTY control - simple and direct
         try:
+            # Ensure getty stays stopped/masked (service should have already done this)
+            # Keep it masked so our message stays visible
+            subprocess.run(['systemctl', 'stop', 'getty@tty1.service'], 
+                         check=False, capture_output=True)
+            subprocess.run(['systemctl', 'mask', 'getty@tty1.service'], 
+                         check=False, capture_output=True)
+            
             # Switch to TTY1
             subprocess.run(['chvt', '1'], check=False, timeout=5)
             time.sleep(0.5)
             
-            # Write completion message directly to TTY1
+            # Clear screen and write completion message
             completion_message = f"""
 {'=' * 70}
 HOMERCHY INSTALLATION COMPLETED
@@ -277,33 +284,24 @@ HOMERCHY INSTALLATION COMPLETED
 Logs have been dumped to /root/ for debugging.
 
 You can now log in to the system.
+Run: systemctl unmask getty@tty1.service && systemctl start getty@tty1.service
 
 {'=' * 70}
 """
             try:
                 with open('/dev/tty1', 'w') as tty1:
-                    tty1.write('\033[2J\033[H')  # Clear screen (ANSI escape codes)
+                    tty1.write('\033[2J\033[H')  # Clear screen
                     tty1.write(completion_message)
                     tty1.flush()
             except Exception as e:
                 print(f"Warning: Could not write to /dev/tty1: {e}", file=sys.stderr)
                 print(completion_message, file=sys.stderr)
+            
+            # Keep getty MASKED - don't restore it
+            # This keeps the message visible - user can manually restore getty if needed
+            
         except Exception as e:
             print(f"Warning: TTY completion display failed: {e}", file=sys.stderr)
-        
-        # Re-enable TTY login (service already does this, but ensure it's done)
-        print("Re-enabling TTY login...", file=sys.stderr)
-        for tty_num in range(1, 7):
-            subprocess.run(['systemctl', 'unmask', f'getty@tty{tty_num}.service'], 
-                         check=False, capture_output=True)
-        
-        # Start getty to allow login
-        subprocess.run(['systemctl', 'start', 'getty@tty1.service'], 
-                      check=False, capture_output=True)
-        
-        # Small delay to ensure message is visible before getty takes over
-        import time
-        time.sleep(2)
         
         # Drop to TTY (don't reboot)
         # The service will complete and TTY will be available for login

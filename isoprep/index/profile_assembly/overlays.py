@@ -53,6 +53,12 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                 continue
             dest = profile_dir / item.name
             if item.is_dir():
+                # ALWAYS remove destination directory first to force fresh copy
+                # Config files change frequently and should NEVER be cached
+                # This ensures -f builds always get the latest code changes
+                if dest.exists():
+                    print(f"{Colors.BLUE}Removing existing {dest.name} directory to force fresh copy...{Colors.NC}")
+                    shutil.rmtree(dest)
                 # Use custom copytree that skips pacman.conf files
                 def ignore_pacman_conf(dir_path, names):
                     """Ignore function to skip pacman.conf files."""
@@ -62,10 +68,22 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                         if should_skip_pacman_conf(full_path, dest / name):
                             ignored.append(name)
                     return ignored
-                safe_copytree(item, dest, dirs_exist_ok=True, ignore=ignore_pacman_conf)
+                safe_copytree(item, dest, dirs_exist_ok=False, ignore=ignore_pacman_conf)
+                # Verify critical files were copied (especially .automated_script.py)
+                if item.name == 'airootfs':
+                    script_file = dest / 'root' / '.automated_script.py'
+                    source_script = item / 'root' / '.automated_script.py'
+                    if source_script.exists():
+                        if script_file.exists():
+                            print(f"{Colors.GREEN}✓ Verified .automated_script.py copied to profile{Colors.NC}")
+                        else:
+                            print(f"{Colors.YELLOW}WARNING: .automated_script.py not found in profile after copy!{Colors.NC}")
             else:
-                # Copy file or symlink (even if broken)
+                # Copy file or symlink (even if broken) - ALWAYS overwrite
                 try:
+                    # Force copy - always overwrite to ensure latest code changes are used
+                    if dest.exists():
+                        dest.unlink()
                     shutil.copy2(item, dest, follow_symlinks=False)
                 except (OSError, shutil.Error) as e:
                     # Skip missing files or broken symlinks
