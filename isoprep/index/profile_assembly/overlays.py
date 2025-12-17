@@ -53,24 +53,31 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                 continue
             dest = profile_dir / item.name
             if item.is_dir():
-                # ALWAYS remove destination directory first to force fresh copy
-                # Config files change frequently and should NEVER be cached
-                # This ensures -f builds always get the latest code changes
-                if dest.exists():
-                    print(f"{Colors.BLUE}Removing existing {dest.name} directory to force fresh copy...{Colors.NC}")
-                    shutil.rmtree(dest)
-                # Use custom copytree that skips pacman.conf files
-                def ignore_pacman_conf(dir_path, names):
-                    """Ignore function to skip pacman.conf files."""
-                    ignored = []
-                    for name in names:
-                        full_path = Path(dir_path) / name
-                        if should_skip_pacman_conf(full_path, dest / name):
-                            ignored.append(name)
-                    return ignored
-                safe_copytree(item, dest, dirs_exist_ok=False, ignore=ignore_pacman_conf)
-                # Verify critical files were copied (especially .automated_script.py)
-                if item.name == 'airootfs':
+                # Special handling for airootfs: merge files instead of replacing entire directory
+                # This preserves the archiso base .automated_script.sh wrapper that runs on boot
+                if item.name == 'airootfs' and dest.exists():
+                    print(f"{Colors.BLUE}Merging {item.name} directory (preserving archiso base files)...{Colors.NC}")
+                    # Merge files recursively, overwriting existing files but preserving archiso base files
+                    def merge_directory(src: Path, dst: Path):
+                        """Recursively merge source directory into destination."""
+                        for src_item in src.iterdir():
+                            dst_item = dst / src_item.name
+                            if src_item.is_dir():
+                                if dst_item.exists():
+                                    merge_directory(src_item, dst_item)
+                                else:
+                                    shutil.copytree(src_item, dst_item, dirs_exist_ok=False)
+                            else:
+                                # Skip pacman.conf files
+                                if should_skip_pacman_conf(src_item, dst_item):
+                                    continue
+                                # Always overwrite files to ensure latest code changes
+                                if dst_item.exists():
+                                    dst_item.unlink()
+                                shutil.copy2(src_item, dst_item, follow_symlinks=False)
+                    
+                    merge_directory(item, dest)
+                    # Verify critical files were copied
                     script_file = dest / 'root' / '.automated_script.py'
                     source_script = item / 'root' / '.automated_script.py'
                     if source_script.exists():
@@ -78,6 +85,27 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                             print(f"{Colors.GREEN}✓ Verified .automated_script.py copied to profile{Colors.NC}")
                         else:
                             print(f"{Colors.YELLOW}WARNING: .automated_script.py not found in profile after copy!{Colors.NC}")
+                    # Verify archiso base wrapper is preserved
+                    archiso_wrapper = dest / 'root' / '.automated_script.sh'
+                    if archiso_wrapper.exists():
+                        print(f"{Colors.GREEN}✓ Archiso base .automated_script.sh wrapper preserved{Colors.NC}")
+                    else:
+                        print(f"{Colors.YELLOW}WARNING: Archiso base .automated_script.sh wrapper not found!{Colors.NC}")
+                else:
+                    # For other directories, remove and copy fresh (original behavior)
+                    if dest.exists():
+                        print(f"{Colors.BLUE}Removing existing {dest.name} directory to force fresh copy...{Colors.NC}")
+                        shutil.rmtree(dest)
+                    # Use custom copytree that skips pacman.conf files
+                    def ignore_pacman_conf(dir_path, names):
+                        """Ignore function to skip pacman.conf files."""
+                        ignored = []
+                        for name in names:
+                            full_path = Path(dir_path) / name
+                            if should_skip_pacman_conf(full_path, dest / name):
+                                ignored.append(name)
+                        return ignored
+                    safe_copytree(item, dest, dirs_exist_ok=False, ignore=ignore_pacman_conf)
             else:
                 # Copy file or symlink (even if broken) - ALWAYS overwrite
                 try:

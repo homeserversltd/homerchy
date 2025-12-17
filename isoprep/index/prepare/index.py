@@ -63,30 +63,63 @@ def main(phase_path: Path, config: dict) -> dict:
     preserve_archiso_tmp = archiso_tmp_dir.exists() and not full_clean
     
     cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
-    preserve_cache = cache_dir.exists() and any(cache_dir.glob('*.pkg.tar.*')) and not full_clean
+    # Also check system temp location (from cache_db_only cleanup)
+    system_temp_cache = Path("/mnt/work/.homerchy-cache-temp")
+    preserve_cache = (
+        (cache_dir.exists() and any(cache_dir.glob('*.pkg.tar.*'))) or
+        (system_temp_cache.exists() and any(system_temp_cache.glob('*.pkg.tar.*')))
+    ) and not full_clean
     
     # Preserve injected source (takes a long time to copy)
     injected_source = profile_dir / 'airootfs' / 'root' / 'homerchy'
     preserve_source = injected_source.exists() and injected_source.is_dir() and not full_clean
+    
+    # Handle cache preservation even if profile_dir doesn't exist (cache in system temp from cleanup)
+    if preserve_cache and not profile_dir.exists() and system_temp_cache.exists() and any(system_temp_cache.glob('*.pkg.tar.*')):
+        print(f"{Colors.BLUE}Restoring cache from system temp location (profile directory doesn't exist yet)...{Colors.NC}")
+        cache_dir.parent.mkdir(parents=True, exist_ok=True)
+        pkg_count = len(list(system_temp_cache.glob('*.pkg.tar.*')))
+        print(f"{Colors.BLUE}Restoring {pkg_count} packages from system temp cache...{Colors.NC}")
+        try:
+            shutil.move(str(system_temp_cache), str(cache_dir))
+        except PermissionError:
+            subprocess.run(['sudo', 'mv', str(system_temp_cache), str(cache_dir)], check=True)
+        # Fix ownership
+        current_uid = os.getuid()
+        current_gid = os.getgid()
+        subprocess.run(['sudo', 'chown', '-R', f'{current_uid}:{current_gid}', str(cache_dir)], check=True)
+        print(f"{Colors.GREEN}✓ Restored cache from system temp location{Colors.NC}")
     
     if profile_dir.exists():
         print(f"{Colors.BLUE}Cleaning up previous profile directory...{Colors.NC}")
         
         # Preserve package cache
         if preserve_cache:
-            print(f"{Colors.BLUE}Preserving offline mirror cache ({len(list(cache_dir.glob('*.pkg.tar.*')))} packages)...{Colors.NC}")
             temp_cache = work_dir / 'offline-mirror-cache-temp'
             if temp_cache.exists():
                 try:
                     shutil.rmtree(temp_cache)
                 except PermissionError:
                     subprocess.run(['sudo', 'rm', '-rf', str(temp_cache)], check=False)
-            cache_dir.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                shutil.move(str(cache_dir), str(temp_cache))
-            except PermissionError:
-                # Use sudo to move if permission denied
-                subprocess.run(['sudo', 'mv', str(cache_dir), str(temp_cache)], check=True)
+            
+            # Check system temp location first (from cache_db_only cleanup)
+            if system_temp_cache.exists() and any(system_temp_cache.glob('*.pkg.tar.*')):
+                pkg_count = len(list(system_temp_cache.glob('*.pkg.tar.*')))
+                print(f"{Colors.BLUE}Preserving offline mirror cache from system temp ({pkg_count} packages)...{Colors.NC}")
+                try:
+                    shutil.move(str(system_temp_cache), str(temp_cache))
+                except PermissionError:
+                    subprocess.run(['sudo', 'mv', str(system_temp_cache), str(temp_cache)], check=True)
+            # Otherwise check normal location
+            elif cache_dir.exists() and any(cache_dir.glob('*.pkg.tar.*')):
+                pkg_count = len(list(cache_dir.glob('*.pkg.tar.*')))
+                print(f"{Colors.BLUE}Preserving offline mirror cache ({pkg_count} packages)...{Colors.NC}")
+                cache_dir.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    shutil.move(str(cache_dir), str(temp_cache))
+                except PermissionError:
+                    # Use sudo to move if permission denied
+                    subprocess.run(['sudo', 'mv', str(cache_dir), str(temp_cache)], check=True)
         
         # Preserve injected source
         if preserve_source:

@@ -86,6 +86,69 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
     package_list = sorted(all_packages)
     print(f"{Colors.BLUE}Total unique packages to download: {len(package_list)}{Colors.NC}")
     
+    # Restore cache from temp location if it exists (from cache_db_only cleanup)
+    work_dir = Path(os.environ.get('HOMERCHY_WORK_DIR', profile_dir.parent))
+    temp_cache_dir = Path("/mnt/work/.homerchy-cache-temp")
+    prepare_temp_cache = work_dir / 'offline-mirror-cache-temp'
+    
+    # Check if cache needs to be restored from temp locations
+    # Priority: system temp > prepare temp > normal location
+    cache_restored = False
+    
+    # Check system temp location first (from cache_db_only cleanup)
+    if temp_cache_dir.exists() and any(temp_cache_dir.glob('*.pkg.tar.*')):
+        temp_pkg_count = len(list(temp_cache_dir.glob('*.pkg.tar.*')))
+        normal_pkg_count = len(list(offline_mirror_dir.glob('*.pkg.tar.*'))) if offline_mirror_dir.exists() else 0
+        
+        # Restore if temp has packages and normal location has fewer or none
+        if temp_pkg_count > normal_pkg_count:
+            print(f"{Colors.BLUE}Restoring preserved cache from system temp location ({temp_pkg_count} packages)...{Colors.NC}")
+            offline_mirror_dir.parent.mkdir(parents=True, exist_ok=True)
+            # Remove existing cache directory if it exists and has fewer packages
+            if offline_mirror_dir.exists():
+                try:
+                    shutil.rmtree(offline_mirror_dir)
+                except PermissionError:
+                    subprocess.run(['sudo', 'rm', '-rf', str(offline_mirror_dir)], check=False)
+            try:
+                shutil.move(str(temp_cache_dir), str(offline_mirror_dir))
+            except PermissionError:
+                # Use sudo to move if permission denied
+                subprocess.run(['sudo', 'mv', str(temp_cache_dir), str(offline_mirror_dir)], check=True)
+            # Fix ownership of restored cache (may be owned by root if moved with sudo)
+            current_uid = os.getuid()
+            current_gid = os.getgid()
+            subprocess.run(['sudo', 'chown', '-R', f'{current_uid}:{current_gid}', str(offline_mirror_dir)], check=True)
+            print(f"{Colors.GREEN}✓ Restored preserved cache ({temp_pkg_count} packages){Colors.NC}")
+            cache_restored = True
+    
+    # Check prepare temp location (from prepare phase preservation)
+    if not cache_restored and prepare_temp_cache.exists() and any(prepare_temp_cache.glob('*.pkg.tar.*')):
+        prepare_pkg_count = len(list(prepare_temp_cache.glob('*.pkg.tar.*')))
+        normal_pkg_count = len(list(offline_mirror_dir.glob('*.pkg.tar.*'))) if offline_mirror_dir.exists() else 0
+        
+        # Restore if prepare temp has packages and normal location has fewer or none
+        if prepare_pkg_count > normal_pkg_count:
+            print(f"{Colors.BLUE}Restoring preserved cache from prepare temp location ({prepare_pkg_count} packages)...{Colors.NC}")
+            offline_mirror_dir.parent.mkdir(parents=True, exist_ok=True)
+            # Remove existing cache directory if it exists and has fewer packages
+            if offline_mirror_dir.exists():
+                try:
+                    shutil.rmtree(offline_mirror_dir)
+                except PermissionError:
+                    subprocess.run(['sudo', 'rm', '-rf', str(offline_mirror_dir)], check=False)
+            try:
+                shutil.move(str(prepare_temp_cache), str(offline_mirror_dir))
+            except PermissionError:
+                # Use sudo to move if permission denied
+                subprocess.run(['sudo', 'mv', str(prepare_temp_cache), str(offline_mirror_dir)], check=True)
+            # Fix ownership of restored cache (may be owned by root if moved with sudo)
+            current_uid = os.getuid()
+            current_gid = os.getgid()
+            subprocess.run(['sudo', 'chown', '-R', f'{current_uid}:{current_gid}', str(offline_mirror_dir)], check=True)
+            print(f"{Colors.GREEN}✓ Restored preserved cache ({prepare_pkg_count} packages){Colors.NC}")
+            cache_restored = True
+    
     # Ensure offline mirror directory exists
     offline_mirror_dir.mkdir(parents=True, exist_ok=True)
     
@@ -102,10 +165,42 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
     
     # Check for existing packages to avoid re-downloading (cache optimization)
     print(f"{Colors.BLUE}Checking for existing packages in cache...{Colors.NC}")
-    existing_packages = set()
+    
+    # Debug: Check all possible cache locations
+    print(f"{Colors.BLUE}  Checking cache locations:{Colors.NC}")
+    print(f"{Colors.BLUE}    Normal: {offline_mirror_dir} (exists: {offline_mirror_dir.exists()}){Colors.NC}")
     if offline_mirror_dir.exists():
-        # Get list of existing package files (excluding .sig files)
-        existing_files = [f for f in offline_mirror_dir.glob('*.pkg.tar.*') if not f.name.endswith('.sig')]
+        pkg_count = len(list(offline_mirror_dir.glob('*.pkg.tar.*')))
+        print(f"{Colors.BLUE}      Packages found: {pkg_count}{Colors.NC}")
+    print(f"{Colors.BLUE}    System temp: {temp_cache_dir} (exists: {temp_cache_dir.exists()}){Colors.NC}")
+    if temp_cache_dir.exists():
+        pkg_count = len(list(temp_cache_dir.glob('*.pkg.tar.*')))
+        print(f"{Colors.BLUE}      Packages found: {pkg_count}{Colors.NC}")
+    print(f"{Colors.BLUE}    Prepare temp: {prepare_temp_cache} (exists: {prepare_temp_cache.exists()}){Colors.NC}")
+    if prepare_temp_cache.exists():
+        pkg_count = len(list(prepare_temp_cache.glob('*.pkg.tar.*')))
+        print(f"{Colors.BLUE}      Packages found: {pkg_count}{Colors.NC}")
+    
+    existing_packages = set()
+    
+    # Also check for preserved cache in temp locations (from cache_db_only cleanup or prepare phase)
+    cache_locations = []
+    if offline_mirror_dir.exists():
+        cache_locations.append(offline_mirror_dir)
+    if temp_cache_dir.exists():
+        cache_locations.append(temp_cache_dir)
+        print(f"{Colors.BLUE}  Found preserved cache in system temp location, checking there too...{Colors.NC}")
+    if prepare_temp_cache.exists():
+        cache_locations.append(prepare_temp_cache)
+        print(f"{Colors.BLUE}  Found preserved cache in prepare temp location, checking there too...{Colors.NC}")
+    
+    if cache_locations:
+        # Get list of existing package files from all cache locations (excluding .sig files)
+        existing_files = []
+        for cache_location in cache_locations:
+            if cache_location.exists():
+                existing_files.extend([f for f in cache_location.glob('*.pkg.tar.*') if not f.name.endswith('.sig')])
+        
         # Extract package names from existing files using repo-query (most reliable)
         # or filename parsing (fallback)
         existing_package_names = set()

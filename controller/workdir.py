@@ -150,16 +150,18 @@ def cleanup_build_workdir(full_clean: bool = False, cache_db_only: bool = False)
         temp_cache_dir = "/mnt/work/.homerchy-cache-temp"
         cache_found = False
         
-        # Check final cache location
-        if cache_dir.exists() and any(cache_dir.iterdir()):
-            print("  Preserving repository database and package files from cache directory...")
+        # Check final cache location - only preserve if it has package files
+        if cache_dir.exists() and any(cache_dir.glob('*.pkg.tar.*')):
+            pkg_count = len(list(cache_dir.glob('*.pkg.tar.*')))
+            print(f"  Preserving repository database and package files from cache directory ({pkg_count} packages)...")
             cache_found = True
             if Path(temp_cache_dir).exists():
                 run_command(['rm', '-rf', temp_cache_dir], sudo=True)
             run_command(['mv', str(cache_dir), temp_cache_dir], sudo=True)
-        # Check prepare phase temp location
-        elif prepare_temp_cache.exists() and any(prepare_temp_cache.iterdir()):
-            print("  Preserving repository database and package files from prepare temp location...")
+        # Check prepare phase temp location - only preserve if it has package files
+        elif prepare_temp_cache.exists() and any(prepare_temp_cache.glob('*.pkg.tar.*')):
+            pkg_count = len(list(prepare_temp_cache.glob('*.pkg.tar.*')))
+            print(f"  Preserving repository database and package files from prepare temp location ({pkg_count} packages)...")
             cache_found = True
             if Path(temp_cache_dir).exists():
                 run_command(['rm', '-rf', temp_cache_dir], sudo=True)
@@ -175,13 +177,18 @@ def cleanup_build_workdir(full_clean: bool = False, cache_db_only: bool = False)
             print("  Removing profile directory...")
             run_command(['rm', '-rf', str(profile_dir)], sudo=True)
         
-        # Restore entire cache directory
+        # Don't restore cache here - leave it in temp location for prepare/download phase to restore
+        # This avoids the prepare phase removing a cache that was just restored
         if Path(temp_cache_dir).exists():
-            print("  Restoring repository database and package files...")
-            run_command(['mkdir', '-p', str(cache_dir.parent)], sudo=True)
-            run_command(['mv', temp_cache_dir, str(cache_dir)], sudo=True)
+            if any(Path(temp_cache_dir).glob('*.pkg.tar.*')):
+                pkg_count = len(list(Path(temp_cache_dir).glob('*.pkg.tar.*')))
+                print(f"  Cache preserved in temp location ({pkg_count} packages, will be restored by prepare phase)...")
+            else:
+                # Temp cache exists but is empty, remove it
+                print("  Cache directory exists but is empty, removing...")
+                run_command(['rm', '-rf', temp_cache_dir], sudo=True)
         
-        print("✓ Work directory cleaned (database and package files preserved)")
+        print("✓ Work directory cleaned (database and package files preserved in temp location)")
     
     else:
         # Preserve cacheable directories

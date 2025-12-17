@@ -673,9 +673,16 @@ def install_homerchy():
 
 def main():
     """Main installation orchestration."""
+    # Print immediately to verify script is executing
+    print("="*70, flush=True)
+    print("[AUTOMATED_SCRIPT] Script started!", flush=True)
+    print(f"[AUTOMATED_SCRIPT] TTY: {os.ttyname(sys.stdout.fileno()) if hasattr(os, 'ttyname') else 'unknown'}", flush=True)
+    print("="*70, flush=True)
+    
     # Only run on tty1
     tty = os.ttyname(sys.stdout.fileno()) if hasattr(os, 'ttyname') else None
     if tty != '/dev/tty1':
+        print(f"[AUTOMATED_SCRIPT] Not on TTY1, exiting. TTY: {tty}", flush=True)
         return
     
     # Initialize log
