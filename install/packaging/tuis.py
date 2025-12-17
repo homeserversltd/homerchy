@@ -30,7 +30,7 @@ def main(config: dict) -> dict:
         disk_usage_icon = str(icon_dir / "Disk Usage.png")
         
         result1 = subprocess.run(
-            ['bash', '-c', f'source ~/.local/share/omarchy/bin/omarchy-tui-install 2>/dev/null || omarchy-tui-install "Disk Usage" "{disk_usage_cmd}" float "{disk_usage_icon}"'],
+            ['bash', '-c', f'source ~/.local/share/omarchy/bin/omarchy-tui-install 2>&1 || omarchy-tui-install "Disk Usage" "{disk_usage_cmd}" float "{disk_usage_icon}" 2>&1'],
             capture_output=True,
             text=True,
             timeout=60
@@ -40,7 +40,7 @@ def main(config: dict) -> dict:
         docker_icon = str(icon_dir / "Docker.png")
         
         result2 = subprocess.run(
-            ['bash', '-c', f'source ~/.local/share/omarchy/bin/omarchy-tui-install 2>/dev/null || omarchy-tui-install "Docker" "lazydocker" tile "{docker_icon}"'],
+            ['bash', '-c', f'source ~/.local/share/omarchy/bin/omarchy-tui-install 2>&1 || omarchy-tui-install "Docker" "lazydocker" tile "{docker_icon}" 2>&1'],
             capture_output=True,
             text=True,
             timeout=60
@@ -51,9 +51,11 @@ def main(config: dict) -> dict:
         else:
             errors = []
             if result1.returncode != 0:
-                errors.append(f"Disk Usage: {result1.stderr}")
+                error_msg = result1.stderr.strip() or result1.stdout.strip() or f"exit code {result1.returncode}"
+                errors.append(f"Disk Usage: {error_msg}")
             if result2.returncode != 0:
-                errors.append(f"Docker: {result2.stderr}")
+                error_msg = result2.stderr.strip() or result2.stdout.strip() or f"exit code {result2.returncode}"
+                errors.append(f"Docker: {error_msg}")
             return {"success": False, "message": f"TUI installation failed: {'; '.join(errors)}"}
     
     except subprocess.TimeoutExpired:

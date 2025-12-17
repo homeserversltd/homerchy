@@ -9,6 +9,8 @@ Initializes migration state tracking.
 import os
 from pathlib import Path
 import sys
+import subprocess
+import pwd
 
 
 def main(config: dict) -> dict:
@@ -30,6 +32,32 @@ def main(config: dict) -> dict:
         local_dir = home / '.local'
         if not local_dir.exists():
             local_dir.mkdir(mode=0o755, exist_ok=True)
+        else:
+            # Check if .local is writable by current user
+            # If owned by root, try to fix ownership
+            try:
+                local_stat = local_dir.stat()
+                current_uid = os.getuid()
+                # Check if directory is owned by someone else or not writable
+                if local_stat.st_uid != current_uid or not os.access(local_dir, os.W_OK):
+                    # Try to fix ownership with sudo
+                    try:
+                        username = pwd.getpwuid(current_uid).pw_name
+                        subprocess.run(
+                            ['sudo', 'chown', '-R', f'{username}:{username}', str(local_dir)],
+                            check=True,
+                            capture_output=True
+                        )
+                    except (subprocess.CalledProcessError, FileNotFoundError, KeyError):
+                        # sudo failed or not available - provide helpful error
+                        username = os.environ.get('USER', os.environ.get('USERNAME', 'owner'))
+                        return {
+                            "success": False,
+                            "message": f"Permission denied: '{local_dir}' is owned by root. Fix with: sudo chown -R {username}:{username} ~/.local"
+                        }
+            except OSError:
+                # Can't stat or access - will fail on mkdir below
+                pass
         
         # Ensure .local/state exists
         state_base = local_dir / 'state'

@@ -414,8 +414,8 @@ Server = file:///var/cache/omarchy/mirror/offline/
         else:
             log("install_base_system: Installed system pacman.conf already configured for offline mirror")
     
-    debug_log("install_base_system: Mounting offline mirror")
-    # Mount offline mirror from ISO to installed system
+    debug_log("install_base_system: Mounting offline mirror for installation")
+    # Mount offline mirror from ISO to installed system (needed during archinstall)
     offline_mirror_source = Path('/var/cache/omarchy/mirror/offline')
     cache_target = Path('/mnt/var/cache/omarchy/mirror/offline')
     
@@ -433,7 +433,7 @@ Server = file:///var/cache/omarchy/mirror/offline/
     # Create target directory
     cache_target.mkdir(parents=True, exist_ok=True)
     
-    # Mount the offline mirror
+    # Mount the offline mirror (needed during archinstall)
     mount_result = subprocess.run(
         ['mount', '--bind', str(offline_mirror_source), str(cache_target)],
         capture_output=True,
@@ -444,7 +444,7 @@ Server = file:///var/cache/omarchy/mirror/offline/
         log(f"install_base_system: ERROR: Failed to mount offline mirror: {mount_result.stderr}")
         raise RuntimeError(f"Failed to mount offline mirror: {mount_result.stderr}")
     
-    log("install_base_system: ✓ Offline mirror mounted successfully")
+    log("install_base_system: ✓ Offline mirror mounted successfully (for installation)")
     
     # /opt/packages mount removed - no developer tools needed for TV receiver
     
@@ -553,6 +553,27 @@ WantedBy=multi-user.target
         log(f"install_base_system: WARNING: Failed to enable first-boot service: {result.stderr}")
     else:
         log("install_base_system: First-boot service created and enabled")
+    
+    # Copy offline mirror to installed system (needed after reboot)
+    log("install_base_system: Copying offline mirror to installed system...")
+    try:
+        # Unmount the bind mount first
+        subprocess.run(['umount', str(cache_target)], check=False, capture_output=True)
+        
+        # Copy offline mirror to installed system
+        log(f"install_base_system: Copying {len(package_files)} package files to installed system...")
+        shutil.copytree(str(offline_mirror_source), str(cache_target), dirs_exist_ok=True)
+        
+        # Verify copy succeeded
+        copied_files = list(cache_target.glob('*.pkg.tar.*'))
+        if len(copied_files) != len(package_files):
+            log(f"install_base_system: WARNING: Copied {len(copied_files)} files but expected {len(package_files)}")
+        else:
+            log(f"install_base_system: ✓ Offline mirror copied successfully ({len(copied_files)} files)")
+    except Exception as e:
+        log(f"install_base_system: ERROR: Failed to copy offline mirror: {e}")
+        # Don't fail installation - system can work with online mirrors if available
+        log("install_base_system: WARNING: Continuing without offline mirror (system may need online access)")
     
     log("install_base_system: Completed successfully")
 
