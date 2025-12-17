@@ -2,8 +2,10 @@
 set -e
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ISO_DIR="${REPO_ROOT}/isoprep/isoout"
-DISK_FILE="${REPO_ROOT}/vmtools/homerchy-test-disk.qcow2"
+# ISO output and qcow2 are now in work directory so they get cleaned up with eject
+WORK_DIR="${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-isoprep-work}"
+ISO_DIR="${WORK_DIR}/isoout"
+DISK_FILE="${WORK_DIR}/homerchy-test-disk.qcow2"
 
 # Find the latest ISO
 ISO_FILE=$(ls -t "$ISO_DIR"/omarchy-*.iso 2>/dev/null | head -n 1)
@@ -12,6 +14,17 @@ if [ -z "$ISO_FILE" ]; then
     echo "Error: No ISO found in $ISO_DIR"
     echo "Please run build first."
     exit 1
+fi
+
+# Ensure work directory exists for qcow2 file with correct permissions
+if [ ! -d "$WORK_DIR" ]; then
+    sudo mkdir -p "$WORK_DIR"
+    sudo chown -R "$(id -u):$(id -g)" "$WORK_DIR"
+else
+    # Fix permissions if directory exists but user doesn't own it
+    if [ ! -w "$WORK_DIR" ]; then
+        sudo chown -R "$(id -u):$(id -g)" "$WORK_DIR"
+    fi
 fi
 
 # Always remove existing disk and create fresh one

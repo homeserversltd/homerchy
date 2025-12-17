@@ -92,7 +92,7 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
     homerchy_target.mkdir(parents=True, exist_ok=True)
     
     # Copy excluding build artifacts and .git
-    exclude_patterns = ['isoprep/work', 'isoprep/isoout', '.git']
+    exclude_patterns = ['isoprep/work', '.git']
     ignore_fn = shutil.ignore_patterns('.git')
     
     for item in repo_root.iterdir():

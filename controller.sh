@@ -5,7 +5,9 @@ set -e
 REPO_ROOT="$(dirname "$(realpath "$0")")"
 BUILD_SCRIPT="${REPO_ROOT}/isoprep/build.py"
 LAUNCH_SCRIPT="${REPO_ROOT}/vmtools/launch-iso.sh"
-ISO_DIR="${REPO_ROOT}/isoprep/isoout"
+# ISO output is now in work directory, will be set dynamically based on work dir
+WORK_DIR_BASE="/mnt/work/homerchy-isoprep-work"
+ISO_DIR="${WORK_DIR_BASE}/isoout"
 
 function usage() {
     echo "Usage: ./controller.sh [OPTIONS]"
@@ -161,10 +163,23 @@ function do_eject() {
                         sudo mv "$PROFILE_DIR" "$PRESERVE_DIR/profile" 2>/dev/null || true
                     fi
                     
-                    # Preserve archiso-tmp package cache
+                    # Preserve archiso-tmp package cache (but remove build artifacts first)
                     if [ -d "$ARCHISO_TMP" ]; then
-                        echo "  Preserving archiso-tmp package cache..."
-                        sudo mv "$ARCHISO_TMP" "$PRESERVE_DIR/archiso-tmp" 2>/dev/null || true
+                        echo "  Cleaning archiso-tmp before preserving (removing build artifacts)..."
+                        # Remove huge build directories before preserving
+                        sudo rm -rf "$ARCHISO_TMP/x86_64" 2>/dev/null || true
+                        sudo rm -rf "$ARCHISO_TMP/iso" 2>/dev/null || true
+                        # Remove state files
+                        sudo rm -f "$ARCHISO_TMP"/*.state 2>/dev/null || true
+                        sudo rm -f "$ARCHISO_TMP"/base.* 2>/dev/null || true
+                        # Only preserve if there's actually something left (package cache)
+                        if [ -n "$(ls -A "$ARCHISO_TMP" 2>/dev/null)" ]; then
+                            echo "  Preserving archiso-tmp package cache..."
+                            sudo mv "$ARCHISO_TMP" "$PRESERVE_DIR/archiso-tmp" 2>/dev/null || true
+                        else
+                            echo "  No package cache to preserve in archiso-tmp"
+                            sudo rmdir "$ARCHISO_TMP" 2>/dev/null || true
+                        fi
                     fi
                 fi
                 
@@ -410,9 +425,11 @@ function do_deploy() {
         exit 1
     fi
 
-    local iso_file=$(ls -t "$ISO_DIR"/omarchy-*.iso 2>/dev/null | head -n 1)
+    # ISO is now in work directory
+    local iso_dir="${HOMERCHY_WORK_DIR:-$WORK_DIR_BASE}/isoout"
+    local iso_file=$(ls -t "$iso_dir"/omarchy-*.iso 2>/dev/null | head -n 1)
     if [ -z "$iso_file" ]; then
-        echo "Error: No ISO found to deploy in $ISO_DIR"
+        echo "Error: No ISO found to deploy in $iso_dir"
         exit 1
     fi
 

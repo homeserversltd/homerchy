@@ -35,7 +35,7 @@ def main(phase_path: Path, config: dict) -> dict:
     repo_root = Path(config.get('repo_root', Path(phase_path).parent.parent.parent))
     # Use environment variable if set, otherwise fall back to config or default
     work_dir = Path(os.environ.get('HOMERCHY_WORK_DIR', config.get('work_dir', '/mnt/work/homerchy-isoprep-work')))
-    out_dir = Path(config.get('out_dir', repo_root / 'isoprep' / 'isoout'))
+    out_dir = Path(config.get('out_dir', work_dir / 'isoout'))
     profile_dir = Path(config.get('profile_dir', work_dir / 'profile'))
     
     # Check dependencies
