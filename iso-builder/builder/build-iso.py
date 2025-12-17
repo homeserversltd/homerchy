@@ -158,6 +158,16 @@ def main():
     
     if plymouth_source.exists():
         plymouth_dest.mkdir(parents=True, exist_ok=True)
+        
+        # Copy icon.png to plymouth theme directory if it exists
+        icon_png = omarchy_dest / 'icon.png'
+        if icon_png.exists():
+            print("Copying icon.png to Plymouth theme...")
+            plymouth_icon_dest = plymouth_source / 'icon.png'
+            shutil.copy2(icon_png, plymouth_icon_dest)
+            print("Successfully copied icon.png to Plymouth theme")
+        
+        # Copy all files
         for item in plymouth_source.iterdir():
             dest_item = plymouth_dest / item.name
             if item.is_dir():

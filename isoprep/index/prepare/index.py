@@ -53,17 +53,21 @@ def main(phase_path: Path, config: dict) -> dict:
     work_dir.mkdir(parents=True, exist_ok=True)
     print(f"{Colors.GREEN}✓ Work directory ready: {work_dir}{Colors.NC}")
     
-    # Clean up profile directory (but preserve caches)
+    # Clean up profile directory (but preserve caches unless full clean)
     print(f"{Colors.BLUE}Preparing profile directory...{Colors.NC}")
+    
+    # Check for full clean mode
+    full_clean = os.environ.get('HOMERCHY_FULL_CLEAN', 'false').lower() == 'true'
+    
     archiso_tmp_dir = work_dir / 'archiso-tmp'
-    preserve_archiso_tmp = archiso_tmp_dir.exists()
+    preserve_archiso_tmp = archiso_tmp_dir.exists() and not full_clean
     
     cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
-    preserve_cache = cache_dir.exists() and any(cache_dir.glob('*.pkg.tar.*'))
+    preserve_cache = cache_dir.exists() and any(cache_dir.glob('*.pkg.tar.*')) and not full_clean
     
     # Preserve injected source (takes a long time to copy)
     injected_source = profile_dir / 'airootfs' / 'root' / 'homerchy'
-    preserve_source = injected_source.exists() and injected_source.is_dir()
+    preserve_source = injected_source.exists() and injected_source.is_dir() and not full_clean
     
     if profile_dir.exists():
         print(f"{Colors.BLUE}Cleaning up previous profile directory...{Colors.NC}")
@@ -104,7 +108,14 @@ def main(phase_path: Path, config: dict) -> dict:
     
     # Clean up preserved archiso-tmp to avoid stale state issues
     # We preserve it for package cache, but need to remove stale build artifacts
-    if preserve_archiso_tmp:
+    # In full clean mode, remove everything
+    if full_clean and archiso_tmp_dir.exists():
+        print(f"{Colors.BLUE}Full clean mode: Removing archiso-tmp directory...{Colors.NC}")
+        try:
+            shutil.rmtree(archiso_tmp_dir)
+        except PermissionError:
+            subprocess.run(['sudo', 'rm', '-rf', str(archiso_tmp_dir)], check=False)
+    elif preserve_archiso_tmp:
         print(f"{Colors.BLUE}Preserving mkarchiso work directory for faster rebuild (package cache){Colors.NC}")
         import subprocess
         

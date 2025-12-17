@@ -194,8 +194,16 @@ def check_ssh_status(service_name: str, log_file: Path):
         log_error(f"Failed to check SSH status: {e}", log_file)
 
 
-def main():
-    """Main SSH configuration flow."""
+def main(config: dict) -> dict:
+    """
+    Main SSH configuration flow.
+    
+    Args:
+        config: Configuration dictionary (unused, but required by orchestrator)
+    
+    Returns:
+        dict: Result dictionary with success status
+    """
     log_file = get_log_file()
     
     log("=== SSH.PY STARTED ===", log_file)

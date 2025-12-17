@@ -515,8 +515,9 @@ Server = file:///var/cache/omarchy/mirror/offline/
     
     service_content = f"""[Unit]
 Description=Homerchy First-Boot Installation
-After=network-online.target
+After=network-online.target plymouth-start.service
 Wants=network-online.target
+Before=plymouth-quit.service
 ConditionPathExists=/var/lib/omarchy-install-needed
 
 [Service]
@@ -529,8 +530,8 @@ Environment="USER={omarchy_user}"
 Environment="OMARCHY_PATH={installed_omarchy_path}"
 ExecStart=/bin/bash {installed_omarchy_path}/install.sh
 ExecStartPost=/bin/rm -f /var/lib/omarchy-install-needed
-StandardOutput=journal+console
-StandardError=journal+console
+StandardOutput=journal
+StandardError=journal
 RemainAfterExit=yes
 
 [Install]

@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""
+HOMESERVER Homerchy Icon to PNG Converter
+Copyright (C) 2024 HOMESERVER LLC
+
+Converts icon.txt ASCII art to logo.png for Plymouth theme.
+"""
+
+import os
+import sys
+from pathlib import Path
+
+try:
+    from PIL import Image, ImageDraw, ImageFont
+except ImportError:
+    print("ERROR: PIL/Pillow not installed. Install with: pip install Pillow", file=sys.stderr)
+    sys.exit(1)
+
+
+def convert_icon_to_png(icon_txt_path: Path, output_png_path: Path, 
+                       font_size: int = 12, padding: int = 20, 
+                       bg_color: tuple = (26, 27, 38), text_color: tuple = (200, 200, 200)):
+    """
+    Convert ASCII art icon.txt to PNG image.
+    
+    Args:
+        icon_txt_path: Path to icon.txt file
+        output_png_path: Path to output logo.png file
+        font_size: Font size for rendering (default 12)
+        padding: Padding around text (default 20)
+        bg_color: Background color RGB tuple (default dark blue-gray)
+        text_color: Text color RGB tuple (default light gray)
+    """
+    if not icon_txt_path.exists():
+        print(f"ERROR: Icon file not found: {icon_txt_path}", file=sys.stderr)
+        return False
+    
+    # Read icon.txt
+    with open(icon_txt_path, 'r') as f:
+        lines = [line.rstrip() for line in f.readlines()]
+    
+    if not lines:
+        print("ERROR: Icon file is empty", file=sys.stderr)
+        return False
+    
+    # Calculate dimensions
+    max_width = max(len(line) for line in lines) if lines else 0
+    num_lines = len(lines)
+    
+    # Try to use a monospace font
+    try:
+        # Try common monospace fonts
+        font_paths = [
+            '/usr/share/fonts/TTF/DejaVuSansMono.ttf',
+            '/usr/share/fonts/TTF/Courier-New.ttf',
+            '/usr/share/fonts/TTF/LiberationMono-Regular.ttf',
+            '/usr/share/fonts/ttf-dejavu/DejaVuSansMono.ttf',
+        ]
+        
+        font = None
+        for font_path in font_paths:
+            if Path(font_path).exists():
+                try:
+                    font = ImageFont.truetype(font_path, font_size)
+                    break
+                except Exception:
+                    continue
+        
+        if font is None:
+            # Fallback to default font
+            font = ImageFont.load_default()
+    except Exception:
+        font = ImageFont.load_default()
+    
+    # Calculate text dimensions
+    # Use a test character to estimate character width/height
+    test_img = Image.new('RGB', (100, 100), bg_color)
+    test_draw = ImageDraw.Draw(test_img)
+    bbox = test_draw.textbbox((0, 0), 'M', font=font)
+    char_width = bbox[2] - bbox[0]
+    char_height = bbox[3] - bbox[1]
+    
+    # Calculate image size
+    text_width = max_width * char_width
+    text_height = num_lines * char_height
+    img_width = text_width + (padding * 2)
+    img_height = text_height + (padding * 2)
+    
+    # Create image
+    img = Image.new('RGB', (img_width, img_height), bg_color)
+    draw = ImageDraw.Draw(img)
+    
+    # Draw text line by line
+    y = padding
+    for line in lines:
+        x = padding
+        draw.text((x, y), line, fill=text_color, font=font)
+        y += char_height
+    
+    # Save image
+    output_png_path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(output_png_path, 'PNG')
+    
+    return True
+
+
+def main():
+    """Main entry point."""
+    omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy'))
+    icon_txt_path = omarchy_path / 'icon.txt'
+    plymouth_dir = omarchy_path / 'default' / 'plymouth'
+    output_png_path = plymouth_dir / 'logo.png'
+    
+    if not icon_txt_path.exists():
+        print(f"ERROR: icon.txt not found at {icon_txt_path}", file=sys.stderr)
+        sys.exit(1)
+    
+    if convert_icon_to_png(icon_txt_path, output_png_path):
+        print(f"Successfully converted {icon_txt_path} to {output_png_path}")
+        sys.exit(0)
+    else:
+        print("ERROR: Failed to convert icon.txt to logo.png", file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
+

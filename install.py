@@ -58,28 +58,42 @@ def lockout_and_reboot():
     print("INSTALLATION FAILED - Locking out login and rebooting...", file=sys.stderr)
     
     try:
+        # Remove marker file FIRST to prevent reboot loop
+        # This prevents the service from running again on next boot
+        marker_file = Path('/var/lib/omarchy-install-needed')
+        if marker_file.exists():
+            try:
+                subprocess.run(['sudo', 'rm', '-f', str(marker_file)], 
+                             check=False, capture_output=True)
+            except Exception:
+                pass  # Ignore errors removing marker
+        
         # Disable SDDM (login manager) to prevent login
-        subprocess.run(['systemctl', 'disable', 'sddm.service'], 
+        subprocess.run(['sudo', 'systemctl', 'disable', 'sddm.service'], 
                       check=False, capture_output=True)
-        subprocess.run(['systemctl', 'stop', 'sddm.service'], 
+        subprocess.run(['sudo', 'systemctl', 'stop', 'sddm.service'], 
                       check=False, capture_output=True)
         
         # Also lock the user account as additional protection
         username = os.environ.get('USER', 'owner')
-        subprocess.run(['passwd', '-l', username], 
+        subprocess.run(['sudo', 'passwd', '-l', username], 
                       check=False, capture_output=True)
         
         print("Login locked. Rebooting in 5 seconds...", file=sys.stderr)
         
         # Force reboot after short delay
         subprocess.run(['sleep', '5'], check=False)
-        subprocess.run(['reboot', '-f'], check=False)
+        subprocess.run(['sudo', 'reboot', '-f'], check=False)
         
     except Exception as e:
         print(f"WARNING: Failed to lock out login: {e}", file=sys.stderr)
-        # Still try to reboot even if lockout fails
+        # Still try to remove marker and reboot even if lockout fails
         try:
-            subprocess.run(['reboot', '-f'], check=False)
+            marker_file = Path('/var/lib/omarchy-install-needed')
+            if marker_file.exists():
+                subprocess.run(['sudo', 'rm', '-f', str(marker_file)], 
+                             check=False, capture_output=True)
+            subprocess.run(['sudo', 'reboot', '-f'], check=False)
         except Exception:
             pass
 

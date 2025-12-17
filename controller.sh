@@ -219,11 +219,16 @@ function setup_build_workdir() {
 }
 
 function cleanup_build_workdir() {
-    # Clean up work directory, but preserve cacheable parts
+    # Clean up work directory, but preserve cacheable parts (unless full clean)
     local WORK_DIR="/mnt/work/homerchy-isoprep-work"
+    local FULL_CLEAN="${HOMERCHY_FULL_CLEAN:-false}"
     
     if [ -d "$WORK_DIR" ]; then
-        echo "Cleaning up build work directory (preserving caches)..."
+        if [ "$FULL_CLEAN" = "true" ]; then
+            echo "Cleaning up build work directory (FULL CLEAN - removing ALL caches)..."
+        else
+            echo "Cleaning up build work directory (preserving caches)..."
+        fi
         
         # Kill any processes using the directory
         local pids=$(lsof +D "$WORK_DIR" 2>/dev/null | awk 'NR>1 {print $2}' | sort -u || true)
@@ -256,42 +261,93 @@ function cleanup_build_workdir() {
             done
         fi
         
-        # Preserve cacheable directories:
-        # - profile/airootfs/root/homerchy (injected source - takes ages to copy)
-        # - profile/airootfs/var/cache/omarchy/mirror/offline (package cache)
-        # - archiso-tmp (package cache for mkarchiso)
-        # Remove only the build artifacts that change each time
-        
-        local PROFILE_DIR="$WORK_DIR/profile"
-        local ARCHISO_TMP="$WORK_DIR/archiso-tmp"
-        
-        # Remove only the parts that need to be rebuilt
-        if [ -d "$ARCHISO_TMP" ]; then
-            echo "Preserving archiso-tmp for package cache..."
-            # Remove only the x86_64 build directory, keep package cache
-            sudo rm -rf "$ARCHISO_TMP/x86_64" 2>/dev/null || true
-            sudo rm -rf "$ARCHISO_TMP/iso" 2>/dev/null || true
-            # Remove state files that cause stale build issues
-            sudo rm -f "$ARCHISO_TMP"/*.state 2>/dev/null || true
-            sudo rm -f "$ARCHISO_TMP"/base.* 2>/dev/null || true
-        fi
-        
-        if [ -d "$PROFILE_DIR" ]; then
-            echo "Preserving profile directory (injected source cached)..."
-            # The prepare phase will handle cleaning up stale parts while preserving cache
-            # We just need to make sure mounts are cleaned up
-        fi
-        
-        # Only remove work directory if it's completely empty (shouldn't happen with preserved caches)
-        if [ -z "$(ls -A "$WORK_DIR" 2>/dev/null)" ]; then
-            sudo rmdir "$WORK_DIR" 2>/dev/null || true
+        if [ "$FULL_CLEAN" = "true" ]; then
+            # Full clean: remove everything
+            echo "Removing work directory and ALL caches (full clean mode)..."
+            sudo rm -rf "$WORK_DIR"
+            echo "✓ Work directory fully cleaned (all caches removed)"
         else
-            echo "✓ Preserved cacheable directories for faster rebuild"
+            # Preserve cacheable directories:
+            # - profile/airootfs/root/homerchy (injected source - takes ages to copy)
+            # - profile/airootfs/var/cache/omarchy/mirror/offline (package cache)
+            # - archiso-tmp (package cache for mkarchiso)
+            # Remove only the build artifacts that change each time
+            
+            local PROFILE_DIR="$WORK_DIR/profile"
+            local ARCHISO_TMP="$WORK_DIR/archiso-tmp"
+            
+            # Remove only the parts that need to be rebuilt
+            if [ -d "$ARCHISO_TMP" ]; then
+                echo "Preserving archiso-tmp for package cache..."
+                # Remove only the x86_64 build directory, keep package cache
+                sudo rm -rf "$ARCHISO_TMP/x86_64" 2>/dev/null || true
+                sudo rm -rf "$ARCHISO_TMP/iso" 2>/dev/null || true
+                # Remove state files that cause stale build issues
+                sudo rm -f "$ARCHISO_TMP"/*.state 2>/dev/null || true
+                sudo rm -f "$ARCHISO_TMP"/base.* 2>/dev/null || true
+            fi
+            
+            if [ -d "$PROFILE_DIR" ]; then
+                echo "Cleaning up profile directory (preserving only caches)..."
+                
+                # Preserve only the cacheable parts, remove everything else
+                local CACHE_DIR="$PROFILE_DIR/airootfs/var/cache/omarchy/mirror/offline"
+                local INJECTED_SOURCE="$PROFILE_DIR/airootfs/root/homerchy"
+                local TEMP_CACHE="$WORK_DIR/offline-mirror-cache-temp"
+                local TEMP_SOURCE="$WORK_DIR/injected-source-temp"
+                
+                # Clean up any stale temp directories from previous runs
+                if [ -d "$TEMP_CACHE" ]; then
+                    sudo rm -rf "$TEMP_CACHE"
+                fi
+                if [ -d "$TEMP_SOURCE" ]; then
+                    sudo rm -rf "$TEMP_SOURCE"
+                fi
+                
+                # Preserve package cache if it exists and has packages
+                if [ -d "$CACHE_DIR" ] && [ -n "$(find "$CACHE_DIR" -name '*.pkg.tar.*' 2>/dev/null | head -1)" ]; then
+                    echo "  Preserving package cache..."
+                    sudo mkdir -p "$(dirname "$TEMP_CACHE")"
+                    sudo mv "$CACHE_DIR" "$TEMP_CACHE" 2>/dev/null || true
+                fi
+                
+                # Preserve injected source if it exists
+                if [ -d "$INJECTED_SOURCE" ]; then
+                    echo "  Preserving injected source..."
+                    sudo mkdir -p "$(dirname "$TEMP_SOURCE")"
+                    sudo mv "$INJECTED_SOURCE" "$TEMP_SOURCE" 2>/dev/null || true
+                fi
+                
+                # Remove entire profile directory (it will be recreated by prepare phase)
+                echo "  Removing profile directory..."
+                sudo rm -rf "$PROFILE_DIR"
+                
+                # Restore preserved caches (prepare phase will handle this, but we do it here too for consistency)
+                if [ -d "$TEMP_CACHE" ]; then
+                    echo "  Restoring package cache..."
+                    sudo mkdir -p "$(dirname "$CACHE_DIR")"
+                    sudo mv "$TEMP_CACHE" "$CACHE_DIR" 2>/dev/null || true
+                fi
+                
+                if [ -d "$TEMP_SOURCE" ]; then
+                    echo "  Restoring injected source..."
+                    sudo mkdir -p "$(dirname "$INJECTED_SOURCE")"
+                    sudo mv "$TEMP_SOURCE" "$INJECTED_SOURCE" 2>/dev/null || true
+                fi
+            fi
+            
+            # Only remove work directory if it's completely empty (shouldn't happen with preserved caches)
+            if [ -z "$(ls -A "$WORK_DIR" 2>/dev/null)" ]; then
+                sudo rmdir "$WORK_DIR" 2>/dev/null || true
+            else
+                echo "✓ Preserved cacheable directories for faster rebuild"
+            fi
         fi
     fi
 }
 
 function do_build() {
+    local FULL_CLEAN="${1:-false}"
     echo ">>> Starting Build..."
     
     # Setup work directory on disk
@@ -319,13 +375,16 @@ function do_build() {
     if [ -f "$BUILD_SCRIPT" ]; then
         # Use trap to ensure work directory cleanup even on error
         trap cleanup_build_workdir EXIT
-        # Set environment variable for work directory location
+        # Set environment variables for work directory location and full clean mode
         export HOMERCHY_WORK_DIR="$WORK_DIR"
+        export HOMERCHY_FULL_CLEAN="$FULL_CLEAN"
         python3 "$BUILD_SCRIPT"
         local build_exit=$?
         # Cleanup work directory
         cleanup_build_workdir
         trap - EXIT
+        # Clear the full clean flag after cleanup
+        unset HOMERCHY_FULL_CLEAN
         return $build_exit
     else
         echo "Error: Build script not found at $BUILD_SCRIPT"
@@ -379,7 +438,7 @@ fi
 while [[ $# -gt 0 ]]; do
     case $1 in
         -b|--build)
-            do_build
+            do_build "false"
             shift
             ;;
         -l|--launch)
@@ -387,7 +446,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -f|--full)
-            do_build
+            do_build "false"
             if [ $? -eq 0 ]; then
                 do_launch
             else
@@ -398,7 +457,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         -F|--full-clean)
             do_eject "true"
-            do_build
+            # Also remove preserved cache directory if it exists
+            PRESERVE_DIR="/mnt/work/.homerchy-cache-preserve"
+            if [ -d "$PRESERVE_DIR" ]; then
+                echo "Removing preserved cache directory..."
+                sudo rm -rf "$PRESERVE_DIR"
+                echo "✓ Preserved cache directory removed"
+            fi
+            do_build "true"
             if [ $? -eq 0 ]; then
                 do_launch
             else

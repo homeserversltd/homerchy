@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Generate logo.png from icon.txt before copying theme
+if [ -f ~/.local/share/omarchy/icon.txt ]; then
+  omarchy-icon-to-png || echo "WARNING: Failed to generate logo.png from icon.txt"
+fi
+
 sudo cp ~/.local/share/omarchy/default/plymouth/* /usr/share/plymouth/themes/omarchy/
 sudo plymouth-set-default-theme omarchy
 
