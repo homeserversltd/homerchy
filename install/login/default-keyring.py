@@ -23,28 +23,36 @@ def main(config: dict) -> dict:
         dict: Result dictionary with success status
     """
     try:
-        # Get the default-keyring.sh script path
-        script_dir = Path(__file__).parent
-        keyring_script = script_dir / "default-keyring.sh"
+        import time
         
-        if not keyring_script.exists():
-            return {"success": False, "message": f"Keyring script not found: {keyring_script}"}
+        keyring_dir = Path.home() / '.local' / 'share' / 'keyrings'
+        keyring_file = keyring_dir / 'Default_keyring.keyring'
+        default_file = keyring_dir / 'default'
         
-        # Execute the shell script
-        result = subprocess.run(
-            ['bash', str(keyring_script)],
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
+        # Create keyring directory
+        keyring_dir.mkdir(parents=True, exist_ok=True)
         
-        if result.returncode == 0:
-            return {"success": True, "message": "Default keyring setup completed"}
-        else:
-            return {"success": False, "message": f"Keyring setup failed: {result.stderr}"}
+        # Create keyring file
+        current_time = int(time.time())
+        keyring_content = f"""[keyring]
+display-name=Default keyring
+ctime={current_time}
+mtime=0
+lock-on-idle=false
+lock-after=false
+"""
+        keyring_file.write_text(keyring_content)
+        
+        # Create default file
+        default_file.write_text("Default_keyring\n")
+        
+        # Set permissions
+        keyring_dir.chmod(0o700)
+        keyring_file.chmod(0o600)
+        default_file.chmod(0o644)
+        
+        return {"success": True, "message": "Default keyring setup completed"}
     
-    except subprocess.TimeoutExpired:
-        return {"success": False, "message": "Keyring setup timed out"}
     except Exception as e:
         return {"success": False, "message": f"Unexpected error: {e}"}
 

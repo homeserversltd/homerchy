@@ -23,30 +23,50 @@ def main(config: dict) -> dict:
         dict: Result dictionary with success status
     """
     try:
-        # Get the pacman.sh script path
-        script_dir = Path(__file__).parent
-        pacman_script = script_dir / "pacman.sh"
+        omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy'))
+        default_pacman_conf = omarchy_path / 'default' / 'pacman' / 'pacman.conf'
+        default_mirrorlist = omarchy_path / 'default' / 'pacman' / 'mirrorlist-stable'
         
-        if not pacman_script.exists():
-            return {"success": False, "message": f"Pacman script not found: {pacman_script}"}
+        # Copy pacman.conf
+        if not default_pacman_conf.exists():
+            return {"success": False, "message": f"Default pacman.conf not found: {default_pacman_conf}"}
         
-        # Execute the shell script
-        result = subprocess.run(
-            ['bash', str(pacman_script)],
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
+        subprocess.run(['cp', '-f', str(default_pacman_conf), '/etc/pacman.conf'], check=True)
         
-        if result.returncode == 0:
-            return {"success": True, "message": "Pacman configuration completed"}
-        else:
-            return {"success": False, "message": f"Pacman configuration failed: {result.stderr}"}
+        # Copy mirrorlist
+        if not default_mirrorlist.exists():
+            return {"success": False, "message": f"Default mirrorlist not found: {default_mirrorlist}"}
+        
+        Path('/etc/pacman.d').mkdir(parents=True, exist_ok=True)
+        subprocess.run(['cp', '-f', str(default_mirrorlist), '/etc/pacman.d/mirrorlist'], check=True)
+        
+        # Check for Mac T2 hardware (lspci -nn | grep -q "106b:180[12]")
+        try:
+            lspci_result = subprocess.run(
+                ['lspci', '-nn'],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if lspci_result.returncode == 0 and ('106b:1801' in lspci_result.stdout or '106b:1802' in lspci_result.stdout):
+                # Add arch-mact2 repo
+                mact2_repo = """
+
+[arch-mact2]
+Server = https://github.com/NoaHimesaka1873/arch-mact2-mirror/releases/download/release
+SigLevel = Never
+"""
+                with open('/etc/pacman.conf', 'a') as f:
+                    f.write(mact2_repo)
+        
+        except Exception as e:
+            # If lspci fails, that's okay - just skip Mac T2 detection
+            pass
+        
+        return {"success": True, "message": "Pacman configuration completed"}
     
-    except subprocess.TimeoutExpired:
-        return {"success": False, "message": "Pacman configuration timed out"}
     except Exception as e:
-        return {"success": False, "message": f"Unexpected error: {e}"}
+        return {"success": False, "message": f"Failed to configure pacman: {e}"}
 
 
 if __name__ == "__main__":

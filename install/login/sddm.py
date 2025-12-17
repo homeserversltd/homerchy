@@ -23,28 +23,46 @@ def main(config: dict) -> dict:
         dict: Result dictionary with success status
     """
     try:
-        # Get the sddm.sh script path
-        script_dir = Path(__file__).parent
-        sddm_script = script_dir / "sddm.sh"
+        username = os.environ.get('OMARCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
         
-        if not sddm_script.exists():
-            return {"success": False, "message": f"SDDM script not found: {sddm_script}"}
+        # Create directories
+        sddm_conf_dir = Path('/etc/sddm.conf.d')
+        wayland_sessions_dir = Path('/usr/share/wayland-sessions')
         
-        # Execute the shell script
-        result = subprocess.run(
-            ['bash', str(sddm_script)],
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
+        sddm_conf_dir.mkdir(parents=True, exist_ok=True)
+        wayland_sessions_dir.mkdir(parents=True, exist_ok=True)
         
-        if result.returncode == 0:
-            return {"success": True, "message": "SDDM setup completed"}
-        else:
-            return {"success": False, "message": f"SDDM setup failed: {result.stderr}"}
+        # Create Wayland session desktop file
+        hyprland_desktop = wayland_sessions_dir / 'hyprland-uwsm.desktop'
+        if not hyprland_desktop.exists():
+            desktop_content = """[Desktop Entry]
+Name=Hyprland (UWSM)
+Comment=Hyprland session managed by UWSM
+Exec=uwsm start -- hyprland.desktop
+Type=Application
+DesktopNames=Hyprland
+"""
+            hyprland_desktop.write_text(desktop_content)
+        
+        # Create autologin configuration
+        autologin_conf = sddm_conf_dir / 'autologin.conf'
+        if not autologin_conf.exists():
+            autologin_content = f"""[Autologin]
+User={username}
+Session=hyprland-uwsm
+
+[Theme]
+Current=breeze
+"""
+            autologin_conf.write_text(autologin_content)
+        
+        # Enable SDDM service (don't use --now for manual installs)
+        subprocess.run(['systemctl', 'enable', 'sddm.service'], check=True)
+        
+        return {"success": True, "message": "SDDM setup completed"}
     
-    except subprocess.TimeoutExpired:
-        return {"success": False, "message": "SDDM setup timed out"}
+    except subprocess.CalledProcessError as e:
+        return {"success": False, "message": f"SDDM setup failed: {e}"}
     except Exception as e:
         return {"success": False, "message": f"Unexpected error: {e}"}
 
