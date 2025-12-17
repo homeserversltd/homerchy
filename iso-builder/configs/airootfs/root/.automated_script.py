@@ -503,6 +503,57 @@ Server = file:///var/cache/omarchy/mirror/offline/
     if waybar_script.exists():
         waybar_script.chmod(0o755)
     
+    # Create systemd service for first-boot installation
+    log("install_base_system: Creating first-boot installation service")
+    # Create marker file to indicate Homerchy installation is needed
+    install_marker = Path('/mnt/var/lib/omarchy-install-needed')
+    install_marker.parent.mkdir(parents=True, exist_ok=True)
+    install_marker.touch()
+    
+    # Use installed system paths (without /mnt prefix) for the service
+    installed_omarchy_path = f'/home/{omarchy_user}/.local/share/omarchy'
+    
+    service_content = f"""[Unit]
+Description=Homerchy First-Boot Installation
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/var/lib/omarchy-install-needed
+
+[Service]
+Type=oneshot
+User={omarchy_user}
+Group={omarchy_user}
+WorkingDirectory={installed_omarchy_path}
+Environment="HOME=/home/{omarchy_user}"
+Environment="USER={omarchy_user}"
+Environment="OMARCHY_PATH={installed_omarchy_path}"
+ExecStart=/bin/bash {installed_omarchy_path}/install.sh
+ExecStartPost=/bin/rm -f /var/lib/omarchy-install-needed
+StandardOutput=journal+console
+StandardError=journal+console
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+"""
+    
+    service_file = Path('/mnt/etc/systemd/system/omarchy-first-boot-install.service')
+    service_file.parent.mkdir(parents=True, exist_ok=True)
+    service_file.write_text(service_content)
+    service_file.chmod(0o644)
+    
+    # Enable service in chroot
+    result = subprocess.run(
+        ['arch-chroot', '/mnt', 'systemctl', 'enable', 'omarchy-first-boot-install.service'],
+        capture_output=True,
+        text=True
+    )
+    
+    if result.returncode != 0:
+        log(f"install_base_system: WARNING: Failed to enable first-boot service: {result.stderr}")
+    else:
+        log("install_base_system: First-boot service created and enabled")
+    
     log("install_base_system: Completed successfully")
 
 
@@ -617,18 +668,18 @@ def main():
         sys.exit(1)
     log("Arch installation completed")
     
-    # Install Homerchy
-    log("Starting Homerchy installation...")
-    if not install_homerchy():
-        log("ERROR: Homerchy installation failed")
-        sys.exit(1)
-    log("Homerchy installation completed")
+    # NOTE: Homerchy installation happens on first boot, not during ISO installation
+    # The installed system will have a systemd service that runs the Homerchy installer on first boot
+    # This allows the user to reboot into the installed system before Homerchy configuration begins
     
-    # Check if reboot was requested
-    completion_marker = Path('/mnt/var/tmp/omarchy-install-completed')
-    if not completion_marker.exists():
-        print("\nInstallation complete! Please reboot your system:")
-        print("  sudo reboot\n")
+    log("Arch Linux installation complete!")
+    log("Homerchy will be installed on first boot of the installed system.")
+    print("\n" + "="*60)
+    print("Arch Linux installation completed successfully!")
+    print("Homerchy will be installed automatically on first boot.")
+    print("="*60)
+    print("\nYou may reboot when ready:")
+    print("  sudo reboot\n")
 
 
 if __name__ == '__main__':

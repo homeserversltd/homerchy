@@ -144,8 +144,9 @@ class Orchestrator:
             # Check for direct module (child_name.py in current directory)
             elif direct_module.exists():
                 self.logger.info(f"[PARENT-CHILD] {child_name} -> DIRECT MODULE path")
-                # Create a dummy path for the executor (it will use parent directory)
-                child_state = self.executor.execute_child(self.install_path, child_name, self.config)
+                # For direct modules, pass the direct_module file path itself
+                # This ensures executor checks parent directory for the .py file, not install_path for index.py
+                child_state = self.executor.execute_child(direct_module.parent, child_name, self.config)
             else:
                 self.logger.error(f"[PARENT-CHILD] {child_name} -> NOT FOUND")
                 self.logger.error(f"Child {child_name} not found (no index.py or {child_name}.py)")
