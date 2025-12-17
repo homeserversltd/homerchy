@@ -277,10 +277,24 @@ function cleanup_build_workdir() {
         fi
         
         if [ "$FULL_CLEAN" = "true" ]; then
-            # Full clean: remove everything
+            # Full clean: remove everything except ISO output (build artifact we want to keep)
             echo "Removing work directory and ALL caches (full clean mode)..."
+            local ISO_OUT_DIR="$WORK_DIR/isoout"
+            # Preserve ISO output if it exists
+            if [ -d "$ISO_OUT_DIR" ] && [ -n "$(ls -A "$ISO_OUT_DIR"/*.iso 2>/dev/null)" ]; then
+                echo "  Preserving ISO output directory..."
+                local TEMP_ISO_DIR="/mnt/work/.homerchy-iso-temp"
+                sudo rm -rf "$TEMP_ISO_DIR" 2>/dev/null || true
+                sudo mv "$ISO_OUT_DIR" "$TEMP_ISO_DIR" 2>/dev/null || true
+            fi
+            # Remove work directory
             sudo rm -rf "$WORK_DIR"
-            echo "✓ Work directory fully cleaned (all caches removed)"
+            # Restore ISO output
+            if [ -d "$TEMP_ISO_DIR" ]; then
+                sudo mkdir -p "$WORK_DIR"
+                sudo mv "$TEMP_ISO_DIR" "$ISO_OUT_DIR" 2>/dev/null || true
+            fi
+            echo "✓ Work directory fully cleaned (all caches removed, ISO output preserved)"
         else
             # Preserve cacheable directories:
             # - profile/airootfs/root/homerchy (injected source - takes ages to copy)
@@ -386,18 +400,22 @@ function do_build() {
         fi
     fi
     
-    # Run build with cleanup on exit
+    # Run build with cleanup on exit (unless full-clean mode - we'll clean at the end)
     if [ -f "$BUILD_SCRIPT" ]; then
-        # Use trap to ensure work directory cleanup even on error
-        trap cleanup_build_workdir EXIT
+        # Use trap to ensure work directory cleanup even on error (unless full-clean)
+        if [ "$FULL_CLEAN" != "true" ]; then
+            trap cleanup_build_workdir EXIT
+        fi
         # Set environment variables for work directory location and full clean mode
         export HOMERCHY_WORK_DIR="$WORK_DIR"
         export HOMERCHY_FULL_CLEAN="$FULL_CLEAN"
         python3 "$BUILD_SCRIPT"
         local build_exit=$?
-        # Cleanup work directory
-        cleanup_build_workdir
-        trap - EXIT
+        # Cleanup work directory (unless full-clean mode - preserve ISO for potential launch)
+        if [ "$FULL_CLEAN" != "true" ]; then
+            cleanup_build_workdir
+            trap - EXIT
+        fi
         # Clear the full clean flag after cleanup
         unset HOMERCHY_FULL_CLEAN
         return $build_exit
@@ -486,6 +504,7 @@ while [[ $# -gt 0 ]]; do
                 do_launch
             else
                 echo "Build failed, skipping VM launch."
+                echo "Note: ISO and work directory preserved in case you want to run -f or -l"
                 exit 1
             fi
             shift

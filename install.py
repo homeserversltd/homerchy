@@ -10,6 +10,8 @@ Replaces install.sh with Python-based orchestrator.
 import os
 import sys
 import subprocess
+import signal
+import atexit
 from pathlib import Path
 
 
@@ -107,8 +109,36 @@ def lockout_and_reboot():
             pass
 
 
+def cleanup_on_exit():
+    """Ensure cleanup happens even on unexpected exit."""
+    try:
+        # Re-enable TTY login
+        for tty_num in range(1, 7):
+            subprocess.run(['systemctl', 'unmask', f'getty@tty{tty_num}.service'], 
+                         check=False, capture_output=True)
+        subprocess.run(['systemctl', 'start', 'getty@tty1.service'], 
+                      check=False, capture_output=True)
+        # Remove marker file to prevent reboot loop
+        marker_file = Path('/var/lib/omarchy-install-needed')
+        if marker_file.exists():
+            marker_file.unlink()
+    except Exception:
+        pass  # Best effort cleanup
+
+
+def signal_handler(signum, frame):
+    """Handle signals to ensure cleanup."""
+    cleanup_on_exit()
+    sys.exit(1)
+
+
 def main():
     """Main entry point."""
+    # Register cleanup handlers
+    atexit.register(cleanup_on_exit)
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
     # Setup environment
     setup_environment()
     

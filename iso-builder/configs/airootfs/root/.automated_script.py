@@ -515,11 +515,17 @@ Server = file:///var/cache/omarchy/mirror/offline/
     
     service_content = f"""[Unit]
 Description=Homerchy First-Boot Installation
-After=network-online.target plymouth-start.service
+# Wait for system to be fully booted (including encrypted root unlock and filesystem mount)
+After=multi-user.target network-online.target plymouth-start.service
+# Don't block boot - start after system is ready
 Wants=network-online.target
 Before=plymouth-quit.service
+# Only run if marker file exists AND root filesystem is mounted
 ConditionPathExists=/var/lib/omarchy-install-needed
+ConditionPathIsMountPoint=/
 Conflicts=getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
+# Don't start if system is shutting down
+DefaultDependencies=yes
 
 [Service]
 Type=oneshot
@@ -529,21 +535,31 @@ Environment="HOME=/home/{omarchy_user}"
 Environment="USER={omarchy_user}"
 Environment="OMARCHY_PATH={installed_omarchy_path}"
 Environment="OMARCHY_INSTALL_USER={omarchy_user}"
+# Timeout settings - prevent infinite hangs
+TimeoutStartSec=3600
+TimeoutStopSec=30
 # Block TTY login during installation
 ExecStartPre=/bin/systemctl stop getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
 ExecStartPre=/bin/systemctl mask getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
 # Run installation as root (orchestrator handles user-specific operations internally)
 ExecStart=/bin/bash {installed_omarchy_path}/install.sh
 # Re-enable TTY login after installation (success or failure)
-ExecStartPost=/bin/systemctl unmask getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
-ExecStartPost=/bin/systemctl start getty@tty1.service
-# Remove marker file
-ExecStartPost=/bin/rm -f /var/lib/omarchy-install-needed
+# Use ExecStartPost with - to ignore errors (ensures TTY is restored even on failure)
+ExecStartPost=-/bin/systemctl unmask getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
+ExecStartPost=-/bin/systemctl start getty@tty1.service
+# Remove marker file (critical - prevents reboot loop)
+# Use - to ignore errors, but ensure it happens
+ExecStartPost=-/bin/rm -f /var/lib/omarchy-install-needed
+# Also ensure cleanup on failure/timeout
+ExecStop=-/bin/systemctl unmask getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
+ExecStop=-/bin/systemctl start getty@tty1.service
+ExecStop=-/bin/rm -f /var/lib/omarchy-install-needed
 StandardOutput=journal
 StandardError=journal
 RemainAfterExit=yes
 
 [Install]
+# Start after multi-user.target is reached (system fully booted)
 WantedBy=multi-user.target
 """
     
