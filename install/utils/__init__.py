@@ -263,17 +263,122 @@ class ChildExecutor:
         child_state = StateManager(phase=child_name)
         child_state.current_step = child_name
         
+        # Check for direct module FIRST (more specific, should take precedence)
+        # Direct module: child_name.py in the child_path directory
+        module_py = child_path / f"{child_name}.py"
+        # Also check parent directory (when child_path is a directory containing the module)
+        module_py_parent = child_path.parent / f"{child_name}.py" if child_path.is_dir() else None
+        
         # Check for nested orchestrator (index.py)
         index_py = child_path / "index.py"
-        module_py_parent = child_path.parent / f"{child_name}.py"
         
         self.logger.info(f"[EXECUTOR] execute_child() called:")
         self.logger.info(f"  child_path: {child_path}")
         self.logger.info(f"  child_name: {child_name}")
+        self.logger.info(f"  module_py ({module_py}): EXISTS={module_py.exists()}")
+        if module_py_parent:
+            self.logger.info(f"  module_py_parent ({module_py_parent}): EXISTS={module_py_parent.exists()}")
         self.logger.info(f"  index_py ({index_py}): EXISTS={index_py.exists()}")
-        self.logger.info(f"  module_py_parent ({module_py_parent}): EXISTS={module_py_parent.exists()}")
         
-        if index_py.exists():
+        # Check for direct module FIRST (before nested orchestrator)
+        if module_py.exists():
+            # Direct module in child_path directory
+            self.logger.info(f"[EXECUTOR] {child_name} -> Executing as DIRECT MODULE (in child_path)")
+            self.logger.info(f"  module_py: {module_py}")
+            child_state.set_status(Status.RUNNING)
+            
+            try:
+                import importlib.util
+                spec = importlib.util.spec_from_file_location(f"homerchy.install.{child_name}", module_py)
+                module = importlib.util.module_from_spec(spec)
+                sys.path.insert(0, str(module_py.parent))
+                spec.loader.exec_module(module)
+                self.logger.info(f"[EXECUTOR] {child_name} module loaded successfully")
+                
+                # Call main function if it exists
+                if hasattr(module, 'main'):
+                    self.logger.info(f"[EXECUTOR] Calling module.main() for {child_name} (direct module)")
+                    result = module.main(config.get(child_name, {}))
+                    self.logger.info(f"[EXECUTOR] {child_name} (direct) returned: type={type(result)}, value={result}")
+                    
+                    if isinstance(result, dict):
+                        if result.get("success") is True:
+                            self.logger.info(f"[EXECUTOR] {child_name} success=True, marking as COMPLETED")
+                            child_state.set_status(Status.COMPLETED)
+                        elif result.get("success") is False:
+                            self.logger.info(f"[EXECUTOR] {child_name} success=False, marking as FAILED")
+                            child_state.set_status(Status.FAILED)
+                            error_msg = result.get("message", "Unknown error")
+                            child_state.add_error(f"Module {child_name} failed: {error_msg}")
+                        else:
+                            self.logger.warning(f"[EXECUTOR] {child_name} dict has no success field, assuming success")
+                            child_state.set_status(Status.COMPLETED)
+                    else:
+                        self.logger.warning(f"[EXECUTOR] {child_name} returned non-dict, assuming failure")
+                        child_state.set_status(Status.FAILED)
+                        child_state.add_error(f"Module {child_name} returned unexpected type: {type(result)}")
+                else:
+                    raise AttributeError(f"Module {child_name} has no main() function")
+                
+                if child_state.status != Status.FAILED:
+                    self.logger.info(f"[EXECUTOR] Completed module: {child_name} (status={child_state.status})")
+                else:
+                    self.logger.error(f"[EXECUTOR] Module {child_name} FAILED (status={child_state.status}, errors={child_state.has_errors()})")
+                
+            except Exception as e:
+                child_state.set_status(Status.FAILED)
+                child_state.add_error(f"Failed to execute module {child_name}", exception=e)
+                self.logger.error(f"Failed to execute module {child_name}: {e}")
+        elif module_py_parent and module_py_parent.exists():
+            # Direct module in parent directory (fallback)
+            self.logger.info(f"[EXECUTOR] {child_name} -> Executing as DIRECT MODULE (in parent)")
+            module_py = module_py_parent
+            self.logger.info(f"  module_py: {module_py}")
+            child_state.set_status(Status.RUNNING)
+            
+            try:
+                import importlib.util
+                spec = importlib.util.spec_from_file_location(f"homerchy.install.{child_name}", module_py)
+                module = importlib.util.module_from_spec(spec)
+                sys.path.insert(0, str(module_py.parent))
+                spec.loader.exec_module(module)
+                self.logger.info(f"[EXECUTOR] {child_name} module loaded successfully")
+                
+                # Call main function if it exists
+                if hasattr(module, 'main'):
+                    self.logger.info(f"[EXECUTOR] Calling module.main() for {child_name} (direct module)")
+                    result = module.main(config.get(child_name, {}))
+                    self.logger.info(f"[EXECUTOR] {child_name} (direct) returned: type={type(result)}, value={result}")
+                    
+                    if isinstance(result, dict):
+                        if result.get("success") is True:
+                            self.logger.info(f"[EXECUTOR] {child_name} success=True, marking as COMPLETED")
+                            child_state.set_status(Status.COMPLETED)
+                        elif result.get("success") is False:
+                            self.logger.info(f"[EXECUTOR] {child_name} success=False, marking as FAILED")
+                            child_state.set_status(Status.FAILED)
+                            error_msg = result.get("message", "Unknown error")
+                            child_state.add_error(f"Module {child_name} failed: {error_msg}")
+                        else:
+                            self.logger.warning(f"[EXECUTOR] {child_name} dict has no success field, assuming success")
+                            child_state.set_status(Status.COMPLETED)
+                    else:
+                        self.logger.warning(f"[EXECUTOR] {child_name} returned non-dict, assuming failure")
+                        child_state.set_status(Status.FAILED)
+                        child_state.add_error(f"Module {child_name} returned unexpected type: {type(result)}")
+                else:
+                    raise AttributeError(f"Module {child_name} has no main() function")
+                
+                if child_state.status != Status.FAILED:
+                    self.logger.info(f"[EXECUTOR] Completed module: {child_name} (status={child_state.status})")
+                else:
+                    self.logger.error(f"[EXECUTOR] Module {child_name} FAILED (status={child_state.status}, errors={child_state.has_errors()})")
+                
+            except Exception as e:
+                child_state.set_status(Status.FAILED)
+                child_state.add_error(f"Failed to execute module {child_name}", exception=e)
+                self.logger.error(f"Failed to execute module {child_name}: {e}")
+        elif index_py.exists():
             self.logger.info(f"[EXECUTOR] {child_name} -> Executing as NESTED ORCHESTRATOR")
             self.logger.info(f"Executing nested orchestrator: {child_name}")
             child_state.set_status(Status.RUNNING)

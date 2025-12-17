@@ -23,9 +23,18 @@ def main(config: dict) -> dict:
         dict: Result dictionary with success status
     """
     try:
-        # Create state directory
-        state_dir = Path.home() / '.local' / 'state' / 'omarchy'
-        state_dir.mkdir(parents=True, exist_ok=True)
+        # Create state directory (ensure parent directories exist first)
+        home = Path.home()
+        local_dir = home / '.local'
+        if not local_dir.exists():
+            local_dir.mkdir(mode=0o755, exist_ok=True)
+        
+        state_base = local_dir / 'state'
+        if not state_base.exists():
+            state_base.mkdir(mode=0o755, exist_ok=True)
+        
+        state_dir = state_base / 'omarchy'
+        state_dir.mkdir(parents=True, mode=0o755, exist_ok=True)
         
         # Create first-run mode marker
         marker_file = state_dir / 'first-run.mode'

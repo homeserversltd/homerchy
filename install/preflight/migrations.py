@@ -24,10 +24,21 @@ def main(config: dict) -> dict:
     try:
         omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy'))
         migrations_path = omarchy_path / 'migrations'
-        state_path = Path.home() / '.local' / 'state' / 'omarchy' / 'migrations'
+        home = Path.home()
+        
+        # Ensure .local directory exists first
+        local_dir = home / '.local'
+        if not local_dir.exists():
+            local_dir.mkdir(mode=0o755, exist_ok=True)
+        
+        # Ensure .local/state exists
+        state_base = local_dir / 'state'
+        if not state_base.exists():
+            state_base.mkdir(mode=0o755, exist_ok=True)
         
         # Create state directory
-        state_path.mkdir(parents=True, exist_ok=True)
+        state_path = state_base / 'omarchy' / 'migrations'
+        state_path.mkdir(parents=True, mode=0o755, exist_ok=True)
         
         # Create state files for each migration script
         if migrations_path.exists():
