@@ -352,7 +352,7 @@ def create_limine_entries(cmdline: str) -> int:
         
         if initrd_path.exists():
             entry = f'''
-/Homerchy ({kernel_name})
+Homerchy ({kernel_name})
     PROTOCOL: linux
     KERNEL_PATH: boot():/vmlinuz-{kernel_name}
     MODULE_PATH: boot():/initramfs-{kernel_name}.img

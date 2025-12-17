@@ -4,7 +4,8 @@ set -e
 # Config
 REPO_ROOT="$(dirname "$(realpath "$0")")"
 BUILD_SCRIPT="${REPO_ROOT}/isoprep/build.py"
-LAUNCH_SCRIPT="${REPO_ROOT}/vmtools/launch-iso.sh"
+LAUNCH_ISO_SCRIPT="${REPO_ROOT}/vmtools/launch-iso.sh"
+LAUNCH_DISK_SCRIPT="${REPO_ROOT}/vmtools/launch-disk.sh"
 # ISO output is now in work directory, will be set dynamically based on work dir
 WORK_DIR_BASE="/mnt/work/homerchy-isoprep-work"
 ISO_DIR="${WORK_DIR_BASE}/isoout"
@@ -13,9 +14,10 @@ function usage() {
     echo "Usage: ./controller.sh [OPTIONS]"
     echo "Options:"
     echo "  -b, --build       Generate a new Homerchy ISO"
-    echo "  -l, --launch      Launch the VM using the filtered ISO"
-    echo "  -f, --full        Build the ISO (reusing cache) and then launch the VM"
-    echo "  -F, --full-clean  Full clean rebuild (eject all caches, build, then launch)"
+    echo "  -l, --launch      Launch the VM from installed disk (existing system)"
+    echo "  -L, --launch-iso  Launch the VM from ISO (fresh install)"
+    echo "  -f, --full        Build the ISO (reusing cache) and then launch the VM from ISO"
+    echo "  -F, --full-clean  Full clean rebuild (eject all caches, build, then launch from ISO)"
     echo "  -d, --deploy DEV  Deploy (dd) the ISO to a device (e.g. /dev/sdX)"
     echo "  -e, --eject       Eject cartridge (preserves caches for faster rebuilds)"
     echo "  -E, --eject-full  Full eject (removes all caches, completely clean)"
@@ -427,11 +429,21 @@ function do_build() {
 }
 
 function do_launch() {
-    echo ">>> Launching VM..."
-    if [ -x "$LAUNCH_SCRIPT" ]; then
-        "$LAUNCH_SCRIPT"
+    echo ">>> Launching VM from installed disk..."
+    if [ -x "$LAUNCH_DISK_SCRIPT" ]; then
+        "$LAUNCH_DISK_SCRIPT"
     else
-        echo "Error: Launch script not found or executable at $LAUNCH_SCRIPT"
+        echo "Error: Launch disk script not found or executable at $LAUNCH_DISK_SCRIPT"
+        exit 1
+    fi
+}
+
+function do_launch_iso() {
+    echo ">>> Launching VM from ISO (fresh install)..."
+    if [ -x "$LAUNCH_ISO_SCRIPT" ]; then
+        "$LAUNCH_ISO_SCRIPT"
+    else
+        echo "Error: Launch ISO script not found or executable at $LAUNCH_ISO_SCRIPT"
         exit 1
     fi
 }
@@ -480,10 +492,14 @@ while [[ $# -gt 0 ]]; do
             do_launch
             shift
             ;;
+        -L|--launch-iso)
+            do_launch_iso
+            shift
+            ;;
         -f|--full)
             do_build "false"
             if [ $? -eq 0 ]; then
-                do_launch
+                do_launch_iso
             else
                 echo "Build failed, skipping VM launch."
                 exit 1
@@ -501,7 +517,7 @@ while [[ $# -gt 0 ]]; do
             fi
             do_build "true"
             if [ $? -eq 0 ]; then
-                do_launch
+                do_launch_iso
             else
                 echo "Build failed, skipping VM launch."
                 echo "Note: ISO and work directory preserved in case you want to run -f or -l"

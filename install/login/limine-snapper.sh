@@ -170,7 +170,7 @@ if ls /boot/vmlinuz-* 1>/dev/null 2>&1; then
       # Create entry for this kernel
       sudo tee -a /boot/limine.conf >/dev/null <<EOF
 
-/Homerchy ($kernel_name)
+Homerchy ($kernel_name)
     PROTOCOL: linux
     KERNEL_PATH: boot():/vmlinuz-$kernel_name
     MODULE_PATH: boot():/initramfs-$kernel_name.img
