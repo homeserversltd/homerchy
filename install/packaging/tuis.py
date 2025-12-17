@@ -24,23 +24,46 @@ def main(config: dict) -> dict:
     """
     try:
         icon_dir = Path.home() / '.local' / 'share' / 'applications' / 'icons'
+        omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy'))
+        icon_src_dir = omarchy_path / 'applications' / 'icons'
+        
+        # Ensure icon directory exists
+        icon_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Ensure icons are copied (in case icons module didn't run or failed)
+        if icon_src_dir.exists():
+            import shutil
+            for icon_file in icon_src_dir.glob('*.png'):
+                shutil.copy2(icon_file, icon_dir / icon_file.name)
         
         # Install Disk Usage TUI
         disk_usage_cmd = "bash -c 'dust -r; read -n 1 -s'"
-        disk_usage_icon = str(icon_dir / "Disk Usage.png")
+        disk_usage_icon = icon_dir / "Disk Usage.png"
+        
+        # Check if icon exists, if not use a placeholder URL or skip
+        if not disk_usage_icon.exists():
+            return {"success": False, "message": f"Disk Usage icon not found: {disk_usage_icon}"}
+        
+        tui_install_script = Path.home() / '.local' / 'share' / 'omarchy' / 'bin' / 'omarchy-tui-install'
+        
+        if not tui_install_script.exists():
+            return {"success": False, "message": f"omarchy-tui-install script not found: {tui_install_script}"}
         
         result1 = subprocess.run(
-            ['bash', '-c', f'source ~/.local/share/omarchy/bin/omarchy-tui-install 2>&1 || omarchy-tui-install "Disk Usage" "{disk_usage_cmd}" float "{disk_usage_icon}" 2>&1'],
+            ['bash', str(tui_install_script), "Disk Usage", disk_usage_cmd, "float", str(disk_usage_icon)],
             capture_output=True,
             text=True,
             timeout=60
         )
         
         # Install Docker TUI
-        docker_icon = str(icon_dir / "Docker.png")
+        docker_icon = icon_dir / "Docker.png"
+        
+        if not docker_icon.exists():
+            return {"success": False, "message": f"Docker icon not found: {docker_icon}"}
         
         result2 = subprocess.run(
-            ['bash', '-c', f'source ~/.local/share/omarchy/bin/omarchy-tui-install 2>&1 || omarchy-tui-install "Docker" "lazydocker" tile "{docker_icon}" 2>&1'],
+            ['bash', str(tui_install_script), "Docker", "lazydocker", "tile", str(docker_icon)],
             capture_output=True,
             text=True,
             timeout=60
