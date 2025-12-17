@@ -11,7 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import eject, build, vm, deploy, workdir
+from . import eject, build, vm, deploy
 
 
 def usage():

@@ -7,7 +7,8 @@ import sys
 from pathlib import Path
 
 from .utils import run_command
-from .workdir import WORK_DIR_BASE
+
+WORK_DIR_BASE = "/mnt/work/homerchy-isoprep-work"
 
 
 def do_deploy(target_dev: str) -> None:

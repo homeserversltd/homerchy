@@ -5,7 +5,7 @@
 set -e
 
 REPO_ROOT="$(dirname "$(realpath "$0")")"
-CONTROLLER_PY="${REPO_ROOT}/controller/main.py"
+CONTROLLER_DIR="${REPO_ROOT}/controller"
 
-# Execute Python controller with all arguments passed through
-exec python3 "$CONTROLLER_PY" "$@"
+# Add controller directory to Python path and execute main module
+PYTHONPATH="${REPO_ROOT}:${PYTHONPATH}" exec python3 -m controller.main "$@"
