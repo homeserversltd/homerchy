@@ -66,12 +66,7 @@
         }
     },
     "children": [
-        "preflight",
-        "packaging",
-        "config",
-        "login",
-        "post-install",
-        "first-run"
+        "display-test"
     ]
 }
 

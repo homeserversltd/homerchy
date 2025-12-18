@@ -12,7 +12,64 @@ import sys
 import subprocess
 import signal
 import atexit
+import threading
+import time
 from pathlib import Path
+
+
+def block_tty_and_display_message():
+    """Block TTY login and display persistent installation message."""
+    try:
+        # Stop and mask all getty services
+        for tty_num in range(1, 7):
+            subprocess.run(['systemctl', 'stop', f'getty@tty{tty_num}.service'], 
+                         check=False, capture_output=True)
+            subprocess.run(['systemctl', 'mask', f'getty@tty{tty_num}.service'], 
+                         check=False, capture_output=True)
+        
+        # Switch to TTY1
+        subprocess.run(['chvt', '1'], check=False, capture_output=True)
+        time.sleep(0.2)
+        
+        # Display persistent message
+        display_persistent_message()
+        
+        print("[INSTALL] TTY login blocked and persistent message displayed", file=sys.stderr)
+    except Exception as e:
+        print(f"WARNING: Failed to block TTY: {e}", file=sys.stderr)
+
+
+def display_persistent_message():
+    """Display the persistent installation message on TTY1."""
+    try:
+        message = "\033[2J\033[H"  # Clear screen and home cursor
+        message += "\033[1m\033[31m"  # Bold red
+        message += "="*70 + "\n"
+        message += "HOMERCHY INSTALLATION IN PROGRESS\n"
+        message += "DO NOT LOG IN - SYSTEM IS CONFIGURING\n"
+        message += "="*70 + "\n"
+        message += "\033[0m\n"  # Reset
+        
+        with open('/dev/tty1', 'w') as tty:
+            tty.write(message)
+            tty.flush()
+        
+        # Also write to console
+        with open('/dev/console', 'w') as console:
+            console.write(message)
+            console.flush()
+    except Exception as e:
+        print(f"WARNING: Failed to display message: {e}", file=sys.stderr)
+
+
+def persistent_message_loop():
+    """Background thread that continuously refreshes the installation message."""
+    while True:
+        try:
+            display_persistent_message()
+            time.sleep(5)  # Refresh every 5 seconds
+        except Exception:
+            break  # Exit thread on error
 
 
 def setup_environment():
@@ -53,6 +110,21 @@ def setup_environment():
     if omarchy_bin.exists():
         current_path = os.environ.get('PATH', '')
         os.environ['PATH'] = f"{omarchy_bin}:{current_path}"
+
+
+def unblock_tty_login():
+    """Unblock TTY login on successful installation."""
+    try:
+        # Unmask all getty services
+        for tty_num in range(1, 7):
+            subprocess.run(['systemctl', 'unmask', f'getty@tty{tty_num}.service'], 
+                         check=False, capture_output=True)
+        # Start TTY1 getty
+        subprocess.run(['systemctl', 'start', 'getty@tty1.service'], 
+                      check=False, capture_output=True)
+        print("[INSTALL] TTY login unblocked", file=sys.stderr)
+    except Exception as e:
+        print(f"WARNING: Failed to unblock TTY: {e}", file=sys.stderr)
 
 
 def unlock_account():
@@ -112,12 +184,8 @@ def lockout_and_reboot():
 def cleanup_on_exit():
     """Ensure cleanup happens even on unexpected exit."""
     try:
-        # Re-enable TTY login
-        for tty_num in range(1, 7):
-            subprocess.run(['systemctl', 'unmask', f'getty@tty{tty_num}.service'], 
-                         check=False, capture_output=True)
-        subprocess.run(['systemctl', 'start', 'getty@tty1.service'], 
-                      check=False, capture_output=True)
+        # DO NOT unblock TTY here - only unblock on explicit success/failure
+        # This prevents TTY from being restored prematurely
         # Remove marker file to prevent reboot loop
         marker_file = Path('/var/lib/omarchy-install-needed')
         if marker_file.exists():
@@ -141,6 +209,13 @@ def main():
     
     # Setup environment
     setup_environment()
+    
+    # Block TTY login and display persistent message BEFORE anything else
+    block_tty_and_display_message()
+    
+    # Start background thread to continuously refresh message
+    message_thread = threading.Thread(target=persistent_message_loop, daemon=True)
+    message_thread.start()
     
     # Ensure account is unlocked at start (in case it was locked from previous failed attempt)
     # This allows installation to proceed even if account was locked before
@@ -177,11 +252,12 @@ def main():
         
         # Exit with appropriate code
         if state.status == Status.COMPLETED:
-            # Installation succeeded - unlock account (TTY already unblocked by service)
+            # Installation succeeded - unlock account and unblock TTY
             unlock_account()
+            unblock_tty_login()
             sys.exit(0)
         else:
-            # Installation failed - lockout (TTY already unblocked by service)
+            # Installation failed - lockout (TTY stays blocked for lockout)
             lockout_and_reboot()
             sys.exit(1)
     

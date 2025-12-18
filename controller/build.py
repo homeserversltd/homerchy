@@ -80,3 +80,4 @@ def do_build(full_clean: bool = False, cache_db_only: bool = False) -> int:
             cleanup_build_workdir(full_clean=full_clean, cache_db_only=cache_db_only)
         return 1
 
+

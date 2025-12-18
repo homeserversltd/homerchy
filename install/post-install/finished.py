@@ -261,44 +261,41 @@ def main(config: dict) -> dict:
             except Exception:
                 pass
         
-        # Take control of TTY1 ONE TIME - show completion message
-        # This is the ONLY place we take TTY control - simple and direct
+        # Show completion message and unblock TTY
         try:
-            # Ensure getty stays stopped/masked (service should have already done this)
-            # Keep it masked so our message stays visible
-            subprocess.run(['systemctl', 'stop', 'getty@tty1.service'], 
-                         check=False, capture_output=True)
-            subprocess.run(['systemctl', 'mask', 'getty@tty1.service'], 
-                         check=False, capture_output=True)
-            
             # Switch to TTY1
             subprocess.run(['chvt', '1'], check=False, timeout=5)
             time.sleep(0.5)
             
             # Clear screen and write completion message
-            completion_message = f"""
-{'=' * 70}
-HOMERCHY INSTALLATION COMPLETED
-{'=' * 70}
-
-Logs have been dumped to /root/ for debugging.
-
-You can now log in to the system.
-Run: systemctl unmask getty@tty1.service && systemctl start getty@tty1.service
-
-{'=' * 70}
-"""
+            completion_message = "\033[2J\033[H"  # Clear screen and home
+            completion_message += "\033[1m\033[32m"  # Bold green
+            completion_message += "="*70 + "\n"
+            completion_message += "HOMERCHY INSTALLATION COMPLETED\n"
+            completion_message += "="*70 + "\n"
+            completion_message += "\033[0m\n"
+            completion_message += "Logs have been dumped to /root/ for debugging.\n\n"
+            completion_message += "TTY login will be enabled shortly...\n"
+            completion_message += "="*70 + "\n"
+            
             try:
                 with open('/dev/tty1', 'w') as tty1:
-                    tty1.write('\033[2J\033[H')  # Clear screen
                     tty1.write(completion_message)
                     tty1.flush()
+                
+                with open('/dev/console', 'w') as console:
+                    console.write(completion_message)
+                    console.flush()
             except Exception as e:
                 print(f"Warning: Could not write to /dev/tty1: {e}", file=sys.stderr)
                 print(completion_message, file=sys.stderr)
             
-            # Keep getty MASKED - don't restore it
-            # This keeps the message visible - user can manually restore getty if needed
+            # Unblock TTY login (install.py will handle this, but ensure it here too)
+            for tty_num in range(1, 7):
+                subprocess.run(['systemctl', 'unmask', f'getty@tty{tty_num}.service'], 
+                             check=False, capture_output=True)
+            subprocess.run(['systemctl', 'start', 'getty@tty1.service'], 
+                         check=False, capture_output=True)
             
         except Exception as e:
             print(f"Warning: TTY completion display failed: {e}", file=sys.stderr)
