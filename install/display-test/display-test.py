@@ -353,53 +353,36 @@ def main(config: dict) -> dict:
         except Exception as e:
             log(f"Warning: Could not dump logs: {e}")
         
-        # Now launch completion TUI
-        from completion_tui import main as completion_tui_main
-        
-        # Run completion TUI - this will block TTY and handle reboot
-        completion_tui_main()
-        
-    except ImportError as e:
-        log(f"ERROR: Could not import completion_tui: {e}")
-        log("Falling back to simple message...")
+        # Try multiple TUI methods - use multi_tui which tries everything
         try:
-            # Simple fallback
-            message = "\033[2J\033[H"
-            message += "\033[1m\033[32m"
-            message += "="*70 + "\n"
-            message += "HOMERCHY INSTALLATION COMPLETED\n"
-            message += "="*70 + "\n"
-            message += "\033[0m\n"
-            message += "Logs dumped to /root/\n"
-            message += "Press Enter to reboot (no automatic reboot)\n"
-            
-            with open('/dev/tty1', 'w') as tty1:
-                tty1.write(message)
-                tty1.flush()
-            
-            # Wait for Enter
-            import select
-            import termios
-            import tty
-            
-            old_settings = termios.tcgetattr(sys.stdin)
-            tty.setraw(sys.stdin.fileno())
-            
-            while True:
-                if select.select([sys.stdin], [], [], 0.1)[0]:
-                    key = sys.stdin.read(1)
-                    if key in ('\r', '\n'):
-                        break
-            
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-            
-            subprocess.run(['reboot'], check=False)
-        except Exception as e2:
-            log(f"ERROR: Fallback also failed: {e2}")
+            from multi_tui import main as multi_tui_main
+            multi_tui_main()
+        except ImportError:
+            # Fallback to completion_tui
+            try:
+                from completion_tui import main as completion_tui_main
+                completion_tui_main()
+            except ImportError:
+                log("ERROR: Could not import any TUI module")
+                # Clear marker file as safety
+                marker_file = Path('/var/lib/omarchy-install-needed')
+                if marker_file.exists():
+                    marker_file.unlink()
+                    log("Marker file cleared as safety measure")
+        
     except Exception as e:
-        log(f"ERROR: Completion TUI failed: {e}")
+        log(f"ERROR: TUI launch failed: {e}")
         import traceback
         log(traceback.format_exc())
+        
+        # CRITICAL: Always clear marker file to prevent reboot loop
+        try:
+            marker_file = Path('/var/lib/omarchy-install-needed')
+            if marker_file.exists():
+                marker_file.unlink()
+                log("Marker file cleared to prevent reboot loop")
+        except Exception as e2:
+            log(f"ERROR: Failed to clear marker file: {e2}")
     
     return {
         "success": True,

@@ -189,12 +189,13 @@ def cleanup_on_exit():
     try:
         # DO NOT unblock TTY here - only unblock on explicit success/failure
         # This prevents TTY from being restored prematurely
-        # Remove marker file to prevent reboot loop
+        # CRITICAL: Remove marker file to prevent reboot loop
         marker_file = Path('/var/lib/omarchy-install-needed')
         if marker_file.exists():
             marker_file.unlink()
-    except Exception:
-        pass  # Best effort cleanup
+            print("[INSTALL] Marker file cleared in cleanup", file=sys.stderr)
+    except Exception as e:
+        print(f"[INSTALL] WARNING: Failed to clear marker in cleanup: {e}", file=sys.stderr)
 
 
 def signal_handler(signum, frame):
