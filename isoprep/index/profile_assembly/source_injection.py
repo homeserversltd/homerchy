@@ -114,21 +114,27 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
         
         # Use guaranteed copy to ensure all files are transferred and updated
         if item.is_dir():
+            # Remove destination directory first to force fresh copy (bypasses mtime check)
+            # This ensures changes always propagate even if profile directory was preserved
+            if dest.exists():
+                shutil.rmtree(dest)
             # guaranteed_copytree ensures all files are copied/updated
             # Show progress for long-running copy operations
             guaranteed_copytree(item, dest, ignore=ignore_fn, show_progress=True)
         else:
-            # For files, copy if source is newer or destination doesn't exist
-            if not dest.exists() or item.stat().st_mtime > dest.stat().st_mtime:
-                try:
-                    shutil.copy2(item, dest, follow_symlinks=False)
-                except (OSError, PermissionError, shutil.Error) as e:
-                    # Skip files that can't be accessed (permission denied, missing, broken symlinks)
-                    if 'Permission denied' in str(e) or 'PermissionError' in str(type(e).__name__):
-                        # Silently skip files we can't read (like .build-swap owned by root)
-                        continue
-                    elif 'No such file or directory' not in str(e):
-                        raise
+            # For files, always copy (remove destination first to force overwrite)
+            # This bypasses mtime check that was preventing changes from propagating
+            if dest.exists():
+                dest.unlink()
+            try:
+                shutil.copy2(item, dest, follow_symlinks=False)
+            except (OSError, PermissionError, shutil.Error) as e:
+                # Skip files that can't be accessed (permission denied, missing, broken symlinks)
+                if 'Permission denied' in str(e) or 'PermissionError' in str(type(e).__name__):
+                    # Silently skip files we can't read (like .build-swap owned by root)
+                    continue
+                elif 'No such file or directory' not in str(e):
+                    raise
     
     # Clean up top-level orphaned directories/files in destination
     def top_level_ignore(d, names):

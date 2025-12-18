@@ -16,6 +16,9 @@ import threading
 import time
 from pathlib import Path
 
+# Register this module in sys.modules so index.py can find it
+sys.modules['install'] = sys.modules[__name__]
+
 
 def block_tty_and_display_message():
     """Block TTY login and display persistent installation message."""

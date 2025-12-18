@@ -76,6 +76,15 @@ class Orchestrator:
             phase_state.set_status(Status.SKIPPED)
             return phase_state
         
+        # Update status before starting phase
+        try:
+            if 'install' in sys.modules:
+                install_module = sys.modules['install']
+                if hasattr(install_module, 'update_status'):
+                    install_module.update_status(f"Starting phase: {phase_name}...")
+        except Exception:
+            pass
+        
         self.logger.info(f"=== Starting phase: {phase_name} ===")
         self.state.current_step = phase_name
         
@@ -99,6 +108,20 @@ class Orchestrator:
             self.logger.warning(f"Phase {phase_name} has no orchestrator (index.py)")
             phase_state = StateManager(phase=phase_name)
             phase_state.set_status(Status.SKIPPED)
+        
+        # Update status after phase completes
+        try:
+            if 'install' in sys.modules:
+                install_module = sys.modules['install']
+                if hasattr(install_module, 'update_status'):
+                    if phase_state.status == Status.COMPLETED:
+                        install_module.update_status(f"Completed phase: {phase_name}")
+                    elif phase_state.status == Status.FAILED:
+                        install_module.update_status(f"Phase {phase_name} failed")
+                    else:
+                        install_module.update_status(f"Phase {phase_name} finished")
+        except Exception:
+            pass
         
         # Add phase state as child
         self.state.add_child(phase_name, phase_state)
@@ -241,6 +264,15 @@ class Orchestrator:
         self.state.set_status(Status.RUNNING)
         self.logger.info("Starting orchestrator execution")
         
+        # Update status
+        try:
+            if 'install' in sys.modules:
+                install_module = sys.modules['install']
+                if hasattr(install_module, 'update_status'):
+                    install_module.update_status("Starting orchestrator...")
+        except Exception:
+            pass
+        
         # Get children from config (phases to execute)
         children = self.config.get("children", [])
         
@@ -253,7 +285,7 @@ class Orchestrator:
         
         # Execute each phase
         for phase_name in children_sorted:
-            phase_state = self.execute_phase(phase_name)
+            phase_state = self.execute_phase(phase_name)  # This will update status
             
             # Check if we should stop on error
             if phase_state.status == Status.FAILED:
@@ -269,9 +301,25 @@ class Orchestrator:
         # Finalize state
         if not self.state.has_errors():
             self.state.set_status(Status.COMPLETED)
+            # Update status
+            try:
+                if 'install' in sys.modules:
+                    install_module = sys.modules['install']
+                    if hasattr(install_module, 'update_status'):
+                        install_module.update_status("Installation completed successfully!")
+            except Exception:
+                pass
             self.logger.info("=== ORCHESTRATOR COMPLETED SUCCESSFULLY ===")
         else:
             self.state.set_status(Status.FAILED)
+            # Update status
+            try:
+                if 'install' in sys.modules:
+                    install_module = sys.modules['install']
+                    if hasattr(install_module, 'update_status'):
+                        install_module.update_status("Installation failed - check logs")
+            except Exception:
+                pass
             self.logger.error("=== ORCHESTRATOR COMPLETED WITH ERRORS ===")
         
         return self.state
