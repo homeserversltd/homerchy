@@ -47,28 +47,137 @@ def block_tty_and_display_message():
 
 # Global status for persistent message
 _current_status = "Starting installation..."
+_run_counter = 0  # Will be set by get_or_increment_run_counter()
+_orchestrator_instance = None  # Global reference to orchestrator for state access
+
+def get_or_increment_run_counter() -> int:
+    """Get or increment the run counter from /tmp/work/homerchy.pid.
+    This counter increments each run and resets on reboot (since /tmp is cleared).
+    Returns the current counter value."""
+    pid_file = Path('/tmp/work/homerchy.pid')
+    pid_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        if pid_file.exists():
+            counter = int(pid_file.read_text().strip())
+            counter += 1
+        else:
+            counter = 1
+        
+        pid_file.write_text(str(counter))
+        return counter
+    except Exception as e:
+        print(f"[INSTALL] WARNING: Failed to read/increment run counter: {e}", file=sys.stderr)
+        return 1  # Default to 1 if we can't read/write
 
 def update_status(status: str):
     """Update the current installation status."""
     global _current_status
     _current_status = status
+    print(f"[STATUS UPDATE] Setting status to: {status}", file=sys.stderr)
     display_persistent_message()
 
+def _get_recent_logs(log_file: str, lines: int = 8) -> list:
+    """Get recent lines from log file."""
+    try:
+        if not Path(log_file).exists():
+            return ["[Log file not created yet]"]
+        with open(log_file, 'r') as f:
+            all_lines = f.readlines()
+            # Return last N non-empty lines, stripping newlines
+            recent = [line.rstrip() for line in all_lines[-lines:] if line.strip()]
+            return recent if recent else ["[Log file is empty]"]
+    except Exception as e:
+        return [f"[Error reading log: {e}]"]
+
+def _get_orchestrator_info() -> tuple:
+    """Get current step and error info from orchestrator if available."""
+    global _orchestrator_instance
+    current_step = "unknown"
+    error_count = 0
+    child_info = []
+    
+    try:
+        if _orchestrator_instance and hasattr(_orchestrator_instance, 'state'):
+            state = _orchestrator_instance.state
+            current_step = state.current_step or "none"
+            error_count = len(state.errors) if hasattr(state, 'errors') else 0
+            # Get list of executed children
+            if hasattr(state, 'children') and state.children:
+                child_info = list(state.children.keys())
+    except Exception:
+        pass  # Silently fail if orchestrator state isn't available
+    
+    return current_step, error_count, child_info
+
 def display_persistent_message():
-    """Display the persistent installation message on TTY1."""
-    global _current_status
+    """Display the persistent installation message on TTY1 with useful debugging info."""
+    global _current_status, _run_counter
+    
+    # Color rotation based on run counter (mod 6 for 6 colors)
+    colors = [
+        "\033[1m\033[31m",  # Bold red
+        "\033[1m\033[32m",  # Bold green
+        "\033[1m\033[33m",  # Bold yellow
+        "\033[1m\033[34m",  # Bold blue
+        "\033[1m\033[35m",  # Bold magenta
+        "\033[1m\033[36m",  # Bold cyan
+    ]
+    header_color = colors[_run_counter % len(colors)]
+    
+    # Get log file path
+    log_file = os.environ.get('OMARCHY_INSTALL_LOG_FILE', '/var/log/omarchy-install.log')
+    
+    # Get recent logs
+    recent_logs = _get_recent_logs(log_file, lines=8)
+    
+    # Get orchestrator info
+    current_step, error_count, child_info = _get_orchestrator_info()
+    
     try:
         message = "\033[2J\033[H"  # Clear screen and home cursor
-        message += "\033[1m\033[31m"  # Bold red
+        message += header_color
         message += "="*70 + "\n"
         message += "HOMERCHY INSTALLATION IN PROGRESS\n"
         message += "DO NOT LOG IN - SYSTEM IS CONFIGURING\n"
         message += "="*70 + "\n"
         message += "\033[0m\n"  # Reset
+        
+        # Status section
         message += "\033[33m"  # Yellow for status
         message += f"Status: {_current_status}\n"
         message += "\033[0m"  # Reset
-        message += "\n" * 3  # Space for more status lines
+        
+        # Current step
+        message += "\033[36m"  # Cyan
+        message += f"Current Step: {current_step}\n"
+        message += "\033[0m"  # Reset
+        
+        # Run counter and errors
+        message += "\033[36m"  # Cyan
+        message += f"Run #: {_run_counter} | Errors: {error_count}\n"
+        message += "\033[0m"  # Reset
+        
+        # Show executed children if any
+        if child_info:
+            message += "\033[35m"  # Magenta
+            message += f"Executed: {', '.join(child_info[-5:])}\n"  # Last 5 children
+            message += "\033[0m"  # Reset
+        
+        message += "\n"
+        
+        # Recent logs section
+        message += "\033[32m"  # Green
+        message += "Recent Logs:\n"
+        message += "\033[0m"  # Reset
+        message += "-" * 70 + "\n"
+        # Show last 6 log lines (leave room for header)
+        for log_line in recent_logs[-6:]:
+            # Truncate long lines to fit terminal width
+            if len(log_line) > 68:
+                log_line = log_line[:65] + "..."
+            message += log_line + "\n"
+        message += "-" * 70 + "\n"
         
         with open('/dev/tty1', 'w') as tty:
             tty.write(message)
@@ -223,10 +332,16 @@ def signal_handler(signum, frame):
 
 def main():
     """Main entry point."""
+    global _run_counter
+    
     # Register cleanup handlers
     atexit.register(cleanup_on_exit)
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
+    
+    # Increment run counter (must happen before display)
+    _run_counter = get_or_increment_run_counter()
+    print(f"[INSTALL] Run counter: {_run_counter}", file=sys.stderr)
     
     # Setup environment
     setup_environment()
@@ -272,6 +387,10 @@ def main():
         update_status("Initializing orchestrator...")
         
         orchestrator = Orchestrator(install_path=install_path, phase="root")
+        
+        # Store global reference for status display
+        global _orchestrator_instance
+        _orchestrator_instance = orchestrator
         
         # Update status during execution
         update_status("Running installation phases...")

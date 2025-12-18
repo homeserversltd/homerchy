@@ -81,9 +81,16 @@ class Orchestrator:
             if 'install' in sys.modules:
                 install_module = sys.modules['install']
                 if hasattr(install_module, 'update_status'):
+                    self.logger.info(f"[STATUS] Updating status to: Starting phase: {phase_name}...")
                     install_module.update_status(f"Starting phase: {phase_name}...")
-        except Exception:
-            pass
+                else:
+                    self.logger.warning(f"[STATUS] install module found but no update_status method")
+            else:
+                self.logger.warning(f"[STATUS] 'install' not in sys.modules - available: {list(sys.modules.keys())[:10]}")
+        except Exception as e:
+            self.logger.error(f"[STATUS] Failed to update status: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
         
         self.logger.info(f"=== Starting phase: {phase_name} ===")
         self.state.current_step = phase_name
@@ -269,9 +276,16 @@ class Orchestrator:
             if 'install' in sys.modules:
                 install_module = sys.modules['install']
                 if hasattr(install_module, 'update_status'):
+                    self.logger.info("[STATUS] Updating status to: Starting orchestrator...")
                     install_module.update_status("Starting orchestrator...")
-        except Exception:
-            pass
+                else:
+                    self.logger.warning("[STATUS] install module found but no update_status method")
+            else:
+                self.logger.warning(f"[STATUS] 'install' not in sys.modules - available: {list(sys.modules.keys())[:10]}")
+        except Exception as e:
+            self.logger.error(f"[STATUS] Failed to update status: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
         
         # Get children from config (phases to execute)
         children = self.config.get("children", [])
