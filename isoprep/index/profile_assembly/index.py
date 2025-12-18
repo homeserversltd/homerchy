@@ -78,7 +78,6 @@ def main(phase_path: Path, config: dict) -> dict:
     import os
     work_dir = Path(os.environ.get('HOMERCHY_WORK_DIR', config.get('work_dir', '/mnt/work/homerchy-isoprep-work')))
     profile_dir = Path(config.get('profile_dir', work_dir / 'profile'))
-    preserve_archiso_tmp = config.get('preserve_archiso_tmp', False)
     
     print(f"{Colors.BLUE}Assembling ISO profile...{Colors.NC}")
     
@@ -126,7 +125,8 @@ def main(phase_path: Path, config: dict) -> dict:
     verify_syslinux_in_packages(profile_dir)
     
     # CRITICAL: Ensure mirrorlist exists in archiso-tmp before mkarchiso runs
-    copy_mirrorlist_to_archiso_tmp(profile_dir, work_dir, preserve_archiso_tmp)
+    # archiso-tmp is always removed, so no need to copy mirrorlist there
+    # mkarchiso will create a fresh archiso-tmp when it runs
     
     print(f"{Colors.GREEN}✓ Profile assembly phase complete{Colors.NC}")
     

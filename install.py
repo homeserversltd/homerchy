@@ -139,8 +139,10 @@ def display_persistent_message():
         message += header_color
         message += "="*70 + "\n"
         message += "HOMERCHY INSTALLATION IN PROGRESS\n"
-        message += "DO NOT LOG IN - SYSTEM IS CONFIGURING\n"
         message += "="*70 + "\n"
+        message += "\033[31m"  # Red
+        message += "DEBUG v2.0 - Enhanced status display\n"  # Version marker to verify new code is running
+        message += "\033[0m"  # Reset
         message += "\033[0m\n"  # Reset
         
         # Status section

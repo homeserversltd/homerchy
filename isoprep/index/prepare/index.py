@@ -59,8 +59,8 @@ def main(phase_path: Path, config: dict) -> dict:
     # Check for full clean mode
     full_clean = os.environ.get('HOMERCHY_FULL_CLEAN', 'false').lower() == 'true'
     
+    # ONLY preserve downloaded packages - NEVER preserve archiso-tmp or any other build state
     archiso_tmp_dir = work_dir / 'archiso-tmp'
-    preserve_archiso_tmp = archiso_tmp_dir.exists() and not full_clean
     
     cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
     # Also check system temp location (from cache_db_only cleanup)
@@ -138,68 +138,19 @@ def main(phase_path: Path, config: dict) -> dict:
             subprocess.run(['sudo', 'chown', '-R', f'{current_uid}:{current_gid}', str(cache_dir)], check=True)
             print(f"{Colors.GREEN}✓ Restored offline mirror cache{Colors.NC}")
     
-    # Clean up preserved archiso-tmp to avoid stale state issues
-    # We preserve it for package cache, but need to remove stale build artifacts
-    # In full clean mode, remove everything
-    if full_clean and archiso_tmp_dir.exists():
-        print(f"{Colors.BLUE}Full clean mode: Removing archiso-tmp directory...{Colors.NC}")
+    # ALWAYS remove archiso-tmp - we ONLY cache downloaded packages, not build state
+    # mkarchiso's build state causes it to skip ISO creation when it shouldn't
+    if archiso_tmp_dir.exists():
+        print(f"{Colors.BLUE}Removing archiso-tmp directory (only package cache is preserved)...{Colors.NC}")
         try:
             shutil.rmtree(archiso_tmp_dir)
         except PermissionError:
             subprocess.run(['sudo', 'rm', '-rf', str(archiso_tmp_dir)], check=False)
-    elif preserve_archiso_tmp:
-        print(f"{Colors.BLUE}Preserving mkarchiso work directory for faster rebuild (package cache){Colors.NC}")
-        
-        # Remove cached squashfs to force rebuild
-        cached_squashfs = archiso_tmp_dir / 'iso' / 'arch' / 'x86_64' / 'airootfs.sfs'
-        if cached_squashfs.exists():
-            print(f"{Colors.BLUE}Removing cached squashfs to force rebuild...{Colors.NC}")
-            try:
-                cached_squashfs.unlink()
-            except PermissionError:
-                subprocess.run(['sudo', 'rm', '-f', str(cached_squashfs)], check=False)
-        
-        # Remove entire x86_64 directory to avoid initramfs errors
-        # mkarchiso uses state files to track progress, and stale state causes issues
-        stale_x86_64 = archiso_tmp_dir / 'x86_64'
-        if stale_x86_64.exists():
-            print(f"{Colors.BLUE}Removing stale x86_64 directory to avoid initramfs errors...{Colors.NC}")
-            try:
-                shutil.rmtree(stale_x86_64)
-            except PermissionError:
-                subprocess.run(['sudo', 'rm', '-rf', str(stale_x86_64)], check=False)
-        
-        # Remove mkarchiso state files that track build progress
-        # These cause mkarchiso to skip steps that need to be redone
-        state_files = [
-            'base._make_packages',
-            'base._make_custom_airootfs',
-            'base._make_customize_airootfs',
-            'base._check_if_initramfs_has_ucode',
-        ]
-        for state_file in state_files:
-            state_path = archiso_tmp_dir / state_file
-            if state_path.exists():
-                print(f"{Colors.BLUE}Removing stale state file: {state_file}...{Colors.NC}")
-                try:
-                    state_path.unlink()
-                except PermissionError:
-                    subprocess.run(['sudo', 'rm', '-f', str(state_path)], check=False)
-        
-        # Also clean up any stale boot directories in iso/arch
-        stale_boot = archiso_tmp_dir / 'iso' / 'arch' / 'boot'
-        if stale_boot.exists():
-            print(f"{Colors.BLUE}Removing stale boot directory...{Colors.NC}")
-            try:
-                shutil.rmtree(stale_boot)
-            except PermissionError:
-                subprocess.run(['sudo', 'rm', '-rf', str(stale_boot)], check=False)
     
     print(f"{Colors.GREEN}✓ Prepare phase complete{Colors.NC}")
     
     return {
         "success": True,
-        "preserve_archiso_tmp": preserve_archiso_tmp,
         "preserve_cache": preserve_cache
     }
 

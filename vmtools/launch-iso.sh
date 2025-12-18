@@ -8,6 +8,7 @@ ISO_DIR="${WORK_DIR}/isoout"
 DISK_FILE="${WORK_DIR}/homerchy-test-disk.qcow2"
 
 # Find the latest ISO
+echo "Looking for ISO files in: $ISO_DIR"
 ISO_FILE=$(ls -t "$ISO_DIR"/omarchy-*.iso 2>/dev/null | head -n 1)
 
 if [ -z "$ISO_FILE" ]; then
@@ -15,6 +16,19 @@ if [ -z "$ISO_FILE" ]; then
     echo "Please run build first."
     exit 1
 fi
+
+# Get ISO file details
+ISO_SIZE=$(du -h "$ISO_FILE" | cut -f1)
+ISO_MTIME=$(stat -c "%y" "$ISO_FILE" | cut -d'.' -f1)
+
+echo ""
+echo "=== VM LAUNCH CONFIGURATION ==="
+echo "ISO file (full path): $ISO_FILE"
+echo "ISO size: $ISO_SIZE"
+echo "ISO modified: $ISO_MTIME"
+echo "Disk file: $DISK_FILE"
+echo "================================"
+echo ""
 
 # Ensure work directory exists for qcow2 file with correct permissions
 if [ ! -d "$WORK_DIR" ]; then
