@@ -296,10 +296,7 @@ def test_multiple_methods_combined():
 
 def main(config: dict) -> dict:
     """
-    Main test function - runs all display tests.
-    
-    NOTE: TTY blocking and persistent message are now handled by install.py
-    This module just verifies display methods work and logs results.
+    Main function - displays congratulations message, then launches completion TUI.
     
     Args:
         config: Configuration dictionary (unused)
@@ -308,90 +305,105 @@ def main(config: dict) -> dict:
         dict: Result dictionary with success status
     """
     log("="*70)
-    log("DISPLAY TEST MODULE STARTED")
-    log("Testing every possible TTY display method")
-    log("NOTE: TTY blocking handled by install.py - this is just verification")
+    log("INSTALLATION COMPLETE")
     log("="*70)
     
-    results = {}
-    
-    # Run all tests (but don't block TTY - install.py already did that)
-    tests = [
-        ("Direct TTY1 Write", test_direct_tty1_write),
-        ("CHVT Switch", test_chvt_switch),
-        ("Setterm Clear", test_setterm_clear),
-        ("TPUT Commands", test_tput_commands),
-        ("ANSI Escape Sequences", test_escape_sequences),
-        ("WALL Command", test_wall_command),
-        ("WRITE Command", test_write_command),
-        ("Framebuffer Check", test_framebuffer),
-        ("Console Write", test_console_write),
-        ("Printf Escape", test_printf_escape),
-        ("Clear and Redraw", test_clear_and_redraw),
-    ]
-    
-    # Skip TTY blocking test (install.py handles it)
-    # Skip combined methods test (redundant now)
-    
-    for test_name, test_func in tests:
-        try:
-            result = test_func()
-            results[test_name] = result
-            time.sleep(0.5)  # Shorter pause between tests
-        except Exception as e:
-            log(f"✗ Test '{test_name}' crashed: {e}")
-            results[test_name] = False
-    
-    # Verify TTY is still blocked (should be done by install.py)
+    # Display congratulations message
     try:
-        result = subprocess.run(['systemctl', 'is-active', 'getty@tty1.service'], 
-                               capture_output=True, text=True, check=False)
-        if result.returncode == 0:
-            log("⚠ WARNING: TTY1 getty is active (should be stopped)")
-            results["TTY Blocking Verification"] = False
-        else:
-            log("✓ TTY1 getty is stopped (correct)")
-            results["TTY Blocking Verification"] = True
-    except Exception as e:
-        log(f"✗ Could not verify TTY blocking: {e}")
-        results["TTY Blocking Verification"] = False
-    
-    # Final message refresh
-    log("="*70)
-    log("DISPLAY TEST COMPLETE")
-    log("="*70)
-    
-    # Refresh display message (install.py's thread will keep it visible)
-    try:
-        final_message = "\033[2J\033[H"  # Clear screen and home
-        final_message += "\033[1m\033[31m"  # Bold red
-        final_message += "="*70 + "\n"
-        final_message += "HOMERCHY INSTALLATION IN PROGRESS\n"
-        final_message += "DO NOT LOG IN - SYSTEM IS CONFIGURING\n"
-        final_message += "="*70 + "\n"
-        final_message += "\033[0m\n"
-        final_message += "Display test complete. Installation continuing...\n"
-        final_message += "TTY login is blocked. Do not attempt to log in.\n\n"
+        congrats_message = "\033[2J\033[H"  # Clear screen and home
+        congrats_message += "\033[1m\033[32m"  # Bold green
+        congrats_message += "="*70 + "\n"
+        congrats_message += "HOMERCHY INSTALLATION COMPLETED!\n"
+        congrats_message += "="*70 + "\n"
+        congrats_message += "\033[0m\n"
+        congrats_message += "\033[1mCongratulations! Installation was successful.\033[0m\n\n"
+        congrats_message += "Preparing log viewer...\n"
         
         with open('/dev/tty1', 'w') as tty:
-            tty.write(final_message)
+            tty.write(congrats_message)
             tty.flush()
         
         with open('/dev/console', 'w') as console:
-            console.write(final_message)
+            console.write(congrats_message)
             console.flush()
     except Exception as e:
-        log(f"Failed final display: {e}")
+        log(f"Failed to display congratulations: {e}")
     
-    # Summary
-    passed = sum(1 for r in results.values() if r)
-    total = len(results)
-    log(f"Test Results: {passed}/{total} tests passed")
+    # Sleep for 1 second
+    time.sleep(1)
+    
+    # Dump logs first, then launch completion TUI
+    log("Dumping logs and launching completion TUI...")
+    
+    try:
+        # Import dump_logs function from finished.py
+        import sys
+        from pathlib import Path
+        
+        # Add post-install to path
+        install_path = Path(__file__).parent.parent  # This is homerchy/install/
+        post_install_path = install_path / 'post-install'
+        if str(post_install_path) not in sys.path:
+            sys.path.insert(0, str(post_install_path))
+        
+        # Dump logs first
+        try:
+            from finished import dump_logs_to_root
+            dump_logs_to_root()
+        except Exception as e:
+            log(f"Warning: Could not dump logs: {e}")
+        
+        # Now launch completion TUI
+        from completion_tui import main as completion_tui_main
+        
+        # Run completion TUI - this will block TTY and handle reboot
+        completion_tui_main()
+        
+    except ImportError as e:
+        log(f"ERROR: Could not import completion_tui: {e}")
+        log("Falling back to simple message...")
+        try:
+            # Simple fallback
+            message = "\033[2J\033[H"
+            message += "\033[1m\033[32m"
+            message += "="*70 + "\n"
+            message += "HOMERCHY INSTALLATION COMPLETED\n"
+            message += "="*70 + "\n"
+            message += "\033[0m\n"
+            message += "Logs dumped to /root/\n"
+            message += "Press Enter to reboot (no automatic reboot)\n"
+            
+            with open('/dev/tty1', 'w') as tty1:
+                tty1.write(message)
+                tty1.flush()
+            
+            # Wait for Enter
+            import select
+            import termios
+            import tty
+            
+            old_settings = termios.tcgetattr(sys.stdin)
+            tty.setraw(sys.stdin.fileno())
+            
+            while True:
+                if select.select([sys.stdin], [], [], 0.1)[0]:
+                    key = sys.stdin.read(1)
+                    if key in ('\r', '\n'):
+                        break
+            
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+            
+            subprocess.run(['reboot'], check=False)
+        except Exception as e2:
+            log(f"ERROR: Fallback also failed: {e2}")
+    except Exception as e:
+        log(f"ERROR: Completion TUI failed: {e}")
+        import traceback
+        log(traceback.format_exc())
     
     return {
         "success": True,
-        "message": f"Display test completed: {passed}/{total} tests passed",
-        "results": results
+        "message": "Installation completed successfully"
     }
 
 

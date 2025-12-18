@@ -537,22 +537,18 @@ Environment="OMARCHY_INSTALL_USER={omarchy_user}"
 # Timeout settings - prevent infinite hangs
 TimeoutStartSec=3600
 TimeoutStopSec=30
-# Block TTY login during installation
+# Block TTY login during installation - stop, mask, and disable to prevent auto-start
 ExecStartPre=/bin/systemctl stop getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
 ExecStartPre=/bin/systemctl mask getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
+ExecStartPre=/bin/systemctl disable getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
 # Run installation as root (orchestrator handles user-specific operations internally)
 ExecStart=/usr/bin/python3 {installed_omarchy_path}/install.py
-# Re-enable TTY login after installation (success or failure)
-# Use ExecStartPost with - to ignore errors (ensures TTY is restored even on failure)
-# NOTE: finished.py keeps getty masked to preserve completion message - unmask only on failure
-ExecStartPost=-/bin/systemctl unmask getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
-ExecStartPost=-/bin/systemctl start getty@tty2.service
 # Remove marker file (critical - prevents reboot loop)
 # Use - to ignore errors, but ensure it happens
 ExecStartPost=-/bin/rm -f /var/lib/omarchy-install-needed
-# Also ensure cleanup on failure/timeout
-ExecStop=-/bin/systemctl unmask getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
-ExecStop=-/bin/systemctl start getty@tty1.service
+# NOTE: TTY unblocking is handled by install.py/finished.py on completion
+# Do NOT unmask getty services here - let install.py handle it
+# ExecStop only removes marker (TTY stays blocked on failure for lockout)
 ExecStop=-/bin/rm -f /var/lib/omarchy-install-needed
 StandardOutput=journal
 StandardError=journal

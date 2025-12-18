@@ -261,44 +261,67 @@ def main(config: dict) -> dict:
             except Exception:
                 pass
         
-        # Show completion message and unblock TTY
+        # Launch captured TUI that blocks TTY and shows logs
+        # This will wait for Enter key, then reboot
         try:
-            # Switch to TTY1
-            subprocess.run(['chvt', '1'], check=False, timeout=5)
-            time.sleep(0.5)
-            
-            # Clear screen and write completion message
-            completion_message = "\033[2J\033[H"  # Clear screen and home
-            completion_message += "\033[1m\033[32m"  # Bold green
-            completion_message += "="*70 + "\n"
-            completion_message += "HOMERCHY INSTALLATION COMPLETED\n"
-            completion_message += "="*70 + "\n"
-            completion_message += "\033[0m\n"
-            completion_message += "Logs have been dumped to /root/ for debugging.\n\n"
-            completion_message += "TTY login will be enabled shortly...\n"
-            completion_message += "="*70 + "\n"
-            
+            from .completion_tui import main as completion_tui_main
+            # Run completion TUI - this will block TTY and handle reboot
+            completion_tui_main()
+        except ImportError:
+            # Fallback if completion_tui not available
+            print("Warning: completion_tui not available, using fallback", file=sys.stderr)
             try:
+                # Switch to TTY1
+                subprocess.run(['chvt', '1'], check=False, timeout=5)
+                time.sleep(0.5)
+                
+                # Simple completion message
+                completion_message = "\033[2J\033[H"
+                completion_message += "\033[1m\033[32m"
+                completion_message += "="*70 + "\n"
+                completion_message += "HOMERCHY INSTALLATION COMPLETED\n"
+                completion_message += "="*70 + "\n"
+                completion_message += "\033[0m\n"
+                completion_message += "Logs dumped to /root/\n"
+                completion_message += "Press Enter to reboot (no automatic reboot)\n"
+                
                 with open('/dev/tty1', 'w') as tty1:
                     tty1.write(completion_message)
                     tty1.flush()
                 
-                with open('/dev/console', 'w') as console:
-                    console.write(completion_message)
-                    console.flush()
+                # Wait for Enter - NO AUTO-REBOOT!
+                try:
+                    import select
+                    import termios
+                    import tty
+                    
+                    # Set stdin to raw mode
+                    old_settings = termios.tcgetattr(sys.stdin)
+                    tty.setraw(sys.stdin.fileno())
+                    
+                    # Wait for Enter
+                    while True:
+                        if select.select([sys.stdin], [], [], 0.1)[0]:
+                            key = sys.stdin.read(1)
+                            if key in ('\r', '\n'):
+                                break
+                    
+                    # Restore terminal
+                    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+                except Exception:
+                    # Fallback: just wait for any input
+                    input()
+                
+                subprocess.run(['reboot'], check=False)
             except Exception as e:
-                print(f"Warning: Could not write to /dev/tty1: {e}", file=sys.stderr)
-                print(completion_message, file=sys.stderr)
-            
-            # Unblock TTY login (install.py will handle this, but ensure it here too)
-            for tty_num in range(1, 7):
-                subprocess.run(['systemctl', 'unmask', f'getty@tty{tty_num}.service'], 
-                             check=False, capture_output=True)
-            subprocess.run(['systemctl', 'start', 'getty@tty1.service'], 
-                         check=False, capture_output=True)
-            
+                print(f"Warning: Fallback completion failed: {e}", file=sys.stderr)
         except Exception as e:
-            print(f"Warning: TTY completion display failed: {e}", file=sys.stderr)
+            print(f"Warning: Completion TUI failed: {e}", file=sys.stderr)
+            # Still try to reboot
+            try:
+                subprocess.run(['reboot'], check=False)
+            except Exception:
+                pass
         
         # Drop to TTY (don't reboot)
         # The service will complete and TTY will be available for login

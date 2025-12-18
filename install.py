@@ -26,6 +26,9 @@ def block_tty_and_display_message():
                          check=False, capture_output=True)
             subprocess.run(['systemctl', 'mask', f'getty@tty{tty_num}.service'], 
                          check=False, capture_output=True)
+            # Also disable the service to prevent auto-start
+            subprocess.run(['systemctl', 'disable', f'getty@tty{tty_num}.service'], 
+                         check=False, capture_output=True)
         
         # Switch to TTY1
         subprocess.run(['chvt', '1'], check=False, capture_output=True)
@@ -252,9 +255,10 @@ def main():
         
         # Exit with appropriate code
         if state.status == Status.COMPLETED:
-            # Installation succeeded - unlock account and unblock TTY
+            # Installation succeeded - unlock account
+            # TTY unblocking handled by finished.py completion TUI
             unlock_account()
-            unblock_tty_login()
+            # Don't unblock TTY here - let completion_tui handle it
             sys.exit(0)
         else:
             # Installation failed - lockout (TTY stays blocked for lockout)
