@@ -29,7 +29,12 @@ def clear_marker_file():
 
 
 def method1_direct_tty_write():
-    """Method 1: Direct write to /dev/tty1 with simple input() - most successful method."""
+    """Method 1: Direct write to /dev/tty1 with simple input() - most successful method.
+    
+    ✅ TESTED AND WORKING - Screenshot evidence shows this method successfully displayed
+    "SUCCESS! Method Direct TTY Write + input() worked!" and waited for Enter to reboot.
+    This is the working method for VM environment.
+    """
     try:
         # Display message
         message = "\033[2J\033[H"  # Clear screen
@@ -426,22 +431,44 @@ def wait_for_any_key_to_continue(tty_fd=None):
                 pass
 
 
+def log_to_tty1(message: str):
+    """Log a message to TTY1 so it's visible during installation."""
+    try:
+        # Append to TTY1 without clearing screen (write to line 6+)
+        log_msg = f"\033[6;1H\033[K{message}\033[K\n"
+        with open('/dev/tty1', 'w') as tty:
+            tty.write(log_msg)
+            tty.flush()
+    except Exception:
+        pass  # Silently fail - logging is non-critical
+
 def main():
-    """Try all TUI methods sequentially - user presses any key to advance through each."""
+    """Try all TUI methods sequentially - user presses any key to advance through each.
+    
+    TESTING RESULTS (from VM screenshots):
+    - Method 1 (Direct TTY Write + input()): ✅ WORKING - Successfully displayed completion
+      screen and waited for Enter to reboot. This is the working method.
+    - Methods 2-10: Not yet tested or failed (need more screenshots to verify)
+    """
+    log_to_tty1("[MULTI-TUI] Starting multi-TUI testing...")
+    
     # CRITICAL: Always clear marker file, even if everything fails
     import atexit
     atexit.register(clear_marker_file)
     
     # Also clear immediately at start (safety)
     clear_marker_file()
+    log_to_tty1("[MULTI-TUI] Marker file cleared")
     
     # Ensure TTY is blocked
+    log_to_tty1("[MULTI-TUI] Blocking TTY services...")
     for tty_num in range(1, 7):
         subprocess.run(['systemctl', 'stop', f'getty@tty{tty_num}.service'], 
                       check=False, capture_output=True)
         subprocess.run(['systemctl', 'mask', f'getty@tty{tty_num}.service'], 
                       check=False, capture_output=True)
     
+    log_to_tty1("[MULTI-TUI] Switching to TTY1...")
     subprocess.run(['chvt', '1'], check=False, capture_output=True)
     time.sleep(0.3)
     
@@ -460,6 +487,8 @@ def main():
     ]
     
     for method_num, (method_name, method_func) in enumerate(methods, 1):
+        log_to_tty1(f"[MULTI-TUI] Preparing method {method_num}/{len(methods)}: {method_name}")
+        
         # Display which method we're trying
         try:
             tty_fd = os.open('/dev/tty1', os.O_RDWR)
@@ -478,16 +507,22 @@ def main():
             os.write(tty_fd, method_msg.encode('utf-8'))
             os.fsync(tty_fd)
             
+            log_to_tty1(f"[MULTI-TUI] Waiting for key press to try method {method_num}...")
+            
             # Wait for any key to try this method
             wait_for_any_key_to_continue(tty_fd)
             os.close(tty_fd)
         except Exception as e:
+            log_to_tty1(f"[MULTI-TUI] ERROR: Failed to display method prompt: {e}")
             print(f"[MULTI-TUI] Failed to display method prompt: {e}", file=sys.stderr)
         
+        log_to_tty1(f"[MULTI-TUI] Executing method {method_num}: {method_name}")
         print(f"[MULTI-TUI] Trying method {method_num}: {method_name}", file=sys.stderr)
         
         try:
+            log_to_tty1(f"[MULTI-TUI] Method {method_num} returned, checking result...")
             if method_func():
+                log_to_tty1(f"[MULTI-TUI] Method {method_name} SUCCEEDED!")
                 print(f"[MULTI-TUI] Method {method_name} succeeded!", file=sys.stderr)
                 # Show success message
                 try:
@@ -512,14 +547,16 @@ def main():
                 except Exception:
                     pass
                 
-                # Reboot
-                print("\n[MULTI-TUI] Rebooting...", file=sys.stderr)
-                time.sleep(1)
-                subprocess.run(['reboot'], check=False)
+                # Method succeeded - exit cleanly, NO AUTO-REBOOT
+                # User must manually reboot when ready
+                print("\n[MULTI-TUI] Method succeeded. Exiting - no automatic reboot.", file=sys.stderr)
+                print("[MULTI-TUI] User must manually reboot when ready.", file=sys.stderr)
                 return
             else:
+                log_to_tty1(f"[MULTI-TUI] Method {method_name} did not work (returned False)")
                 print(f"[MULTI-TUI] Method {method_name} did not work", file=sys.stderr)
         except Exception as e:
+            log_to_tty1(f"[MULTI-TUI] Method {method_name} CRASHED: {e}")
             print(f"[MULTI-TUI] Method {method_name} crashed: {e}", file=sys.stderr)
             import traceback
             traceback.print_exc(file=sys.stderr)

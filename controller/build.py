@@ -52,7 +52,7 @@ def do_build(full_clean: bool = False, cache_db_only: bool = False) -> int:
     
     if not build_script.exists():
         print(f"Error: Build script not found at {build_script}")
-        cleanup_build_workdir(full_clean=full_clean, cache_db_only=cache_db_only)
+        # DO NOT cleanup - preserve state for debugging
         return 1
     
     # Set environment variables for work directory location and cleanup modes
@@ -65,19 +65,17 @@ def do_build(full_clean: bool = False, cache_db_only: bool = False) -> int:
         result = run_command([sys.executable, str(build_script)], check=False)
         build_exit = result.returncode
         
-        # Cleanup work directory (unless full-clean mode - preserve ISO for potential launch)
-        if not full_clean:
-            cleanup_build_workdir(full_clean=full_clean, cache_db_only=cache_db_only)
+        # DO NOT cleanup after build - cleanup only happens on rebuild (pre-build) or eject
+        # This allows inspection of profile directory and build artifacts
         
-        # Clear the cleanup flags after cleanup
+        # Clear the cleanup flags
         os.environ.pop('HOMERCHY_FULL_CLEAN', None)
         os.environ.pop('HOMERCHY_CACHE_DB_ONLY', None)
         
         return build_exit
     except Exception as e:
         print(f"Error running build: {e}", file=sys.stderr)
-        if not full_clean:
-            cleanup_build_workdir(full_clean=full_clean, cache_db_only=cache_db_only)
+        # DO NOT cleanup on error either - preserve state for debugging
         return 1
 
 

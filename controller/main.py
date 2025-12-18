@@ -9,6 +9,7 @@ Thin wrapper providing CLI interface to controller operations.
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 from . import eject, build, vm, deploy
@@ -89,19 +90,35 @@ Examples:
         return
     
     if args.full_clean:
-        # Eject everything first
-        eject.do_eject(full_cleanup=True)
-        # Also remove preserved cache directory if it exists
-        preserve_dir = Path("/mnt/work/.homerchy-cache-preserve")
-        if preserve_dir.exists():
-            print("Removing preserved cache directory...")
-            from .utils import run_command
-            run_command(['rm', '-rf', str(preserve_dir)], sudo=True)
-            print("✓ Preserved cache directory removed")
+        # Start timer
+        start_time = time.time()
+        print(">>> Full Clean: Starting timer...")
+        
+        # Full clean: remove everything in /mnt/work/
+        print(">>> Full Clean: Removing everything in /mnt/work/...")
+        from .utils import run_command, run_shell_command
+        work_base = Path("/mnt/work")
+        if work_base.exists():
+            # Remove all contents (including hidden files/dirs) but keep the directory itself
+            # Use find to safely remove hidden files without matching . and ..
+            run_shell_command(
+                'find /mnt/work -mindepth 1 -maxdepth 1 -exec rm -rf {} +',
+                sudo=True,
+                check=False
+            )
+            print("✓ /mnt/work/ fully cleaned")
         # Build with full clean
         exit_code = build.do_build(full_clean=True, cache_db_only=False)
         if exit_code == 0:
             vm.do_launch_iso()
+            # End timer and display elapsed time
+            end_time = time.time()
+            elapsed = end_time - start_time
+            minutes = int(elapsed // 60)
+            seconds = int(elapsed % 60)
+            print(f"\n{'='*70}")
+            print(f"✓ Full clean rebuild completed in {minutes}m {seconds}s")
+            print(f"{'='*70}")
         else:
             print("Build failed, skipping VM launch.")
             print("Note: ISO and work directory preserved in case you want to run -f or -l")

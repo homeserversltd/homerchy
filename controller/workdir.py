@@ -172,10 +172,14 @@ def cleanup_build_workdir(full_clean: bool = False, cache_db_only: bool = False)
             print("  Removing archiso-tmp...")
             run_command(['rm', '-rf', str(archiso_tmp)], sudo=True)
         
-        # Remove profile directory completely
+        # Remove profile directory completely (unless preservation requested)
+        preserve_profile = os.environ.get('HOMERCHY_PRESERVE_PROFILE', 'false').lower() == 'true'
         if profile_dir.exists():
-            print("  Removing profile directory...")
-            run_command(['rm', '-rf', str(profile_dir)], sudo=True)
+            if preserve_profile:
+                print("  Preserving profile directory (HOMERCHY_PRESERVE_PROFILE=true)...")
+            else:
+                print("  Removing profile directory...")
+                run_command(['rm', '-rf', str(profile_dir)], sudo=True)
         
         # Don't restore cache here - leave it in temp location for prepare/download phase to restore
         # This avoids the prepare phase removing a cache that was just restored
@@ -211,8 +215,13 @@ def cleanup_build_workdir(full_clean: bool = False, cache_db_only: bool = False)
             for base_file in archiso_tmp.glob("base.*"):
                 run_command(['rm', '-f', str(base_file)], sudo=True)
         
+        preserve_profile = os.environ.get('HOMERCHY_PRESERVE_PROFILE', 'false').lower() == 'true'
         if profile_dir.exists():
-            print("Cleaning up profile directory (preserving only caches)...")
+            if preserve_profile:
+                print("Preserving profile directory (HOMERCHY_PRESERVE_PROFILE=true)...")
+                print("  (Skipping profile cleanup to allow inspection)")
+            else:
+                print("Cleaning up profile directory (preserving only caches)...")
             
             cache_dir = profile_dir / "airootfs/var/cache/omarchy/mirror/offline"
             temp_cache = work_path / "offline-mirror-cache-temp"
@@ -229,9 +238,12 @@ def cleanup_build_workdir(full_clean: bool = False, cache_db_only: bool = False)
                     run_command(['mkdir', '-p', str(temp_cache.parent)], sudo=True)
                     run_command(['mv', str(cache_dir), str(temp_cache)], sudo=True)
             
-            # Remove entire profile directory
-            print("  Removing profile directory...")
-            run_command(['rm', '-rf', str(profile_dir)], sudo=True)
+            # Remove entire profile directory (unless preservation requested)
+            if preserve_profile:
+                print("  Skipping profile directory removal (preserved for inspection)")
+            else:
+                print("  Removing profile directory...")
+                run_command(['rm', '-rf', str(profile_dir)], sudo=True)
             
             # Restore preserved cache
             if temp_cache.exists():

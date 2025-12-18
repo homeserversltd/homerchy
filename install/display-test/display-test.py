@@ -354,21 +354,25 @@ def main(config: dict) -> dict:
             log(f"Warning: Could not dump logs: {e}")
         
         # Try multiple TUI methods - use multi_tui which tries everything
+        # Import from same directory (display-test/multi_tui.py)
         try:
+            # Add current directory to path for direct import
+            display_test_dir = Path(__file__).parent
+            if str(display_test_dir) not in sys.path:
+                sys.path.insert(0, str(display_test_dir))
+            
             from multi_tui import main as multi_tui_main
+            log("Launching multi_tui from display-test directory...")
             multi_tui_main()
-        except ImportError:
-            # Fallback to completion_tui
-            try:
-                from completion_tui import main as completion_tui_main
-                completion_tui_main()
-            except ImportError:
-                log("ERROR: Could not import any TUI module")
-                # Clear marker file as safety
-                marker_file = Path('/var/lib/omarchy-install-needed')
-                if marker_file.exists():
-                    marker_file.unlink()
-                    log("Marker file cleared as safety measure")
+        except ImportError as e:
+            log(f"ERROR: Could not import multi_tui: {e}")
+            import traceback
+            log(traceback.format_exc())
+            # Clear marker file as safety
+            marker_file = Path('/var/lib/omarchy-install-needed')
+            if marker_file.exists():
+                marker_file.unlink()
+                log("Marker file cleared as safety measure")
         
     except Exception as e:
         log(f"ERROR: TUI launch failed: {e}")

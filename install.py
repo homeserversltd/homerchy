@@ -42,8 +42,18 @@ def block_tty_and_display_message():
         print(f"WARNING: Failed to block TTY: {e}", file=sys.stderr)
 
 
+# Global status for persistent message
+_current_status = "Starting installation..."
+
+def update_status(status: str):
+    """Update the current installation status."""
+    global _current_status
+    _current_status = status
+    display_persistent_message()
+
 def display_persistent_message():
     """Display the persistent installation message on TTY1."""
+    global _current_status
     try:
         message = "\033[2J\033[H"  # Clear screen and home cursor
         message += "\033[1m\033[31m"  # Bold red
@@ -52,6 +62,10 @@ def display_persistent_message():
         message += "DO NOT LOG IN - SYSTEM IS CONFIGURING\n"
         message += "="*70 + "\n"
         message += "\033[0m\n"  # Reset
+        message += "\033[33m"  # Yellow for status
+        message += f"Status: {_current_status}\n"
+        message += "\033[0m"  # Reset
+        message += "\n" * 3  # Space for more status lines
         
         with open('/dev/tty1', 'w') as tty:
             tty.write(message)
@@ -70,7 +84,7 @@ def persistent_message_loop():
     while True:
         try:
             display_persistent_message()
-            time.sleep(5)  # Refresh every 5 seconds
+            time.sleep(2)  # Refresh every 2 seconds for more responsive updates
         except Exception:
             break  # Exit thread on error
 
@@ -251,8 +265,21 @@ def main():
     try:
         from index import Orchestrator, Status
         
+        # Update status before starting
+        update_status("Initializing orchestrator...")
+        
         orchestrator = Orchestrator(install_path=install_path, phase="root")
+        
+        # Update status during execution
+        update_status("Running installation phases...")
+        
         state = orchestrator.run()
+        
+        # Update status based on result
+        if state.status == Status.COMPLETED:
+            update_status("Installation completed successfully!")
+        else:
+            update_status(f"Installation failed: {state.status}")
         
         # Exit with appropriate code
         if state.status == Status.COMPLETED:

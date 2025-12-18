@@ -63,6 +63,11 @@
             "enabled": true,
             "description": "First boot tasks",
             "order": 6
+        },
+        "display-test": {
+            "enabled": true,
+            "description": "TUI testing - tests all TUI methods sequentially for screenshot documentation",
+            "order": 7
         }
     },
     "children": [

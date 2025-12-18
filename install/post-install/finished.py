@@ -261,12 +261,12 @@ def main(config: dict) -> dict:
             except Exception:
                 pass
         
-        # Launch captured TUI that blocks TTY and shows logs
+        # Launch pleasant completion screen
         # This will wait for Enter key, then reboot
         try:
-            from .completion_tui import main as completion_tui_main
-            # Run completion TUI - this will block TTY and handle reboot
-            completion_tui_main()
+            from .finishedDisplay import main as finished_display_main
+            # Run finishedDisplay - shows completion screen and handles reboot
+            finished_display_main()
         except ImportError:
             # Fallback if completion_tui not available
             print("Warning: completion_tui not available, using fallback", file=sys.stderr)

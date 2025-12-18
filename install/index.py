@@ -123,9 +123,28 @@ class Orchestrator:
         self.state.set_status(Status.RUNNING)
         children = self.config.get("children", [])
         
+        # Try to update status on TTY1 if install.py is available
+        try:
+            import sys
+            if 'install' in sys.modules:
+                install_module = sys.modules['install']
+                if hasattr(install_module, 'update_status'):
+                    install_module.update_status(f"Running {self.phase} phase...")
+        except Exception:
+            pass  # Silently fail - status updates are optional
+        
         for child_name in children:
             self.state.current_step = child_name
             self.logger.info(f"[PARENT-CHILD] Executing child: {child_name}")
+            
+            # Update status for current child
+            try:
+                if 'install' in sys.modules:
+                    install_module = sys.modules['install']
+                    if hasattr(install_module, 'update_status'):
+                        install_module.update_status(f"Running {self.phase}/{child_name}...")
+            except Exception:
+                pass
             
             # Check for nested orchestrator (subdirectory with index.py)
             child_dir = self.install_path / child_name
@@ -140,13 +159,51 @@ class Orchestrator:
             
             if nested_orchestrator.exists():
                 self.logger.info(f"[PARENT-CHILD] {child_name} -> NESTED ORCHESTRATOR path")
+                # Update status before executing
+                try:
+                    if 'install' in sys.modules:
+                        install_module = sys.modules['install']
+                        if hasattr(install_module, 'update_status'):
+                            install_module.update_status(f"Executing {self.phase}/{child_name}...")
+                except Exception:
+                    pass
                 child_state = self.executor.execute_child(child_dir, child_name, self.config)
+                # Update status after execution
+                try:
+                    if 'install' in sys.modules:
+                        install_module = sys.modules['install']
+                        if hasattr(install_module, 'update_status'):
+                            if child_state.status == Status.SUCCESS:
+                                install_module.update_status(f"Completed {self.phase}/{child_name}")
+                            else:
+                                install_module.update_status(f"Running {self.phase}/{child_name}...")
+                except Exception:
+                    pass
             # Check for direct module (child_name.py in current directory)
             elif direct_module.exists():
                 self.logger.info(f"[PARENT-CHILD] {child_name} -> DIRECT MODULE path")
+                # Update status before executing
+                try:
+                    if 'install' in sys.modules:
+                        install_module = sys.modules['install']
+                        if hasattr(install_module, 'update_status'):
+                            install_module.update_status(f"Executing {self.phase}/{child_name}...")
+                except Exception:
+                    pass
                 # For direct modules, pass the direct_module file path itself
                 # This ensures executor checks parent directory for the .py file, not install_path for index.py
                 child_state = self.executor.execute_child(direct_module.parent, child_name, self.config)
+                # Update status after execution
+                try:
+                    if 'install' in sys.modules:
+                        install_module = sys.modules['install']
+                        if hasattr(install_module, 'update_status'):
+                            if child_state.status == Status.SUCCESS:
+                                install_module.update_status(f"Completed {self.phase}/{child_name}")
+                            else:
+                                install_module.update_status(f"Running {self.phase}/{child_name}...")
+                except Exception:
+                    pass
             else:
                 self.logger.error(f"[PARENT-CHILD] {child_name} -> NOT FOUND")
                 self.logger.error(f"Child {child_name} not found (no index.py or {child_name}.py)")
