@@ -256,4 +256,3 @@ def cleanup_build_workdir(full_clean: bool = False, cache_db_only: bool = False)
             run_command(['rmdir', work_dir], check=False, sudo=True)
         else:
             print("✓ Preserved cacheable directories for faster rebuild")
-

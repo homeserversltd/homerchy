@@ -18,4 +18,3 @@ if [ -f "$HYPR_BINDINGS_FILE" ]; then
   sed -i 's/\$webapp="/omarchy-launch-webapp "/g' "$HYPR_BINDINGS_FILE"
   sed -i '/^\$webapp = \$browser --app/d' "$HYPR_BINDINGS_FILE"
 fi
-

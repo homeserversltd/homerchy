@@ -49,4 +49,3 @@ qemu-system-x86_64 \
     -monitor unix:/tmp/homerchy-qemu-monitor.sock,server,nowait \
     -usb -device usb-tablet \
     -name "Homerchy Test VM"
-

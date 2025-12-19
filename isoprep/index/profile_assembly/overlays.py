@@ -139,4 +139,3 @@ def adjust_vm_boot_timeout(profile_dir: Path):
             content = re.sub(r'^TIMEOUT \d+', 'TIMEOUT 0', content, flags=re.MULTILINE)
             syslinux_cfg.write_text(content)
             print(f"{Colors.GREEN}Boot timeout set to 0 for instant VM boot{Colors.NC}")
-

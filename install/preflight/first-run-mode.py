@@ -86,4 +86,3 @@ Cmnd_Alias SYMLINK_RESOLVED = /usr/bin/ln -sf /run/systemd/resolve/stub-resolv.c
 if __name__ == "__main__":
     result = main({})
     sys.exit(0 if result["success"] else 1)
-

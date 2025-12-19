@@ -229,4 +229,3 @@ def fix_permissions_targets(repo_root: Path, profile_dir: Path):
         shutil.copy2(upload_log_source, bin_dir / 'omarchy-upload-log')
         (bin_dir / 'omarchy-upload-log').chmod(0o755)
         print(f"{Colors.GREEN}✓ Copied omarchy-upload-log utility{Colors.NC}")
-

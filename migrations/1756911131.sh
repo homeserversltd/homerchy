@@ -8,4 +8,3 @@ if omarchy-cmd-present ufw; then
         fi
     fi
 fi
-

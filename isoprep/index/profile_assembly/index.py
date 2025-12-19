@@ -142,4 +142,3 @@ if __name__ == '__main__':
     config = json.load(open(config_path)) if config_path.exists() else {}
     result = main(phase_path, config)
     sys.exit(0 if result.get('success') else 1)
-

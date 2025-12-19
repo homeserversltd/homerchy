@@ -187,4 +187,3 @@ def copy_mirrorlist_to_archiso_tmp(profile_dir: Path, work_dir: Path, preserve_a
                 current_gid = os.getgid()
                 subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(preserved_mirrorlist)], check=True)
                 print(f"{Colors.GREEN}✓ Copied mirrorlist to preserved archiso-tmp (with sudo){Colors.NC}")
-

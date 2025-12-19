@@ -281,4 +281,3 @@ This orchestrator is the core of the Homerchy installation system. It coordinate
 - **First-run tasks**: Tasks executed on first boot
 
 All phases follow the same infinite nesting pattern, enabling unlimited hierarchical organization of installation tasks.
-

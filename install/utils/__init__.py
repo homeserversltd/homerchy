@@ -582,4 +582,3 @@ class ErrorHandler:
         error_handling = config.get("error_handling", {})
         phase_config = error_handling.get(phase, {})
         return phase_config.get("continue_on_error", False)
-

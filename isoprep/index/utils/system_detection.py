@@ -41,4 +41,3 @@ def detect_vm_environment():
             return True
     
     return False
-

@@ -142,4 +142,3 @@ def launch_log_viewer(log_files=None):
 
 if __name__ == "__main__":
     launch_log_viewer()
-

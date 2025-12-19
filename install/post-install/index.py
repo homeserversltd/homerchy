@@ -80,4 +80,3 @@ if __name__ == "__main__":
     phase_path = Path(__file__).parent
     state = main(phase_path, {})
     sys.exit(0 if state.status == Status.COMPLETED else 1)
-

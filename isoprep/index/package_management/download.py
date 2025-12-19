@@ -327,4 +327,3 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
             subprocess.run(['sudo', 'rm', '-rf', str(temp_db_dir)], check=False)
     
     return package_list, packages_were_downloaded
-

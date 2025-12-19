@@ -411,4 +411,3 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
         print(f"{Colors.GREEN}✓ Repository database size: {db_size / 1024:.1f} KB{Colors.NC}")
     else:
         print(f"{Colors.YELLOW}WARNING: Repository database file not found after creation{Colors.NC}")
-

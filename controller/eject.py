@@ -260,4 +260,3 @@ def do_eject(full_cleanup: bool = False) -> None:
             print("✓ Cartridge ejected (caches preserved for faster rebuilds)")
     else:
         print(f"Safety check failed: WORK_DIR path looks suspicious ({work_dir}). Skipping rm -rf.")
-

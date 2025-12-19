@@ -74,4 +74,3 @@ def cleanup_reflector(profile_dir: Path):
                 path.unlink()
     
     print(f"{Colors.GREEN}✓ Reflector cleanup complete{Colors.NC}")
-

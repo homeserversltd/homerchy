@@ -61,4 +61,3 @@ EOF
 else
   echo "Boot config is non-standard. Not making any changes."
 fi
-

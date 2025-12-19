@@ -72,4 +72,3 @@ SigLevel = Never
 if __name__ == "__main__":
     result = main({})
     sys.exit(0 if result["success"] else 1)
-

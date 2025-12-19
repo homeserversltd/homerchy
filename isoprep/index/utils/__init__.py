@@ -19,4 +19,3 @@ __all__ = [
     'detect_vm_environment',
     'read_package_list',
 ]
-

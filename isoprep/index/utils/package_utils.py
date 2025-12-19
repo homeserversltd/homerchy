@@ -31,4 +31,3 @@ def read_package_list(package_file: Path) -> list:
                 packages.append(line)
     
     return packages
-
