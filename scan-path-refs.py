@@ -2,7 +2,7 @@
 """
 Path Reference Scanner for Homerchy Reorganization
 Scans the entire homerchy directory for path references that need updating after reorganization.
-"""
+"
 
 import os
 import re
@@ -12,31 +12,31 @@ from typing import List, Dict, Set
 
 # Directories to scan for references
 HOMERCHY_DIRS = [
-    onmachine/onmachine/install', deployment/deployment/isoprep', deployment/deployment/iso-builder', deployment/deployment/prebuild', deployment/deployment/controller',
-    onmachine/onmachine/config', onmachine/onmachine/default', onmachine/onmachine/themes', onmachine/onmachine/applications', onmachine/onmachine/autostart', onmachine/onmachine/bin',
-    deployment/deployment/merge-tool', deployment/deployment/migrations', deployment/deployment/vmtools'
+    onmachine/deployment/deployment/install, deployment/deployment/isoprep, deployment/deployment/iso-builder, deployment/deployment/prebuild, deployment/deployment/controller,
+    onmachine/src/config, onmachine/src/default, onmachine/src/themes, onmachine/src/applications, onmachine/src/autostart, onmachine/src/bin,
+    deployment/deployment/merge-tool, deployment/deployment/migrations, deployment/deployment/vmtools
 ]
 
 # Patterns to match path references
 PATTERNS = [
     # Python imports and paths
     (r'from\s+([a-zA-Z_][a-zA-Z0-9_]*)\s+import', 'python_import'),
-    (r'import\s+([a-zA-Z_][a-zA-Z0-9_]*)', 'python_import'),
-    (r'Path\(["\']([^"\']+)[\]\), path_constructor),
+    (r'import\s+([a-zA-Z_][a-zA-Z0-9_]*), python_import),
+    (rPath\([\]([^\]+)[\]\), path_constructor),
     (ros\.path\.join\(([^)]+)\), os_path_join),
-    (r[\]([^\]*(?:onmachine/onmachine/install|deployment/deployment/isoprep|deployment/deployment/iso-builder|deployment/deployment/prebuild|deployment/deployment/controller|onmachine/onmachine/config|onmachine/onmachine/default|onmachine/onmachine/themes|onmachine/onmachine/applications|onmachine/onmachine/autostart|onmachine/onmachine/bin|deployment/deployment/merge-tool|deployment/deployment/migrations|deployment/deployment/vmtools)[^"\']*)["\']', 'string_path'),
-    (r'["\']([^"\']*\.\./[^"\']*)["\']', 'relative_path'),
-    (r'["\']([^"\']*\./[^"\']*)["\'], relative_path),
+    (r[\]([^\]*(?:onmachine/deployment/deployment/install|deployment/deployment/isoprep|deployment/deployment/iso-builder|deployment/deployment/prebuild|deployment/deployment/controller|onmachine/src/config|onmachine/src/default|onmachine/src/themes|onmachine/src/applications|onmachine/src/autostart|onmachine/src/bin|deployment/deployment/merge-tool|deployment/deployment/migrations|deployment/deployment/vmtools)[^\]*)[\], string_path),
+    (r["\']([^"\']*\.\./[^"\']*)["\']', 'relative_path'),
+    (r'[\]([^\]*\./[^\]*)[\], relative_path),
     
     # Shell/bash paths
     (r\$\{?([A-Z_]+)\}?/, env_var_path),
     (r([a-zA-Z_][a-zA-Z0-9_]*)/, directory_reference),
     
     # JSON paths
-    (r([^]*(?:onmachine/onmachine/install|deployment/deployment/isoprep|deployment/deployment/iso-builder|deployment/deployment/prebuild|deployment/deployment/controller|onmachine/onmachine/config|onmachine/onmachine/default|onmachine/onmachine/themes|onmachine/onmachine/applications|onmachine/onmachine/autostart|onmachine/onmachine/bin|deployment/deployment/merge-tool|deployment/deployment/migrations|deployment/deployment/vmtools)[^"]*)"', 'json_path'),
+    (r([^]*(?:onmachine/deployment/deployment/install|deployment/deployment/isoprep|deployment/deployment/iso-builder|deployment/deployment/prebuild|deployment/deployment/controller|onmachine/src/config|onmachine/src/default|onmachine/src/themes|onmachine/src/applications|onmachine/src/autostart|onmachine/src/bin|deployment/deployment/merge-tool|deployment/deployment/migrations|deployment/deployment/vmtools)[^]*), json_path),
     
     # sys.path manipulations
-    (r'sys\.path\.insert\([^,]+,\s*["\']([^"\']+)["\']\)', 'sys_path_insert'),
+    (rsys\.path\.insert\([^,]+,\s*[\]([^"\']+)["\']\)', 'sys_path_insert'),
     (r'sys\.path\.append\(["\']([^"\']+)["\']\)', 'sys_path_append'),
 ]
 
@@ -84,7 +84,7 @@ def scan_directory(directory: Path, repo_root: Path) -> List[Dict]:
     all_references = []
     
     # File extensions to scan
-    extensions = {'.py', '.sh', '.bash', '.json', '.md', '.txt', '.conf', .onmachine/onmachine/config', '.yaml', '.yml'}
+    extensions = {'.py', '.sh', '.bash', '.json', '.md', '.txt', '.conf, .onmachine/src/config, '.yaml', '.yml'}
     
     for root, dirs, files in os.walk(directory):
         # Skip hidden directories and common ignore patterns

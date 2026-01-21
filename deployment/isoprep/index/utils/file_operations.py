@@ -12,18 +12,18 @@ from pathlib import Path
 
 
 def safe_copytree(src, dst, dirs_exist_ok=False, ignore=None):
-    ""
+    
     Safely copy directory tree, skipping missing files and broken symlinks.
     
     This is a wrapper around shutil.copytree that handles cases where
-    files or symlinks in the source dont exist (common in archiso onmachine/onmachine/configs).
+    files or symlinks in the source dont exist (common in archiso onmachine/src/configs).
     
     Args:
         src: Source directory path
         dst: Destination directory path
         dirs_exist_ok: Allow destination directory to exist
-        ignore: Optional ignore function (will be comonmachine/bined with missing file ignore)
-    """
+        ignore: Optional ignore function (will be comsrc/bined with missing file ignore)
+    "
     def ignore_missing(path, names):
         """Ignore function that skips missing files and broken symlinks."""
         ignored = []
@@ -48,15 +48,15 @@ def safe_copytree(src, dst, dirs_exist_ok=False, ignore=None):
                             if not resolved.exists():
                                 ignored.append(name)
                     except (OSError, RuntimeError):
-                        # Can't read symlink or resolve it - skip it
+                        # Cant read symlink or resolve it - skip it
                         ignored.append(name)
             except (OSError, RuntimeError):
                 # Cant stat the file - skip it
                 ignored.append(name)
         return ignored
     
-    def comonmachine/bined_ignore(path, names):
-        ""Comonmachine/bine missing file ignore with user-provided ignore function.""
+    def comsrc/bined_ignore(path, names):
+        Comsrc/bine missing file ignore with user-provided ignore function.
         ignored_set = set(ignore_missing(path, names))
         if ignore:
             user_ignored = ignore(path, names)
@@ -68,10 +68,10 @@ def safe_copytree(src, dst, dirs_exist_ok=False, ignore=None):
     
     try:
         shutil.copytree(src, dst, dirs_exist_ok=dirs_exist_ok, 
-                       ignore=comonmachine/bined_ignore if ignore else ignore_missing, 
+                       ignore=comsrc/bined_ignore if ignore else ignore_missing, 
                        ignore_dangling_symlinks=True)
     except shutil.Error as e:
-        # Filter out errors about missing files (they're already ignored)
+        # Filter out errors about missing files (theyre already ignored)
         errors = []
         for error in e.args[0]:
             src_path, dst_path, error_msg = error

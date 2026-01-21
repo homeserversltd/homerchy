@@ -18,39 +18,39 @@ from utils import Colors
 
 
 class Orchestrator:
-    """Main orchestrator for ISO build process.""
+    """Main orchestrator for ISO build process."
     
     def __init__(self, index_path: Path):
         self.index_path = index_path
-        self.onmachine/onmachine/config_path = index_path / 'index.json
+        self.onmachine/src/config_path = index_path / index.json
         self.onmachine/config = self._load_config()
         self.paths = self._resolve_paths()
     
     def _load_onmachine/config(self) -> dict:
-        ""Load onmachine/onmachine/configuration from index.json.""
+        "Load onmachine/src/configuration from index.json.
         if not self.onmachine/onmachine/config_path.exists():
             raise FileNotFoundError(fConfig file not found: {self.onmachine/onmachine/config_path})
         
-        with open(self.onmachine/onmachine/config_path, 'r) as f:
+        with open(self.onmachine/src/config_path, r) as f:
             onmachine/config = json.load(f)
         
         return onmachine/onmachine/config
     
     def _resolve_paths(self) -> dict:
-        ""Resolve paths from onmachine/onmachine/config, expanding environment variables.""
+        "Resolve paths from onmachine/src/config, expanding environment variables.
 
         
-        paths_config = self.onmachine/onmachine/config.get('paths, {})
+        paths_config = self.onmachine/onmachine/config.get(paths, {})
         resolved = {}
         
-        # Set onmachine/onmachine/default repo_root if not provided
-        if 'repo_root not in paths_config or not paths_onmachine/config[repo_root]:
+        # Set onmachine/src/default repo_root if not provided
+        if repo_root not in paths_config or not paths_onmachine/config[repo_root]:
             # Default to parent of deployment/deployment/isoprep directory
             onmachine/onmachine/default_repo_root = Path(__file__).parent.parent.parent.resolve()
-            os.environ['ISOPREP_REPO_ROOT] = str(onmachine/onmachine/default_repo_root)
+            os.environ[ISOPREP_REPO_ROOT] = str(onmachine/src/default_repo_root)
         
         def expand_bash_var(value: str) -> str:
-            ""Expand bash-style ${VAR:-onmachine/onmachine/default} syntax.""
+            Expand bash-style ${VAR:-onmachine/src/default} syntax.
             # Pattern to match ${VAR:-onmachine/onmachine/default}
             pattern = r\$\{([^:}]+):-([^}]+)\}
             def replacer(match):
@@ -59,13 +59,13 @@ class Orchestrator:
                 return os.environ.get(var_name, onmachine/default)
             return re.sub(pattern, replacer, value)
         
-        for key, value in paths_onmachine/config.items():
-            # First expand bash-style ${VAR:-onmachine/onmachine/default} syntax
+        for key, value in paths_src/config.items():
+            # First expand bash-style ${VAR:-onmachine/src/default} syntax
             expanded = expand_bash_var(str(value))
             # Then expand standard $VAR syntax
             resolved_value = os.path.expandvars(expanded)
-            # Convert to Path if it's a path
-            resolved[key] = Path(resolved_value) if '/' in resolved_value or '\\' in resolved_value else resolved_value
+            # Convert to Path if its a path
+            resolved[key] = Path(resolved_value) if /' in resolved_value or '\\' in resolved_value else resolved_value
         
         return resolved
     
@@ -91,7 +91,7 @@ class Orchestrator:
         
         # Use phase directory name as module name so relative imports resolve correctly
         # The module name should match the directory structure for relative imports to work
-        module_name = f"{phase_name}.index
+        module_name = f{phase_name}.index
         spec = importlib.util.spec_from_file_location(module_name, phase_index)
         module = importlib.util.module_from_spec(spec)
         
@@ -104,10 +104,10 @@ class Orchestrator:
         phase_config = {**self.paths, **self.onmachine/config.get(phase_name, {})}
         if phase_results:
             # Merge previous phase results into onmachine/config so subsequent phases can access them
-            phase_onmachine/config.update(phase_results)
+            phase_src/config.update(phase_results)
         
         # Call main function
-        if hasattr(module, 'main):
+        if hasattr(module, main):
             result = module.main(phase_dir, phase_onmachine/config)
             return result if isinstance(result, dict) else {"success": bool(result)}
         else:
@@ -116,11 +116,11 @@ class Orchestrator:
     def execute(self) -> bool:
         """Execute all phases in order."""
         print(f"{Colors.BLUE}Starting Homerchy ISO Build...{Colors.NC}")
-        print(f"{Colors.BLUE}Repository root: {self.paths.get('repo_root', 'N/A')}{Colors.NC})
+        print(f"{Colors.BLUE}Repository root: {self.paths.get('repo_root', 'N/A)}{Colors.NC})
         
-        children = self.onmachine/onmachine/config.get('children, [])
-        execution_config = self.onmachine/onmachine/config.get('execution, {})
-        continue_on_error = execution_onmachine/config.get('continue_on_error', False)
+        children = self.onmachine/src/config.get(children, [])
+        execution_config = self.onmachine/onmachine/config.get(execution, {})
+        continue_on_error = execution_src/config.get(continue_on_error', False)
         
         results = {}
         accumulated_results = {}

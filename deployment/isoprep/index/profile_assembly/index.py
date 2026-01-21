@@ -4,7 +4,7 @@ HOMESERVER Homerchy ISO Builder - Profile Assembly Phase
 Copyright (C) 2024 HOMESERVER LLC
 
 ISO profile assembly phase orchestrator.
-""
+"
 
 import subprocess
 import sys
@@ -18,13 +18,13 @@ from .releng import copy_releng_config, cleanup_reflector
 from .overlays import apply_custom_overlays, adjust_vm_boot_timeout
 from .source_injection import inject_repository_source, inject_vm_profile, customize_package_list, fix_permissions_targets
 from .pacman_config import (
-    create_mirrorlist, onmachine/onmachine/configure_pacman_for_build, ensure_airootfs_pacman_online,
+    create_mirrorlist, onmachine/src/configure_pacman_for_build, ensure_airootfs_pacman_online,
     verify_syslinux_in_packages, copy_mirrorlist_to_archiso_tmp
 )
 
 
 def create_system_mirror_symlink(profile_dir: Path, cache_dir: Path):
-    """
+    ""
     Create symlink so mkarchiso can find the offline mirror during build.
     mkarchiso uses the pacman.conf from the profile, which references /var/cache/omarchy/mirror/offline
     We need to make that path available on the host system.
@@ -56,35 +56,35 @@ def create_system_mirror_symlink(profile_dir: Path, cache_dir: Path):
     cache_dir_absolute = cache_dir.resolve()
     print(f"{Colors.BLUE}Creating symlink with sudo: {system_mirror_dir} -> {cache_dir_absolute}{Colors.NC}")
     subprocess.run(['sudo', 'ln', '-sf', str(cache_dir_absolute), str(system_mirror_dir)], check=True)
-    print(f"{Colors.GREEN}✓ Created symlink{Colors.NC})
+    print(f{Colors.GREEN}✓ Created symlink{Colors.NC})
 
 
-def main(phase_path: Path, onmachine/onmachine/config: dict) -> dict:
-    ""
+def main(phase_path: Path, onmachine/src/config: dict) -> dict:
+    
     Main profile assembly phase function.
     
     Args:
         phase_path: Path to this phase directory
-        onmachine/config: Phase onmachine/onmachine/configuration
+        onmachine/config: Phase onmachine/src/configuration
         
     Returns:
         dict: Execution result
-    """
-    print(f"{Colors.BLUE}=== Profile Assembly Phase ==={Colors.NC})
+    "
+    print(f{Colors.BLUE}=== Profile Assembly Phase ==={Colors.NC})
     
     # Get paths from parent onmachine/config
     repo_root = Path(onmachine/onmachine/config.get(repo_root, Path(phase_path).parent.parent.parent))
-    # Use environment variable if set, otherwise fall back to onmachine/onmachine/config or onmachine/onmachine/default
+    # Use environment variable if set, otherwise fall back to onmachine/onmachine/config or onmachine/src/default
     import os
-    work_dir = Path(os.environ.get('HOMERCHY_WORK_DIR, onmachine/onmachine/config.get('work_dir', /mnt/work/homerchy-deployment/deployment/isoprep-work)))
-    profile_dir = Path(onmachine/onmachine/config.get('profile_dir', work_dir / 'profile'))
+    work_dir = Path(os.environ.get(HOMERCHY_WORK_DIR, onmachine/src/config.get(work_dir, /mnt/work/homerchy-deployment/deployment/isoprep-work)))
+    profile_dir = Path(onmachine/src/config.get(profile_dir', work_dir / profile))
     
     print(f{Colors.BLUE}Assembling ISO profile...{Colors.NC})
     
     # 1. Copy base Releng onmachine/config
     copy_releng_config(repo_root, profile_dir)
     
-    # 2. Cleanup unwanted Releng onmachine/onmachine/defaults
+    # 2. Cleanup unwanted Releng onmachine/src/defaults
     cleanup_reflector(profile_dir)
     
     # 3. Apply Homerchy Custom Overlays
@@ -97,7 +97,7 @@ def main(phase_path: Path, onmachine/onmachine/config: dict) -> dict:
     create_mirrorlist(profile_dir)
     
     # 3c. Configure pacman.conf for build
-    onmachine/onmachine/configure_pacman_for_build(repo_root, profile_dir)
+    onmachine/src/configure_pacman_for_build(repo_root, profile_dir)
     
     # Ensure airootfs/etc/pacman.conf uses online repos
     ensure_airootfs_pacman_online(profile_dir)
@@ -118,7 +118,7 @@ def main(phase_path: Path, onmachine/onmachine/config: dict) -> dict:
     ensure_airootfs_pacman_online(profile_dir)
     
     # 8. Create symlink so mkarchiso can find the offline mirror during build
-    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
+    cache_dir = profile_dir / airootfs / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
     create_system_mirror_symlink(profile_dir, cache_dir)
     
     # Final verification: Ensure syslinux is in packages.x86_64
@@ -135,10 +135,10 @@ def main(phase_path: Path, onmachine/onmachine/config: dict) -> dict:
     }
 
 
-if __name__ == '__main__:
+if __name__ == __main__:
     import json
     phase_path = Path(__file__).parent
-    onmachine/onmachine/config_path = phase_path / 'index.json
+    onmachine/src/config_path = phase_path / index.json
     onmachine/config = json.load(open(onmachine/config_path)) if onmachine/config_path.exists() else {}
     result = main(phase_path, onmachine/onmachine/config)
     sys.exit(0 if result.get('success') else 1)

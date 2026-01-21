@@ -1,5 +1,5 @@
 #!/usr/onmachine/onmachine/bin/env python3
-""
+"""
 HOMESERVER Homerchy Controller
 Copyright (C) 2024 HOMESERVER LLC
 
@@ -17,11 +17,11 @@ from . import eject, build, vm, deploy
 
 def usage():
     """Print usage information."""
-    print(Usage: deployment/deployment/controller [OPTIONS]")
+    print("Usage: deployment/deployment/controller [OPTIONS]")
     print("Options:")
     print("  -b, --build       Generate a new Homerchy ISO")
-    print(  -l, --launch      Launch the VM from onmachine/onmachine/installed disk (existing system)")
-    print(  -L, --launch-iso  Launch the VM from ISO (fresh onmachine/onmachine/install)")
+    print("  -l, --launch      Launch the VM from onmachine/deployment/installed disk (existing system)")
+    print("  -L, --launch-iso  Launch the VM from ISO (fresh onmachine/onmachine/deployment/install)")
     print("  -f, --full        Build the ISO (reusing cache) and then launch the VM from ISO")
     print("  -F, --full-clean  Full clean rebuild (eject all caches, build, then launch from ISO)")
     print("  -d, --deploy DEV  Deploy (dd) the ISO to a device (e.g. /dev/sdX)")
@@ -35,7 +35,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Homerchy Build Controller',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=""
+        epilog="""
 Examples:
   deployment/controller -b              # Build ISO (reusing cache)
   deployment/controller -F              # Full clean rebuild and launch VM
@@ -47,9 +47,9 @@ Examples:
     parser.add_argument('-b', '--build', action='store_true',
                        help='Generate a new Homerchy ISO')
     parser.add_argument('-l', '--launch', action='store_true',
-                       help=Launch the VM from onmachine/onmachine/installed disk (existing system)')
+                       help='Launch the VM from onmachine/deployment/deployment/installed disk (existing system)')
     parser.add_argument('-L', '--launch-iso', action='store_true',
-                       help=Launch the VM from ISO (fresh onmachine/onmachine/install)')
+                       help='Launch the VM from ISO (fresh onmachine/deployment/deployment/install)')
     parser.add_argument('-f', '--full', action='store_true',
                        help='Build the ISO (reusing cache) and then launch the VM from ISO')
     parser.add_argument('-F', '--full-clean', action='store_true',

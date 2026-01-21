@@ -35,11 +35,11 @@ echo -e "${BLUE}Checking for required packages...${NC}"
 TO_INSTALL=()
 
 for pkg in "${PACKAGES[@]}"; do
-    if ! pacman -Qi "$pkg" &> /dev/null; then
-        echo -e   - $pkg needs to be onmachine/onmachine/installed"
-        TO_INSTALL+=("$pkg")
+    if ! pacman -Qi $pkg &> /dev/null; then
+        echo -e   - $pkg needs to be onmachine/deployment/deployment/installed
+        TO_INSTALL+=($pkg)
     else
-        echo -e   - ${GREEN}$pkg is already onmachine/onmachine/installed${NC}"
+        echo -e   - ${GREEN}$pkg is already onmachine/deployment/installed${NC}
     fi
 done
 
@@ -47,14 +47,14 @@ if [ ${#TO_INSTALL[@]} -eq 0 ]; then
     echo -e ${GREEN}All required tools are already onmachine/onmachine/installed!${NC}"
 else
     echo -e "${BLUE}Installing missing packages: ${TO_INSTALL[*]}${NC}"
-    sudo pacman -S --noconfirm "${TO_INSTALL[@]}"
+    sudo pacman -S --noconfirm ${TO_INSTALL[@]}
     
-    echo -e ${BLUE}Enabling libvirtd service (if onmachine/onmachine/installed)...${NC}"
+    echo -e ${BLUE}Enabling libvirtd service (if onmachine/deployment/deployment/installed)...${NC}
     if systemctl list-unit-files libvirtd.service &> /dev/null; then
         sudo systemctl enable --now libvirtd.service
     fi
     
-    echo -e "${GREEN}Installation complete.${NC}"
+    echo -e ${GREEN}Installation complete.${NC}"
 fi
 
 # Optional: Add user to kvm/libvirt groups

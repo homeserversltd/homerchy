@@ -5,8 +5,8 @@ iso_name="omarchy"
 iso_label="OMARCHY_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="Homerchy <https://omarchy.org>"
 iso_application="Homerchy Installer"
-iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)
-onmachine/onmachine/install_dir="arch"
+iso_version="$(date --date=@${SOURCE_DATE_EPOCH:-$(date +%s)} +%Y.%m.%d)
+onmachine/deployment/deployment/install_dir=arch
 buildmodes=('iso')
 bootmodes=('bios.syslinux' 'uefi.grub')
 arch="x86_64"
@@ -19,9 +19,9 @@ file_permissions=(
   ["/root"]="0:0:750"
   ["/root/.automated_script.sh"]="0:0:755"
   ["/root/.automated_script.py"]="0:0:755"
-  ["/root/.gnupg"]="0:0:700
-  [/usr/local/onmachine/onmachine/onmachine/onmachine/bin/choose-mirror"]="0:0:755"
-  [/root/onmachine/onmachine/configurator"]="0:0:755"
-  ["/var/cache/omarchy/mirror/offline/"]="0:0:775
-  [/usr/local/onmachine/onmachine/onmachine/onmachine/bin/omarchy-upload-log"]="0:0:755"
+  ["/root/.gnupg"]=0:0:700
+  [/usr/local/onmachine/onmachine/onmachine/src/bin/choose-mirror]="0:0:755
+  [/root/onmachine/src/configurator]="0:0:755"
+  ["/var/cache/omarchy/mirror/offline/"]=0:0:775
+  [/usr/local/onmachine/onmachine/onmachine/src/bin/omarchy-upload-log]="0:0:755"
 )

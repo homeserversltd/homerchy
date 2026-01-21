@@ -10,7 +10,7 @@ PROFILE_DIR=$(DESTDIR)$(PREFIX)/share/archiso
 DOC_FILES=$(wildcard docs/*) $(wildcard *.rst)
 SCRIPT_FILES=$(wildcard archiso/*) $(wildcard scripts/*.sh) $(wildcard .gitlab/ci/*.sh) \
              $(wildcard onmachine/configs/*/profiledef.sh) $(wildcard onmachine/configs/*/airootfs/usr/local/onmachine/onmachine/bin/*)
-VERSION?=$(shell git describe --long --abbrev=7 | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g;s/\.r0\.g.*//)
+VERSION?=$(shell git describe --long --abbrev=7 | sed s/^v//;s/\([^-]*-g\)/r\1/;s/-/./g;s/\.r0\.g.*//)
 
 all:
 
@@ -22,7 +22,7 @@ shellcheck:
 onmachine/install: onmachine/install-scripts onmachine/install-profiles onmachine/install-doc onmachine/install-man
 
 onmachine/install-scripts:
-	onmachine/onmachine/install -vDm 755 archiso/mkarchiso -t "$(BIN_DIR)/
+	onmachine/deployment/install -vDm 755 archiso/mkarchiso -t $(BIN_DIR)/
 	onmachine/onmachine/install -vDm 755 scripts/run_archiso.sh $(BIN_DIR)/run_archiso
 
 onmachine/install-profiles:

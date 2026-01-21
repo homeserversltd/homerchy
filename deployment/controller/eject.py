@@ -9,8 +9,8 @@ from typing import List
 from .utils import run_command, run_shell_command
 
 
-WORK_DIR_BASE = /mnt/work/homerchy-deployment/deployment/isoprep-work"
-WORK_DIR_OLD = /tmp/homerchy-deployment/deployment/isoprep-work"
+WORK_DIR_BASE = "/mnt/work/homerchy-deployment/deployment/isoprep-work"
+WORK_DIR_OLD = "/tmp/homerchy-deployment/deployment/isoprep-work"
 
 
 def do_eject(full_cleanup: bool = False) -> None:

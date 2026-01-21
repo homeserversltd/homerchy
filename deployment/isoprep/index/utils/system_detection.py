@@ -16,7 +16,7 @@ from pathlib import Path
 def check_dependencies():
     """Check if required tools are available."""
     if not shutil.which('mkarchiso'):
-        print("Error: 'mkarchiso not found. Please onmachine/onmachine/install 'archiso' package.")
+        print(Error: mkarchiso not found. Please onmachine/deployment/deployment/install archiso package.")
         sys.exit(1)
 
 

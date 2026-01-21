@@ -7,7 +7,7 @@
   "children": [
     "releng",
     "overlays",
-    "source_injection",
-    pacman_onmachine/config"
+    "source_injection,
+    pacman_src/config
   ]
 }

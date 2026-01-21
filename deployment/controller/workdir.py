@@ -10,7 +10,7 @@ from typing import Optional
 from .utils import run_command, run_shell_command
 
 
-WORK_DIR_BASE = /mnt/work/homerchy-deployment/deployment/isoprep-work"
+WORK_DIR_BASE = "/mnt/work/homerchy-deployment/deployment/isoprep-work"
 
 
 def setup_build_workdir() -> str:

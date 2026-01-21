@@ -4,7 +4,7 @@ HOMESERVER Homerchy ISO Builder - Prepare Phase
 Copyright (C) 2024 HOMESERVER LLC
 
 Setup and validation phase for ISO build process.
-""
+"
 
 import os
 import shutil
@@ -18,25 +18,25 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from utils import Colors, check_dependencies
 
 
-def main(phase_path: Path, onmachine/onmachine/config: dict) -> dict:
-    ""
+def main(phase_path: Path, onmachine/src/config: dict) -> dict:
+    
     Main prepare phase function.
     
     Args:
         phase_path: Path to this phase directory
-        onmachine/config: Phase onmachine/onmachine/configuration
+        onmachine/config: Phase onmachine/src/configuration
         
     Returns:
         dict: Execution result
-    """
-    print(f"{Colors.BLUE}=== Prepare Phase: Setup and Validation ==={Colors.NC})
+    "
+    print(f{Colors.BLUE}=== Prepare Phase: Setup and Validation ==={Colors.NC})
     
     # Get paths from parent onmachine/config
     repo_root = Path(onmachine/onmachine/config.get(repo_root, Path(phase_path).parent.parent.parent))
-    # Use environment variable if set, otherwise fall back to onmachine/onmachine/config or onmachine/onmachine/default
-    work_dir = Path(os.environ.get('HOMERCHY_WORK_DIR, onmachine/onmachine/config.get('work_dir', /mnt/work/homerchy-deployment/deployment/isoprep-work)))
-    out_dir = Path(onmachine/onmachine/config.get('out_dir', work_dir / 'isoout))
-    profile_dir = Path(onmachine/onmachine/config.get('profile_dir', work_dir / 'profile'))
+    # Use environment variable if set, otherwise fall back to onmachine/onmachine/config or onmachine/src/default
+    work_dir = Path(os.environ.get(HOMERCHY_WORK_DIR, onmachine/src/config.get(work_dir, /mnt/work/homerchy-deployment/deployment/isoprep-work)))
+    out_dir = Path(onmachine/src/config.get(out_dir', work_dir / isoout))
+    profile_dir = Path(onmachine/src/config.get(profile_dir', work_dir / 'profile'))
     
     # Check dependencies
     print(f"{Colors.BLUE}Checking dependencies...{Colors.NC}")
@@ -155,10 +155,10 @@ def main(phase_path: Path, onmachine/onmachine/config: dict) -> dict:
     }
 
 
-if __name__ == '__main__:
+if __name__ == __main__:
     import json
     phase_path = Path(__file__).parent
-    onmachine/onmachine/config_path = phase_path / 'index.json
+    onmachine/src/config_path = phase_path / index.json
     onmachine/config = json.load(open(onmachine/config_path)) if onmachine/config_path.exists() else {}
     result = main(phase_path, onmachine/onmachine/config)
     sys.exit(0 if result.get('success') else 1)

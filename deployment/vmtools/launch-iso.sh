@@ -55,11 +55,11 @@ echo "Using disk: $DISK_FILE
 
 # Check which profile will be used
 INDEX_FILE=${REPO_ROOT}/deployment/deployment/deployment/deployment/vmtools/index.json"
-if [ -f "$INDEX_FILE" ]; then
-    PROFILE=$(jq -r .onmachine/onmachine/default_profile // "homerchy-test"' "$INDEX_FILE" 2>/dev/null || echo "homerchy-test")
-    echo "VM Profile: $PROFILE"
+if [ -f "$INDEX_FILE ]; then
+    PROFILE=$(jq -r .onmachine/src/default_profile // homerchy-test"' "$INDEX_FILE" 2>/dev/null || echo "homerchy-test")
+    echo "VM Profile: $PROFILE
 else
-    echo VM Profile: onmachine/onmachine/default (no index.json found)"
+    echo VM Profile: onmachine/src/default (no index.json found)
 fi
 
 qemu-system-x86_64 \
@@ -70,12 +70,12 @@ qemu-system-x86_64 \
     -smp 4 \
     -cdrom "$ISO_FILE" \
     -boot order=dc \
-    -drive file="$DISK_FILE,format=qcow2,if=none,id=drive0 \
+    -drive file=$DISK_FILE,format=qcow2,if=none,id=drive0 \
     -device virtio-blk-pci,drive=drive0 \
     -device virtio-vga \
-    -display onmachine/onmachine/default \
+    -display onmachine/src/default \
     -netdev user,id=net0,hostfwd=tcp::2222-:22 \
     -device virtio-net-pci,netdev=net0 \
     -monitor unix:/tmp/homerchy-qemu-monitor.sock,server,nowait \
     -usb -device usb-tablet \
-    -name "Homerchy Test VM"
+    -name Homerchy Test VM"

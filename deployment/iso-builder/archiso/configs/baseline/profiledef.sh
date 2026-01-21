@@ -5,8 +5,8 @@ iso_name="archlinux-baseline"
 iso_label="ARCH_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="Arch Linux <https://archlinux.org>"
 iso_application="Arch Linux baseline"
-iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)
-onmachine/onmachine/install_dir="arch"
+iso_version="$(date --date=@${SOURCE_DATE_EPOCH:-$(date +%s)} +%Y.%m.%d)
+onmachine/deployment/deployment/install_dir=arch
 buildmodes=('iso')
 bootmodes=('bios.syslinux'
            'uefi.grub')

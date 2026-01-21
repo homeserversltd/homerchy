@@ -1,0 +1,205 @@
+Directory Tree for: /home/owner/git/serverGenesis/homerchy
+Generated on: 2026-01-21 10:24:52
+Mode: Directories only
+==================================================
+
+homerchy
+├── deployment
+│   ├── controller
+│   ├── iso-builder
+│   │   ├── archiso
+│   │   │   ├── archiso
+│   │   │   ├── configs
+│   │   │   │   ├── baseline
+│   │   │   │   │   ├── airootfs
+│   │   │   │   │   │   └── etc
+│   │   │   │   │   │       ├── mkinitcpio.conf.d
+│   │   │   │   │   │       ├── mkinitcpio.d
+│   │   │   │   │   │       ├── ssh
+│   │   │   │   │   │       │   └── sshd_config.d
+│   │   │   │   │   │       └── systemd
+│   │   │   │   │   │           ├── network
+│   │   │   │   │   │           ├── networkd.conf.d
+│   │   │   │   │   │           ├── resolved.conf.d
+│   │   │   │   │   │           ├── system
+│   │   │   │   │   │           │   ├── cloud-init.target.wants
+│   │   │   │   │   │           │   ├── multi-user.target.wants
+│   │   │   │   │   │           │   ├── network-online.target.wants
+│   │   │   │   │   │           │   ├── sockets.target.wants
+│   │   │   │   │   │           │   └── systemd-networkd-wait-online.service.d
+│   │   │   │   │   │           └── system-generators
+│   │   │   │   │   ├── efiboot
+│   │   │   │   │   │   └── loader
+│   │   │   │   │   │       └── entries
+│   │   │   │   │   ├── grub
+│   │   │   │   │   └── syslinux
+│   │   │   │   └── releng
+│   │   │   │       ├── airootfs
+│   │   │   │       │   ├── etc
+│   │   │   │       │   │   ├── mkinitcpio.conf.d
+│   │   │   │       │   │   ├── mkinitcpio.d
+│   │   │   │       │   │   ├── modprobe.d
+│   │   │   │       │   │   ├── pacman.d
+│   │   │   │       │   │   │   └── hooks
+│   │   │   │       │   │   ├── ssh
+│   │   │   │       │   │   │   └── sshd_config.d
+│   │   │   │       │   │   └── systemd
+│   │   │   │       │   │       ├── journald.conf.d
+│   │   │   │       │   │       ├── logind.conf.d
+│   │   │   │       │   │       ├── network
+│   │   │   │       │   │       ├── networkd.conf.d
+│   │   │   │       │   │       ├── resolved.conf.d
+│   │   │   │       │   │       ├── system
+│   │   │   │       │   │       │   ├── cloud-init.target.wants
+│   │   │   │       │   │       │   ├── getty@tty1.service.d
+│   │   │   │       │   │       │   ├── multi-user.target.wants
+│   │   │   │       │   │       │   ├── network-online.target.wants
+│   │   │   │       │   │       │   ├── sockets.target.wants
+│   │   │   │       │   │       │   ├── sound.target.wants
+│   │   │   │       │   │       │   ├── sysinit.target.wants
+│   │   │   │       │   │       │   └── systemd-networkd-wait-online.service.d
+│   │   │   │       │   │       └── system-generators
+│   │   │   │       │   ├── root
+│   │   │   │       │   └── usr
+│   │   │   │       │       └── local
+│   │   │   │       │           ├── bin
+│   │   │   │       │           └── share
+│   │   │   │       │               └── livecd-sound
+│   │   │   │       ├── efiboot
+│   │   │   │       │   └── loader
+│   │   │   │       │       └── entries
+│   │   │   │       ├── grub
+│   │   │   │       └── syslinux
+│   │   │   ├── docs
+│   │   │   └── man
+│   │   │   ├── scripts
+│   │   ├── bin
+│   │   └── builder
+│   │   ├── configs
+│   │   │   ├── airootfs
+│   │   │   │   ├── etc
+│   │   │   │   │   ├── mkinitcpio.conf.d
+│   │   │   │   │   ├── mkinitcpio.d
+│   │   │   │   │   └── plymouth
+│   │   │   │   └── root
+│   │   │   ├── efiboot
+│   │   │   │   └── loader
+│   │   │   │       └── entries
+│   │   │   ├── grub
+│   │   │   └── syslinux
+│   ├── isoprep
+│   │   └── index
+│   │       ├── build
+│   │       ├── package_management
+│   │       ├── prepare
+│   │       ├── profile_assembly
+│   │       └── utils
+│   ├── prebuild
+│   │   ├── bin
+│   │   ├── deploy
+│   │   ├── dot
+│   │   ├── hypr
+│   │   └── kitty
+│   └── vmtools
+└── images
+├── lib
+├── src
+│   ├── applications
+│   │   ├── hidden
+│   │   └── icons
+│   ├── autostart
+│   ├── bin
+│   ├── config
+│   │   ├── Typora
+│   │   │   └── themes
+│   │   ├── alacritty
+│   │   ├── btop
+│   │   ├── chromium
+│   │   │   └── Default
+│   │   ├── elephant
+│   │   ├── environment.d
+│   │   ├── fastfetch
+│   │   ├── fcitx5
+│   │   │   └── conf
+│   │   ├── fontconfig
+│   │   ├── ghostty
+│   │   ├── git
+│   │   ├── hypr
+│   │   ├── imv
+│   │   ├── kitty
+│   │   ├── lazygit
+│   │   ├── omarchy
+│   │   │   └── hooks
+│   │   ├── swayosd
+│   │   ├── systemd
+│   │   │   └── user
+│   │   ├── uwsm
+│   │   ├── walker
+│   │   ├── waybar
+│   │   └── xournalpp
+│   ├── default
+│   │   ├── alacritty
+│   │   ├── bash
+│   │   ├── chromium
+│   │   │   └── extensions
+│   │   │       └── copy-url
+│   │   ├── elephant
+│   │   ├── ghostty
+│   │   ├── gpg
+│   │   ├── hypr
+│   │   │   ├── apps
+│   │   │   └── bindings
+│   │   ├── mako
+│   │   ├── pacman
+│   │   ├── plymouth
+│   │   ├── walker
+│   │   │   └── themes
+│   │   │       └── omarchy-default
+│   │   └── waybar
+│   │       └── indicators
+│   ├── install
+│   │   ├── config
+│   │   │   └── hardware
+│   │   ├── display-test
+│   │   ├── first-run
+│   │   ├── helpers
+│   │   ├── login
+│   │   ├── packaging
+│   │   ├── post-install
+│   │   ├── preflight
+│   │   └── utils
+│   ├── merge-tool
+│   │   └── preprompts
+│   ├── migrations
+│   └── themes
+│       ├── catppuccin
+│       │   └── backgrounds
+│       ├── catppuccin-latte
+│       │   └── backgrounds
+│       ├── ethereal
+│       │   └── backgrounds
+│       ├── everforest
+│       │   └── backgrounds
+│       ├── flexoki-light
+│       │   └── backgrounds
+│       ├── gruvbox
+│       │   └── backgrounds
+│       ├── hackerman
+│       │   └── backgrounds
+│       ├── kanagawa
+│       │   └── backgrounds
+│       ├── matte-black
+│       │   └── backgrounds
+│       ├── nord
+│       │   └── backgrounds
+│       ├── osaka-jade
+│       │   └── backgrounds
+│       ├── ristretto
+│       │   └── backgrounds
+│       ├── rose-pine
+│       │   └── backgrounds
+│       └── tokyo-night
+│           └── backgrounds
+
+==================================================
+Generated by tree

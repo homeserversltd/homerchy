@@ -25,24 +25,24 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
         repo_root: Root of the repository
         profile_dir: ISO profile directory
     """
-    print(f"{Colors.BLUE}Applying Homerchy custom overlays...{Colors.NC}")
+    print(f"{Colors.BLUE}Applying Homerchy custom overlays...{Colors.NC})
     
     # Note: We skip pacman.conf here because well onmachine/configure it separately for build vs ISO
     # Also skip any pacman.conf files in subdirectories (like airootfs/etc/pacman.conf)
-    onmachine/onmachine/configs_source = repo_root / deployment/deployment/iso-builder' / onmachine/onmachine/configs
+    onmachine/src/configs_source = repo_root / deployment/deployment/iso-builder / onmachine/onmachine/configs
     if onmachine/onmachine/configs_source.exists():
         def should_skip_pacman_conf(src_path, dest_path):
             """Check if this is a pacman.conf file we should skip."""
             if src_path.name == 'pacman.conf':
                 return True
             # Also skip pacman.conf in airootfs/etc/
-            if 'airootfs' in str(src_path) and 'etc' in str(src_path) and src_path.name == 'pacman.conf:
+            if 'airootfs' in str(src_path) and 'etc' in str(src_path) and src_path.name == pacman.conf:
                 return True
             return False
         
         for item in onmachine/onmachine/configs_source.iterdir():
-            # Skip pacman.conf at root level - well onmachine/onmachine/configure it separately
-            if item.name == 'pacman.conf':
+            # Skip pacman.conf at root level - well onmachine/src/configure it separately
+            if item.name == pacman.conf':
                 continue
             # Skip if we can't stat the item (doesn't exist or permission error)
             try:
@@ -118,9 +118,9 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                     if 'No such file or directory' not in str(e):
                         raise
         
-        print(f"{Colors.GREEN}✓ Custom overlays applied{Colors.NC}")
+        print(f"{Colors.GREEN}✓ Custom overlays applied{Colors.NC})
     else:
-        print(f{Colors.YELLOW}WARNING: Configs source not found: {onmachine/onmachine/configs_source}{Colors.NC}")
+        print(f{Colors.YELLOW}WARNING: Configs source not found: {onmachine/src/configs_source}{Colors.NC})
 
 
 def adjust_vm_boot_timeout(profile_dir: Path):

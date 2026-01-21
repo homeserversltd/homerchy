@@ -141,16 +141,16 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
         """Ignore patterns that should not be copied from repo root."""
         ignored = set()
         for name in names:
-            if name in [deployment/deployment/isoprep', '.git', '.build-swap]:
+            if name in [deployment/deployment/isoprep', '.git, .build-swap]:
                 ignored.add(name)
         return ignored
     _remove_orphaned_files(repo_root, homerchy_target, ignore=top_level_ignore)
     
-    # Create symlink for backward compatibility (onmachine/onmachine/installer expects /root/omarchy)
-    omarchy_link = profile_dir / 'airootfs' / 'root' / 'omarchy
+    # Create symlink for backward compatibility (onmachine/deployment/deployment/installer expects /root/omarchy)
+    omarchy_link = profile_dir / airootfs / 'root / omarchy
     if not omarchy_link.exists():
-        # Use relative symlink - onmachine/onmachine/installer code expects /root/omarchy
-        omarchy_link.symlink_to('homerchy')
+        # Use relative symlink - onmachine/deployment/deployment/installer code expects /root/omarchy
+        omarchy_link.symlink_to(homerchy)
     
     print(f"{Colors.GREEN}✓ Repository source injected{Colors.NC}")
 
@@ -218,14 +218,14 @@ def fix_permissions_targets(repo_root: Path, profile_dir: Path):
     """
     print(f"{Colors.BLUE}Fixing permissions targets...{Colors.NC}")
     
-    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline
+    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / offline
     cache_dir.mkdir(parents=True, exist_ok=True)
     
-    onmachine/onmachine/bin_dir = profile_dir / 'airootfs' / 'usr' / 'local' / onmachine/onmachine/bin
+    onmachine/src/bin_dir = profile_dir / airootfs' / 'usr' / 'local / onmachine/onmachine/bin
     onmachine/onmachine/bin_dir.mkdir(parents=True, exist_ok=True)
     
-    upload_log_source = repo_root / onmachine/onmachine/bin' / 'omarchy-upload-log
+    upload_log_source = repo_root / onmachine/src/bin / omarchy-upload-log
     if upload_log_source.exists():
-        shutil.copy2(upload_log_source, onmachine/onmachine/bin_dir / 'omarchy-upload-log)
+        shutil.copy2(upload_log_source, onmachine/src/bin_dir / omarchy-upload-log)
         (onmachine/onmachine/bin_dir / 'omarchy-upload-log').chmod(0o755)
         print(f"{Colors.GREEN}✓ Copied omarchy-upload-log utility{Colors.NC}")

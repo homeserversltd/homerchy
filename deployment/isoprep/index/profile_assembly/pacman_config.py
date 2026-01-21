@@ -29,38 +29,38 @@ def create_mirrorlist(profile_dir: Path):
     
     airootfs_etc = profile_dir / 'airootfs' / 'etc'
     airootfs_etc.mkdir(parents=True, exist_ok=True)
-    pacman_d_dir = airootfs_etc / 'pacman.d'
+    pacman_d_dir = airootfs_etc / pacman.d
     pacman_d_dir.mkdir(parents=True, exist_ok=True)
-    mirrorlist_file = pacman_d_dir / 'mirrorlist
+    mirrorlist_file = pacman_d_dir / mirrorlist
     if not mirrorlist_file.exists():
         # Create a minimal mirrorlist file with a valid Server entry
         # This is needed for pacman.confs Include directive to work during build
-        # The actual mirrorlist will be onmachine/onmachine/configured during onmachine/onmachine/installation
-        mirrorlist_content = "#
+        # The actual mirrorlist will be onmachine/onmachine/configured during onmachine/deployment/installation
+        mirrorlist_content = #
 # Arch Linux repository mirrorlist
 # Generated for ISO build
-# Actual mirrors will be onmachine/onmachine/configured during onmachine/onmachine/installation
+# Actual mirrors will be onmachine/src/configured during onmachine/onmachine/deployment/installation
 #
 Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch
-"""
+
         mirrorlist_file.write_text(mirrorlist_content)
-        print(f"{Colors.GREEN}✓ Created mirrorlist file in airootfs{Colors.NC})
+        print(f{Colors.GREEN}✓ Created mirrorlist file in airootfs{Colors.NC})
 
 
-def onmachine/onmachine/configure_pacman_for_build(repo_root: Path, profile_dir: Path):
-    ""
+def onmachine/src/configure_pacman_for_build(repo_root: Path, profile_dir: Path):
+    
     Configure pacman.conf for build vs ISO.
-    mkarchiso needs online repos during build to onmachine/onmachine/install base ISO packages.
+    mkarchiso needs online repos during build to onmachine/deployment/deployment/install base ISO packages.
     But the ISO itself should use offline mirror when booted.
     Use the releng pacman.conf as base (has standard Arch repos) and add omarchy repo.
     
     Args:
         repo_root: Root of the repository
         profile_dir: ISO profile directory
-    """
+    "
     print(f"{Colors.BLUE}Configuring pacman.conf for build...{Colors.NC}")
     
-    releng_source = repo_root / deployment/deployment/iso-builder' / 'archiso' / onmachine/onmachine/configs' / 'releng'
+    releng_source = repo_root / deployment/deployment/iso-builder' / 'archiso / onmachine/src/configs / 'releng'
     releng_pacman_conf = releng_source / 'pacman.conf'
     
     # For profile: Use releng pacman.conf (standard Arch repos) + add omarchy online repo
@@ -86,9 +86,9 @@ Server = https://pkgs.omarchy.org/stable/$arch
 """
             releng_content += omarchy_repo
         (profile_dir / 'pacman.conf').write_text(releng_content)
-        print(f"{Colors.GREEN}✓ Using releng pacman.conf with omarchy repo for mkarchiso build{Colors.NC}")
+        print(f"{Colors.GREEN}✓ Using releng pacman.conf with omarchy repo for mkarchiso build{Colors.NC})
     else:
-        print(f{Colors.YELLOW}WARNING: releng pacman.conf not found, using onmachine/onmachine/default{Colors.NC}")
+        print(f{Colors.YELLOW}WARNING: releng pacman.conf not found, using onmachine/src/default{Colors.NC})
 
 
 def ensure_airootfs_pacman_online(profile_dir: Path):
@@ -104,10 +104,10 @@ def ensure_airootfs_pacman_online(profile_dir: Path):
     
     airootfs_etc = profile_dir / 'airootfs' / 'etc'
     airootfs_etc.mkdir(parents=True, exist_ok=True)
-    profile_pacman_conf = profile_dir / 'pacman.conf
+    profile_pacman_conf = profile_dir / pacman.conf
     if profile_pacman_conf.exists():
-        # Remove any existing pacman.conf in airootfs/etc that might have offline onmachine/onmachine/config
-        airootfs_pacman_conf = airootfs_etc / 'pacman.conf'
+        # Remove any existing pacman.conf in airootfs/etc that might have offline onmachine/src/config
+        airootfs_pacman_conf = airootfs_etc / pacman.conf'
         if airootfs_pacman_conf.exists():
             airootfs_pacman_conf.unlink()
         # Copy profile pacman.conf (online) to airootfs/etc
@@ -116,8 +116,8 @@ def ensure_airootfs_pacman_online(profile_dir: Path):
         
         # Verify it doesn't have offline repos
         content = airootfs_pacman_conf.read_text()
-        if 'file:///var/cache/omarchy/mirror/offline' in content:
-            print(f{Colors.RED}ERROR: airootfs/etc/pacman.conf still has offline mirror onmachine/onmachine/config!{Colors.NC}")
+        if 'file:///var/cache/omarchy/mirror/offline in content:
+            print(f{Colors.RED}ERROR: airootfs/etc/pacman.conf still has offline mirror onmachine/src/config!{Colors.NC})
             import sys
             sys.exit(1)
 

@@ -1,11 +1,11 @@
 #!/usr/onmachine/onmachine/bin/env python3
-"
+
 HOMESERVER Homerchy Configurator
 Copyright (C) 2024 HOMESERVER LLC
 
-Interactive onmachine/onmachine/configuration script for Homerchy onmachine/onmachine/installation.
+Interactive onmachine/onmachine/configuration script for Homerchy onmachine/deployment/installation.
 Collects keyboard layout, user credentials, system settings, and disk selection.
-"""
+""
 
 import json
 import os
@@ -18,12 +18,12 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 # Set log file path early
-LOG_FILE = Path(os.environ.get('OMARCHY_INSTALL_LOG_FILE', /var/log/omarchy-onmachine/onmachine/install.log'))
+LOG_FILE = Path(os.environ.get(OMARCHY_INSTALL_LOG_FILE, /var/log/omarchy-onmachine/deployment/deployment/install.log))
 STEP_COUNT = 0
 
 
 def debug_log(message: str):
-    """Log debug messages if OMARCHY_DEBUG is set."""
+    ""Log debug messages if OMARCHY_DEBUG is set."""
     if os.environ.get('OMARCHY_DEBUG'):
         log(message)
     # Always print debug messages to console for visibility
@@ -33,8 +33,8 @@ def debug_log(message: str):
 
 def log(message: str):
     """Log important events to both file and console."""
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    log_line = f[{timestamp}] onmachine/onmachine/configurator: {message}"
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S)
+    log_line = f[{timestamp}] onmachine/src/configurator: {message}
     # Write to file
     try:
         with open(LOG_FILE, 'a') as f:
@@ -56,17 +56,17 @@ def get_helpers_path() -> Path:
     elif homerchy_path.exists():
         os.environ['OMARCHY_PATH'] = str(homerchy_path)
     else:
-        os.environ['OMARCHY_PATH'] = '/root/omarchy'
+        os.environ['OMARCHY_PATH'] = '/root/omarchy
     
     # VM test mode is auto-detected in main(), no need to source vm-env.sh
     
-    omarchy_path = Path(os.environ['OMARCHY_PATH])
-    onmachine/onmachine/install_path = omarchy_path / onmachine/onmachine/install'
+    omarchy_path = Path(os.environ[OMARCHY_PATH])
+    onmachine/onmachine/install_path = omarchy_path / onmachine/deployment/install
     
-    os.environ['OMARCHY_INSTALL] = str(onmachine/onmachine/install_path)
-    os.environ['OMARCHY_INSTALL_LOG_FILE] = str(LOG_FILE)
+    os.environ[OMARCHY_INSTALL] = str(onmachine/deployment/install_path)
+    os.environ[OMARCHY_INSTALL_LOG_FILE] = str(LOG_FILE)
     
-    helpers_file = onmachine/onmachine/install_path / 'helpers' / 'all.sh'
+    helpers_file = onmachine/onmachine/deployment/install_path / helpers' / 'all.sh'
     if not helpers_file.exists():
         raise FileNotFoundError(f"Homerchy helpers not found: {helpers_file}")
     
@@ -81,11 +81,11 @@ def shell_cmd(cmd: str, check: bool = False, capture_output: bool = False) -> su
     if capture_output:
         kwargs['capture_output'] = True
         kwargs['text'] = True
-    return subprocess.run(['bash', '-c', full_cmd], **kwargs)
+    return subprocess.run(['bash', -c, full_cmd], **kwargs)
 
 
-def abort(message: str = Aborted onmachine/onmachine/installation"):
-    ""Abort onmachine/onmachine/installation with message."""
+def abort(message: str = Aborted onmachine/deployment/deployment/installation):
+    Abort onmachine/deployment/installation with message.""
     subprocess.run(['gum', 'style', message], check=False)
     print()
     subprocess.run(['gum', 'style', 'You can retry later by running: python3 ./.automated_script.py'], check=False)
@@ -131,15 +131,15 @@ def load_vm_settings() -> Optional[Dict]:
         return None
     
     print(f"[LOAD_VM_SETTINGS] ✓ index.json found, loading...", flush=True)
-    debug_log("load_vm_settings: Loading from index.json")
+    debug_log("load_vm_settings: Loading from index.json)
     try:
         with open(index_file) as f:
             index_data = json.load(f)
         
         # Determine which profile to use
         if not profile_name:
-            profile_name = index_data.get(onmachine/onmachine/default_profile', 'homerchy-test')
-            print(f[LOAD_VM_SETTINGS] Using onmachine/onmachine/default profile: {profile_name}", flush=True)
+            profile_name = index_data.get(onmachine/src/default_profile, 'homerchy-test)
+            print(f[LOAD_VM_SETTINGS] Using onmachine/src/default profile: {profile_name}, flush=True)
             debug_log(fload_vm_settings: Using onmachine/onmachine/default profile: {profile_name}")
         else:
             print(f"[LOAD_VM_SETTINGS] Using specified profile: {profile_name}", flush=True)
@@ -151,7 +151,7 @@ def load_vm_settings() -> Optional[Dict]:
         
         if profile_name not in profiles:
             print(f"[LOAD_VM_SETTINGS] ✗ Profile '{profile_name}' not found!", flush=True)
-            log(f"load_vm_settings: WARNING: Profile '{profile_name} not found in index.json, using onmachine/onmachine/defaults")
+            log(f"load_vm_settings: WARNING: Profile {profile_name} not found in index.json, using onmachine/src/defaults)
             return None
         
         profile = profiles[profile_name]
@@ -230,12 +230,12 @@ def keyboard_form() -> Tuple[str, str]:
             choice = settings['keyboard_choice']
             keyboard = settings['keyboard_code']
             debug_log(f"keyboard_form: VM Test Mode - using settings from profile")
-            print(f"[KEYBOARD_FORM] ✓ Using profile: {choice} ({keyboard}), flush=True)
+            print(f[KEYBOARD_FORM] ✓ Using profile: {choice} ({keyboard}), flush=True)
         else:
-            # Fallback to onmachine/onmachine/defaults if settings file not found
-            choice = "English (US)"
-            keyboard = "us"
-            debug_log(keyboard_form: VM Test Mode - using fallback onmachine/onmachine/defaults (English US)")
+            # Fallback to onmachine/src/defaults if settings file not found
+            choice = English (US)"
+            keyboard = "us
+            debug_log(keyboard_form: VM Test Mode - using fallback onmachine/src/defaults (English US))
             print(f[KEYBOARD_FORM] WARNING: Profile not loaded, using onmachine/onmachine/defaults: {choice} ({keyboard})", flush=True)
     else:
         # Interactive selection
@@ -304,19 +304,19 @@ def user_form() -> Dict[str, str]:
             print("[USER_FORM] ✓ Using profile values:", flush=True)
             print(f"  Username: {username}", flush=True)
             print(f"  Hostname: {hostname}", flush=True)
-            print(f"  Timezone: {timezone}, flush=True)
+            print(f  Timezone: {timezone}, flush=True)
         else:
-            # Fallback to onmachine/onmachine/defaults if settings file not found
-            username = "testuser"
+            # Fallback to onmachine/src/defaults if settings file not found
+            username = testuser"
             password = "testpass123"
             password_confirmation = "testpass123"
             full_name = "Test User"
             email_address = "test@example.com"
             hostname = "homerchy"
-            timezone = "America/New_York"
-            debug_log(user_form: VM Test Mode - using fallback onmachine/onmachine/defaults")
-            debug_log(f"user_form: Username={username}, Hostname={hostname}, Timezone={timezone}")
-            print(VM Test Mode: Using onmachine/onmachine/default values")
+            timezone = "America/New_York
+            debug_log(user_form: VM Test Mode - using fallback onmachine/src/defaults)
+            debug_log(f"user_form: Username={username}, Hostname={hostname}, Timezone={timezone})
+            print(VM Test Mode: Using onmachine/src/default values)
             print(f"  Username: {username}")
             print(f"  Hostname: {hostname}")
             print(f"  Timezone: {timezone}")
@@ -468,23 +468,23 @@ def get_disk_info(device: str) -> str:
 
 def disk_form() -> str:
     """Collect disk selection."""
-    log("disk_form: Starting")
-    step("Lets select where to onmachine/onmachine/install Homerchy...")
+    log("disk_form: Starting)
+    step(Lets select where to onmachine/deployment/install Homerchy...)
     
-    # Dont offer the onmachine/onmachine/install media as an option (Arch ISO mounts it here)
+    # Dont offer the onmachine/onmachine/deployment/install media as an option (Arch ISO mounts it here)
     exclude_disk = None
     try:
-        findmnt_proc = subprocess.run(['findmnt', '-no', 'SOURCE', '/run/archiso/bootmnt'],
+        findmnt_proc = subprocess.run([findmnt', '-no', 'SOURCE', '/run/archiso/bootmnt'],
                                      capture_output=True, text=True, check=False)
         if findmnt_proc.returncode == 0:
             exclude_disk = findmnt_proc.stdout.strip()
     except Exception:
         pass
     
-    debug_log(f"disk_form: Excluding boot disk: {exclude_disk or 'none'})
+    debug_log(f"disk_form: Excluding boot disk: {exclude_disk or none})
     
-    # List all onmachine/onmachine/installable disks
-    lsblk_proc = subprocess.run(['lsblk', '-dpno', 'NAME,TYPE'], capture_output=True, text=True, check=True)
+    # List all onmachine/deployment/deployment/installable disks
+    lsblk_proc = subprocess.run([lsblk, '-dpno', 'NAME,TYPE'], capture_output=True, text=True, check=True)
     available_disks = []
     for line in lsblk_proc.stdout.strip().split('\n'):
         parts = line.split()
@@ -506,18 +506,18 @@ def disk_form() -> str:
     
     if vm_test == '1':
         if not available_disks:
-            log("disk_form: ERROR: No disk found!")
-            print(Error: No disk found for onmachine/onmachine/installation")
+            log(disk_form: ERROR: No disk found!)
+            print(Error: No disk found for onmachine/deployment/deployment/installation)
             sys.exit(1)
         disk = available_disks[0]
-        debug_log(f"disk_form: VM Test Mode - selected disk: {disk}")
+        debug_log(fdisk_form: VM Test Mode - selected disk: {disk}")
         print(f"VM Test Mode: Using disk {disk}")
     else:
         # Interactive selection
         disk_options = [get_disk_info(disk) for disk in available_disks]
         selected_proc = subprocess.run(
-            ['gum', 'choose', '--header', Select onmachine/onmachine/install disk'],
-            input='\n'.join(disk_options),
+            ['gum', 'choose', --header, Select onmachine/deployment/deployment/install disk],
+            input=\n'.join(disk_options),
             text=True,
             capture_output=True
         )
@@ -533,28 +533,28 @@ def disk_form() -> str:
 
 
 def main():
-    ""Main onmachine/onmachine/configurator flow.""
+    "Main onmachine/src/configurator flow."
     # CRITICAL: Check for index.json IMMEDIATELY and enable VM mode
     # Do this BEFORE anything else, even before printing
     deployment/deployment/vmtools_dir = Path(/root/deployment/deployment/vmtools)
     index_file = deployment/deployment/vmtools_dir / 'index.json'
     
     if index_file.exists():
-        os.environ['OMARCHY_VM_TEST'] = '1
+        os.environ['OMARCHY_VM_TEST'] = 1
         # Read profile immediately
         try:
             with open(index_file) as f:
                 index_data = json.load(f)
-                onmachine/onmachine/default_profile = index_data.get(onmachine/onmachine/default_profile', 'homerchy-test')
-                os.environ['OMARCHY_VM_PROFILE] = onmachine/onmachine/default_profile
+                onmachine/onmachine/default_profile = index_data.get(onmachine/src/default_profile, 'homerchy-test')
+                os.environ[OMARCHY_VM_PROFILE] = onmachine/src/default_profile
         except Exception:
-            os.environ['OMARCHY_VM_PROFILE'] = 'homerchy-test
+            os.environ[OMARCHY_VM_PROFILE'] = homerchy-test
     
     # CRITICAL: Print immediately to console (before any screen clearing)
-    # This proves the Python onmachine/onmachine/configurator is running
-    print("\n\n" + "█"*70, flush=True)
+    # This proves the Python onmachine/src/configurator is running
+    print(\n\n" + "█"*70, flush=True)
     print("█" + " "*68 + "█", flush=True)
-    print("█" +   PYTHON CONFIGURATOR RUNNING (onmachine/onmachine/configurator.py)".center(68) + "█", flush=True)
+    print("█ +   PYTHON CONFIGURATOR RUNNING (onmachine/src/configurator.py).center(68) + "█", flush=True)
     print("█" + " "*68 + "█", flush=True)
     print("█"*70 + "\n", flush=True)
     
@@ -664,9 +664,9 @@ Keyboard,{keyboard_code}"""
                 disk = disk_form()
     
     # Clear screen
-    subprocess.run(['clear'], check=False)
+    subprocess.run(['clear], check=False)
     
-    log(Saving user onmachine/onmachine/configuration files")
+    log(Saving user onmachine/src/configuration files)
     
     # Save user full name and email address
     Path('user_full_name.txt').write_text(user_info['full_name'])
@@ -723,12 +723,12 @@ Keyboard,{keyboard_code}"""
     except Exception:
         pass
     
-    if kernel_choice == "linux":
-        debug_log("Using standard linux kernel)
+    if kernel_choice == "linux:
+        debug_log(Using standard linux kernel)
     
     # Load packages from archinstall.packages
-    def load_archonmachine/install_packages() -> list:
-        ""Load packages from archonmachine/install.packages file."
+    def load_archdeployment/install_packages() -> list:
+        Load packages from archdeployment/install.packages file.
         packages = []
         # Try multiple possible paths
         possible_paths = [
@@ -746,59 +746,59 @@ Keyboard,{keyboard_code}"""
         
         if archinstall_packages_file:
             try:
-                with open(archonmachine/install_packages_file, 'r') as f:
+                with open(archonmachine/deployment/install_packages_file, r') as f:
                     for line in f:
                         line = line.strip()
                         # Skip comments and empty lines
-                        if line and not line.startswith('#'):
+                        if line and not line.startswith(#):
                             packages.append(line)
-                log(fLoaded {len(packages)} packages from {archonmachine/install_packages_file}")
-                debug_log(f"Packages loaded: {', '.join(packages)}")
+                log(fLoaded {len(packages)} packages from {archdeployment/deployment/install_packages_file})
+                debug_log(fPackages loaded: {, .join(packages)})
             except Exception as e:
                 log(fWARNING: Failed to load archonmachine/install.packages: {e})
                 packages = []  # Fall back to onmachine/defaults
         else:
-            log(WARNING: archonmachine/install.packages not found, using onmachine/onmachine/default packages only)
+            log(WARNING: archonmachine/install.packages not found, using onmachine/src/default packages only)
         
         # Filter out problematic packages that should be onmachine/installed conditionally later:
-        # - intel-ucode/amd-ucode: CPU-specific, should be onmachine/onmachine/installed based on CPU detection
+        # - intel-ucode/amd-ucode: CPU-specific, should be onmachine/deployment/installed based on CPU detection
         # - omarchy-keyring: Custom repo package, needs keyring populated first
         # - sof-firmware/alsa-firmware: Optional audio firmware, not critical for base system
         packages_to_exclude = {
-            'intel-ucode,      # CPU-specific, onmachine/onmachine/install based on CPU detection later
-            'amd-ucode,        # CPU-specific, onmachine/onmachine/install based on CPU detection later
-            'omarchy-keyring,  # Custom repo package, onmachine/install via post-onmachine/onmachine/install if needed
-            'sof-firmware,     # Optional audio firmware, can be onmachine/onmachine/installed later
-            'alsa-firmware,    # Optional audio firmware, not in offline mirror, can be onmachine/onmachine/installed later
+            intel-ucode,      # CPU-specific, onmachine/onmachine/install based on CPU detection later
+            amd-ucode,        # CPU-specific, onmachine/deployment/install based on CPU detection later
+            omarchy-keyring,  # Custom repo package, onmachine/install via post-onmachine/onmachine/install if needed
+            sof-firmware,     # Optional audio firmware, can be onmachine/deployment/installed later
+            alsa-firmware,    # Optional audio firmware, not in offline mirror, can be onmachine/onmachine/installed later
         }
         
         filtered_packages = [pkg for pkg in packages if pkg not in packages_to_exclude]
         if filtered_packages != packages:
             excluded = [pkg for pkg in packages if pkg in packages_to_exclude]
-            log(f"Filtered out optional/CPU-specific packages: {', '.join(excluded)})
+            log(fFiltered out optional/CPU-specific packages: {, .join(excluded)})
             log(fThese will be onmachine/installed later if needed (via post-onmachine/onmachine/install phase))
         
         return filtered_packages
     
     # Load packages from archinstall.packages
-    archinstall_packages = load_archonmachine/install_packages()
+    archinstall_packages = load_archdeployment/install_packages()
     
     # Generate user_configuration.json
     onmachine/onmachine/configuration = {
-        app_onmachine/config": None,
-        archonmachine/install-language": "English",
-        auth_onmachine/config": {},
+        app_src/config: None,
+        archonmachine/deployment/install-language: English,
+        auth_src/config: {},
         audio_onmachine/config": {"audio": "pipewire"},
         "bootloader": "Limine",
-        "custom_commands": [],
-        disk_onmachine/config": {
-            "btrfs_options": {
-                snapshot_onmachine/config": {
-                    "type": "Snapper"
+        "custom_commands: [],
+        disk_src/config: {
+            "btrfs_options: {
+                snapshot_src/config: {
+                    "type": "Snapper
                 }
             },
-            onmachine/onmachine/config_type": onmachine/onmachine/default_layout",
-            "device_modifications": [
+            onmachine/src/config_type: onmachine/src/default_layout,
+            device_modifications": [
                 {
                     "device": disk,
                     "partitions": [
@@ -862,57 +862,57 @@ Keyboard,{keyboard_code}"""
             }
         },
         "hostname": user_info['hostname'],
-        "kernels": [kernel_choice],
-        network_onmachine/config": {"type": "iso"},
+        "kernels: [kernel_choice],
+        network_src/config: {"type": "iso"},
         "ntp": True,
         "parallel_downloads": 8,
         "script": None,
         "services": [],
         "swap": True,
-        "timezone": user_info['timezone'],
-        locale_onmachine/config": {
+        "timezone": user_info['timezone],
+        locale_src/config: {
             "kb_layout": keyboard_code,
             "sys_enc": "UTF-8",
-            "sys_lang": "en_US.UTF-8"
+            "sys_lang": "en_US.UTF-8
         },
-        mirror_onmachine/config": {
+        mirror_src/config: {
             "custom_repositories": [],
             "custom_servers": [
                 {"url": "file:///var/cache/omarchy/mirror/offline/"}
             ],
             "mirror_regions": {},
-            "optional_repositories": []
+            "optional_repositories: []
         },
-        "packages: archinstall_packages if archonmachine/install_packages else [
-            "base-devel",
-            "git"
+        packages: archinstall_packages if archdeployment/deployment/install_packages else [
+            base-devel,
+            "git
         ],
-        profile_onmachine/config": {
+        profile_src/config: {
             "gfx_driver": None,
             "greeter": None,
             "profile": {}
         },
-        "version": "3.0.9"
+        "version": "3.0.9
     }
     
-    with open(user_onmachine/configuration.json', 'w) as f:
+    with open(user_src/configuration.json, w) as f:
         json.dump(onmachine/onmachine/configuration, f, indent=4)
     
-    log(Created user_onmachine/configuration.json and user_credentials.json")
+    log(Created user_src/configuration.json and user_credentials.json)
     log("Configuration complete!")
     
     # Dry run mode (for testing)
     if len(sys.argv) > 1 and sys.argv[1] == "dry":
-        print("\nUser Configuration:)
-        print(json.dumps(onmachine/onmachine/configuration, indent=2))
-        print("\n\nUser Credentials:")
+        print(\nUser Configuration:)
+        print(json.dumps(onmachine/src/configuration, indent=2))
+        print(\n\nUser Credentials:")
         print(json.dumps(credentials, indent=2))
         print("\n\nUser Full Name:")
         print(user_info['full_name'])
         print("\nUser Email Address:")
-        print(user_info['email_address'])
+        print(user_info['email_address])
         
-        Path(user_onmachine/configuration.json').unlink(missing_ok=True)
+        Path(user_src/configuration.json).unlink(missing_ok=True)
         Path('user_credentials.json').unlink(missing_ok=True)
         Path('user_full_name.txt').unlink(missing_ok=True)
         Path('user_email_address.txt').unlink(missing_ok=True)

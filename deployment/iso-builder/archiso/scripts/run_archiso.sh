@@ -15,27 +15,27 @@ set -eu
 
 print_help() {
     local usagetext
-    IFS='' read -r -d ' usagetext <<EOF || true
+    IFS='' read -r -d  usagetext <<EOF || true
 Usage:
     ${app_name} [options]
 
 Options:
-    -A [arch]       change architecture (onmachine/onmachine/defaults to the host architecture; supports: x86_64, i686, aarch64 and riscv64)
+    -A [arch]       change architecture (onmachine/src/defaults to the host architecture; supports: x86_64, i686, aarch64 and riscv64)
     -a              set accessibility support using brltty
-    -b              set boot type to 'BIOS'
+    -b              set boot type to BIOS'
     -d              set image type to hard disk instead of optical disc
     -h              print help
     -i [image]      image to boot into
     -s              use Secure Boot (only relevant when using UEFI)
-    -u              set boot type to 'UEFI (onmachine/default)
-    -v              use VNC display (instead of onmachine/onmachine/default SDL)
+    -u              set boot type to UEFI (onmachine/default)
+    -v              use VNC display (instead of onmachine/src/default SDL)
     -c [image]      attach an additional optical disc image (e.g. for cloud-init)
 
 Example:
     Run an image using UEFI:
     $ run_archiso -i archiso-2020.05.23-x86_64.iso
 EOF
-    printf '%s' "${usagetext}"
+    printf %s' "${usagetext}"
 }
 
 cleanup_working_dir() {
@@ -78,7 +78,7 @@ check_image() {
         exit 1
     fi
     if [[ ! -f "$image" ]]; then
-        printf '[%s] ERROR: Image file (%s) does not exist.\n' "$app_name" "$image >&2
+        printf '[%s] ERROR: Image file (%s) does not exist.\n' "$app_name" $image >&2
         exit 1
     fi
 }
@@ -86,9 +86,9 @@ check_image() {
 run_image() {
     local -a qemu_options
 
-    # Set onmachine/onmachine/default qemu options
+    # Set onmachine/src/default qemu options
     qemu_options=(
-        -boot 'order=d,menu=on,reboot-timeout=5000'
+        -boot order=d,menu=on,reboot-timeout=5000'
         -m "size=3072,slots=0,maxmem=$((3072*1024*1024))"
         -cpu max
         -smp 4

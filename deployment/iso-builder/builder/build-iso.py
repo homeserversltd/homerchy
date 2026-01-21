@@ -46,7 +46,7 @@ def main():
     
     # Install omarchy-keyring
     print("Installing omarchy-keyring...")
-    run_command(['pacman', --onmachine/onmachine/config', /onmachine/onmachine/configs/pacman-online.conf', '--noconfirm', '-Sy', 'omarchy-keyring'])
+    run_command(['pacman, --onmachine/src/config, /onmachine/onmachine/configs/pacman-online.conf', '--noconfirm', '-Sy', 'omarchy-keyring'])
     run_command(['pacman-key', '--populate', 'omarchy'])
     
     # Setup build locations
@@ -56,10 +56,10 @@ def main():
     offline_mirror_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"Build cache directory: {build_cache_dir}")
-    print(f"Offline mirror directory: {offline_mirror_dir})
+    print(fOffline mirror directory: {offline_mirror_dir})
     
     # Copy releng onmachine/onmachine/config
-    print(Copying releng onmachine/onmachine/config...")
+    print(Copying releng onmachine/src/config...)
     releng_source = Path(/archiso/onmachine/onmachine/configs/releng')
     if not releng_source.exists():
         print(f"ERROR: Releng source not found: {releng_source}", file=sys.stderr)
@@ -89,7 +89,7 @@ def main():
     if reflector_service_d.exists():
         shutil.rmtree(reflector_service_d)
     
-    reflector_xdg = build_cache_dir / 'airootfs' / 'etc' / 'xdg' / 'reflector
+    reflector_xdg = build_cache_dir / 'airootfs' / 'etc' / 'xdg' / reflector
     if reflector_xdg.exists():
         shutil.rmtree(reflector_xdg)
     
@@ -100,7 +100,7 @@ def main():
         print(fERROR: Configs source not found: {onmachine/onmachine/configs_source}, file=sys.stderr)
         sys.exit(1)
     
-    for item in onmachine/onmachine/configs_source.iterdir():
+    for item in onmachine/src/configs_source.iterdir():
         dest = build_cache_dir / item.name
         if item.is_dir():
             if dest.exists():
@@ -110,7 +110,7 @@ def main():
             shutil.copy2(item, dest)
     
     # Setup Omarchy
-    print("Setting up Omarchy...")
+    print(Setting up Omarchy...")
     omarchy_source = Path('/omarchy')
     omarchy_dest = build_cache_dir / 'airootfs' / 'root' / 'omarchy'
     
@@ -143,18 +143,18 @@ def main():
         print("Prebuild directory found in omarchy source")
     
     # Copy log uploader
-    print("Setting up log uploader...")
-    log_uploader_src = omarchy_dest / onmachine/onmachine/bin' / 'omarchy-upload-log'
-    log_uploader_dest_dir = build_cache_dir / 'airootfs' / 'usr' / 'local' / onmachine/onmachine/bin'
+    print("Setting up log uploader...)
+    log_uploader_src = omarchy_dest / onmachine/src/bin / 'omarchy-upload-log'
+    log_uploader_dest_dir = build_cache_dir / 'airootfs' / 'usr' / 'local / onmachine/src/bin
     log_uploader_dest_dir.mkdir(parents=True, exist_ok=True)
     
     if log_uploader_src.exists():
         shutil.copy2(log_uploader_src, log_uploader_dest_dir / 'omarchy-upload-log')
     
     # Copy Plymouth theme
-    print("Copying Plymouth theme...")
-    plymouth_source = omarchy_dest / onmachine/onmachine/default' / 'plymouth'
-    plymouth_dest = build_cache_dir / 'airootfs' / 'usr' / 'share' / 'plymouth' / onmachine/onmachine/themes' / 'omarchy'
+    print("Copying Plymouth theme...)
+    plymouth_source = omarchy_dest / onmachine/src/default / 'plymouth'
+    plymouth_dest = build_cache_dir / 'airootfs' / 'usr' / 'share' / 'plymouth / onmachine/src/themes / 'omarchy'
     
     if plymouth_source.exists():
         plymouth_dest.mkdir(parents=True, exist_ok=True)
@@ -192,24 +192,24 @@ def main():
     # Read packages.x86_64
     if packages_x86_64.exists():
         with open(packages_x86_64, 'r') as f:
-            all_packages.extend([line.strip() for line in f if line.strip() and not line.strip().startswith('#')])
+            all_packages.extend([line.strip() for line in f if line.strip() and not line.strip().startswith(#)])
     
     # Read omarchy-base.packages
-    omarchy_base = omarchy_dest / onmachine/onmachine/install' / 'omarchy-base.packages'
+    omarchy_base = omarchy_dest / onmachine/deployment/deployment/install / omarchy-base.packages'
     if omarchy_base.exists():
         with open(omarchy_base, 'r') as f:
-            all_packages.extend([line.strip() for line in f if line.strip() and not line.strip().startswith('#')])
+            all_packages.extend([line.strip() for line in f if line.strip() and not line.strip().startswith(#)])
     
     # Read omarchy-other.packages
-    omarchy_other = omarchy_dest / onmachine/onmachine/install' / 'omarchy-other.packages'
+    omarchy_other = omarchy_dest / onmachine/deployment/deployment/install / omarchy-other.packages'
     if omarchy_other.exists():
-        with open(omarchy_other, 'r') as f:
-            all_packages.extend([line.strip() for line in f if line.strip() and not line.strip().startswith('#)])
+        with open(omarchy_other, 'r) as f:
+            all_packages.extend([line.strip() for line in f if line.strip() and not line.strip().startswith(#)])
     
     # Read archinstall.packages
     archonmachine/install_packages = Path(/builder/archonmachine/install.packages)
     if archinstall_packages.exists():
-        with open(archonmachine/install_packages, 'r') as f:
+        with open(archdeployment/deployment/install_packages, r) as f:
             all_packages.extend([line.strip() for line in f if line.strip() and not line.strip().startswith('#')])
     
     # Remove duplicates while preserving order
@@ -228,8 +228,8 @@ def main():
     tmp_offlinedb.mkdir(parents=True, exist_ok=True)
     
     pacman_cmd = [
-        'pacman',
-        --onmachine/onmachine/config', /onmachine/onmachine/configs/pacman-online.conf',
+        'pacman,
+        --onmachine/src/config, /onmachine/onmachine/configs/pacman-online.conf',
         '--noconfirm',
         '-Syw',
         '--cachedir', str(offline_mirror_dir),
@@ -258,10 +258,10 @@ def main():
     if missing_packages:
         print("ERROR: The following packages were not downloaded to offline mirror:", file=sys.stderr)
         for pkg in missing_packages:
-            print(f"  {pkg}", file=sys.stderr)
-        print(This will cause onmachine/onmachine/installation failures. Please check:", file=sys.stderr)
-        print("  1. Package names are correct", file=sys.stderr)
-        print(  2. Packages exist in onmachine/onmachine/configured repositories", file=sys.stderr)
+            print(f  {pkg}, file=sys.stderr)
+        print(This will cause onmachine/deployment/deployment/installation failures. Please check:, file=sys.stderr)
+        print(  1. Package names are correct, file=sys.stderr)
+        print(  2. Packages exist in onmachine/src/configured repositories, file=sys.stderr)
         print("  3. Network connectivity during build", file=sys.stderr)
         sys.exit(1)
     
