@@ -24,7 +24,7 @@ from .pacman_config import (
 
 
 def create_system_mirror_symlink(profile_dir: Path, cache_dir: Path):
-    ""
+    """
     Create symlink so mkarchiso can find the offline mirror during build.
     mkarchiso uses the pacman.conf from the profile, which references /var/cache/omarchy/mirror/offline
     We need to make that path available on the host system.
@@ -48,7 +48,7 @@ def create_system_mirror_symlink(profile_dir: Path, cache_dir: Path):
         if system_mirror_dir.is_symlink():
             subprocess.run(['sudo', 'rm', '-f', str(system_mirror_dir)], check=False)
         else:
-            # If 'it's a directory, we need sudo to remove it
+            # If it's a directory, we need sudo to remove it
             subprocess.run(['sudo', 'rm', '-rf', str(system_mirror_dir)], check=False)
     
     # Create symlink from system location to profile directory
@@ -56,27 +56,27 @@ def create_system_mirror_symlink(profile_dir: Path, cache_dir: Path):
     cache_dir_absolute = cache_dir.resolve()
     print(f"{Colors.BLUE}Creating symlink with sudo: {system_mirror_dir} -> {cache_dir_absolute}{Colors.NC}")
     subprocess.run(['sudo', 'ln', '-sf', str(cache_dir_absolute), str(system_mirror_dir)], check=True)
-    print(f"{Colors.GREEN}✓ Created symlink{Colors.NC})
+    print(f"{Colors.GREEN}✓ Created symlink{Colors.NC}")
 
 
 def main(phase_path: Path, config: dict) -> dict:
-    
+    """
     Main profile assembly phase function.
     
     Args:
         phase_path: Path to this phase directory
-        onmachine/config: Phase configuration
+        config: Phase configuration
         
     Returns:
         dict: Execution result
-    "
-    print(f"{Colors.BLUE}=== Profile Assembly Phase ==={Colors.NC})
+    """
+    print(f"{Colors.BLUE}=== Profile Assembly Phase ==={Colors.NC}")
     
-    # Get paths from parent onmachine/config
-    repo_root = Path(config.get(repo_root, Path(phase_path).parent.parent.parent))
-    # Use environment variable if set, otherwise fall back to config or onmachine/src/default
+    # Get paths from parent config
+    repo_root = Path(config.get('repo_root', Path(phase_path).parent.parent.parent))
+    # Use environment variable if set, otherwise fall back to config or default
     import os
-    work_dir = Path(os.environ.get(HOMERCHY_WORK_DIR, config.get(work_dir, /mnt/work/homerchy-deployment/deployment/isoprep-work)))
+    work_dir = Path(os.environ.get('HOMERCHY_WORK_DIR', config.get('work_dir', '/mnt/work/homerchy-deployment/deployment/isoprep-work')))
     profile_dir = Path(config.get('profile_dir', work_dir / profile))
     
     print(f"{Colors.BLUE}Assembling ISO profile...{Colors.NC})

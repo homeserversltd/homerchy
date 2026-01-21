@@ -10,6 +10,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 # Add utils to path
@@ -258,17 +259,37 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
         # Create temporary database directory for pacman
         temp_db_dir.mkdir(parents=True, exist_ok=True)
 
-        # Clean up any existing pacman database lock from previous failed builds
+        # Clean up any existing pacman database locks from previous failed builds
+        # Clean both system database lock and custom database lock
+        import time
         subprocess.run(['sudo', 'rm', '-f', '/var/lib/pacman/db.lck'], check=False)
+        subprocess.run(['sudo', 'rm', '-f', str(temp_db_dir / 'db.lck')], check=False)
+        time.sleep(0.5)  # Small delay to ensure lock files are fully released
 
-        # Sync the custom database to ensure it's ready before download
-        subprocess.run(['sudo', 'pacman', '-Sy', '--noconfirm', '--ask=0', '--dbpath', str(temp_db_dir)], check=False, capture_output=True)
+        # Sync the custom database first (needed for package lookup)
+        # Use --dbpath to avoid locking system database
+        subprocess.run(['sudo', 'rm', '-f', '/var/lib/pacman/db.lck'], check=False)
+        subprocess.run(['sudo', 'rm', '-f', str(temp_db_dir / 'db.lck')], check=False)
+        time.sleep(0.2)
+        sync_result = subprocess.run(
+            ['sudo', 'pacman', '-Sy', '--noconfirm', '--ask=0', '--dbpath', str(temp_db_dir)],
+            check=False,
+            capture_output=True
+        )
+        if sync_result.returncode != 0:
+            print(f"{Colors.YELLOW}WARNING: Database sync failed, but continuing anyway...{Colors.NC}")
 
         # Build pacman command (requires root)
-        pacman_cmd = ['sudo', 'pacman', '-Syw', '--noconfirm', '--ask=0', '--cachedir', str(offline_mirror_dir), '--dbpath', str(temp_db_dir)]
+        # Use -Sw (skip sync, we already synced above)
+        pacman_cmd = ['sudo', 'pacman', '-Sw', '--noconfirm', '--ask=0', '--cachedir', str(offline_mirror_dir), '--dbpath', str(temp_db_dir)]
         if pacman_config:
             pacman_cmd.extend([--config, pacman_src/config])
         pacman_cmd.extend(packages_to_download)
+        
+        # Clean locks one more time right before execution
+        subprocess.run(['sudo', 'rm', '-f', '/var/lib/pacman/db.lck'], check=False)
+        subprocess.run(['sudo', 'rm', '-f', str(temp_db_dir / 'db.lck')], check=False)
+        time.sleep(0.2)
         
         # Run pacman to download packages (requires sudo)
         # Show output in real-time so user can see progress

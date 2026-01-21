@@ -30,8 +30,8 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
     print(f"{Colors.BLUE}Creating offline repository database...{Colors.NC}")
     
     # Check if repo-add is available
-    if not shutil.which(repo-add):
-        print(f"{Colors.RED}ERROR: repo-add not found. Please onmachine/deployment/deployment/install pacman-contrib package.{Colors.NC}")
+    if not shutil.which('repo-add'):
+        print(f"{Colors.RED}ERROR: repo-add not found. Please install pacman-contrib package.{Colors.NC}")
         sys.exit(1)
     
     # Find all package files (exclude .sig signature files)

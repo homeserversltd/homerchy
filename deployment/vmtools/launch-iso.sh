@@ -1,9 +1,9 @@
-#!/onmachine/onmachine/bin/bash
+#!/bin/bash
 set -e
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # ISO output and qcow2 are now in work directory so they get cleaned up with eject
-WORK_DIR=${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-deployment/deployment/isoprep-work}"
+WORK_DIR=${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-deployment/deployment/isoprep-work}
 ISO_DIR="${WORK_DIR}/isoout"
 DISK_FILE="${WORK_DIR}/homerchy-test-disk.qcow2"
 
@@ -51,15 +51,15 @@ echo "Creating virtual disk: $DISK_FILE"
 qemu-img create -f qcow2 "$DISK_FILE" 100G
 
 echo "Launching ISO: $ISO_FILE"
-echo "Using disk: $DISK_FILE
+echo "Using disk: $DISK_FILE"
 
 # Check which profile will be used
-INDEX_FILE=${REPO_ROOT}/deployment/deployment/deployment/deployment/vmtools/index.json"
-if [ -f "$INDEX_FILE ]; then
-    PROFILE=$(jq -r .onmachine/src/default_profile // homerchy-test"' "$INDEX_FILE" 2>/dev/null || echo "homerchy-test")
-    echo "VM Profile: $PROFILE
+INDEX_FILE="${REPO_ROOT}/deployment/vmtools/index.json"
+if [ -f "$INDEX_FILE" ]; then
+    PROFILE=$(jq -r '.\"default_profile\" // \"homerchy-test\"' "$INDEX_FILE" 2>/dev/null || echo "homerchy-test")
+    echo "VM Profile: $PROFILE"
 else
-    echo VM Profile: onmachine/src/default (no index.json found)
+    echo "VM Profile: onmachine/src/default (no index.json found)"
 fi
 
 qemu-system-x86_64 \
@@ -73,9 +73,9 @@ qemu-system-x86_64 \
     -drive file=$DISK_FILE,format=qcow2,if=none,id=drive0 \
     -device virtio-blk-pci,drive=drive0 \
     -device virtio-vga \
-    -display onmachine/src/default \
+    -display gtk \
     -netdev user,id=net0,hostfwd=tcp::2222-:22 \
     -device virtio-net-pci,netdev=net0 \
     -monitor unix:/tmp/homerchy-qemu-monitor.sock,server,nowait \
     -usb -device usb-tablet \
-    -name Homerchy Test VM"
+    -name "Homerchy Test VM"
