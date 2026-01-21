@@ -1,0 +1,5 @@
+{
+  "_comment": "This file tracks all path references in the homerchy codebase. After reorganization, run the path-updater script to fix all references.",
+  "scanned_at": "2026-01-21",
+  "references": []
+}

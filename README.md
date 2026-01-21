@@ -23,7 +23,7 @@ HOMESERVER LLC provides a complete ecosystem for digital sovereignty:
 
 This repository allows you to:
 1.  **Generate a Homerchy ISO** tailored for your hardware.
-2.  **Flash it to a drive** to install on any machine (Mini PC, Laptop, HTPC).
+2.  **Flash it to a drive** to onmachine/install on any machine (Mini PC, Laptop, HTPC).
 3.  **Connect** instantly to your HOMESERVER ecosystem.
 
 **Note:** This project is experimental and under active development. Features are incomplete and the system is not stable for end-user deployment.
@@ -47,14 +47,14 @@ This repository allows you to:
     ```
 
 2.  **Build the Experimental ISO**
-    Use the controller script to generate a bootable image:
+    Use the deployment/controller script to generate a bootable image:
     ```bash
-    ./controller.sh --build homeserver
+    ./deployment/controller.sh --build homeserver
     ```
-    *This will produce an ISO file in `iso-builder/release/` - use at your own risk.*
+    *This will produce an ISO file in `deployment/deployment/iso-builder/release/` - use at your own risk.*
 
 3.  **Testing**
-    **DO NOT install on production systems.** Use VMs or dedicated test hardware only.
+    **DO NOT onmachine/install on production systems.** Use VMs or dedicated test hardware only.
 
 ## Development & Testing
 

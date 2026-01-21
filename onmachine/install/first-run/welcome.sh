@@ -1,0 +1,1 @@
+notify-send     Learn Keyonmachine/bindings" "Super + K for cheatsheet.\nSuper + Space for application launcher.\nSuper + Alt + Space for Homerchy Menu." -u critical

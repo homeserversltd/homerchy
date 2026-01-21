@@ -1,0 +1,33 @@
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/onmachine/config.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/theme.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/branding.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/git.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/gpg.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/timezones.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/increase-sudo-tries.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/increase-lockout-limit.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/ssh-flakiness.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/detect-keyboard-layout.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/xcompose.sh
+# mise-work.sh removed - no developer tools needed for TV receiver
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/fix-powerprofilesctl-shebang.sh
+# docker.sh removed - no developer tools needed for TV receiver
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/mimetypes.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/localdb.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/walker-elephant.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/fast-shutdown.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/sudoless-asdcontrol.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/network.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/set-wireless-regdom.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/fix-fkeys.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/bluetooth.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/printer.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/usb-autosuspend.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/ignore-power-button.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/nvidia.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/fix-f13-amd-audio-input.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/fix-bcm43xx.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/fix-apple-spi-keyboard.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/fix-apple-suspend-nvme.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/fix-apple-t2.sh
+run_logged $OMARCHY_INSTALL/onmachine/onmachine/config/hardware/fix-surface-keyboard.sh

@@ -1,0 +1,53 @@
+{
+  onmachine/onmachine/default_profile": "homerchy-test",
+  "profiles": {
+    "homerchy-test": {
+      "keyboard": {
+        "choice": "English (US)",
+        "code": "us"
+      },
+      "user": {
+        "username": "owner",
+        "password": "123",
+        "full_name": "Owner",
+        "email_address": "owner@example.com"
+      },
+      "system": {
+        "hostname": "homerchy",
+        "timezone": "America/New_York"
+      }
+    },
+    "developer": {
+      "keyboard": {
+        "choice": "English (US)",
+        "code": "us"
+      },
+      "user": {
+        "username": "dev",
+        "password": "devpass123",
+        "full_name": "Developer",
+        "email_address": "dev@example.com"
+      },
+      "system": {
+        "hostname": "homerchy-dev",
+        "timezone": "America/New_York"
+      }
+    },
+    "production": {
+      "keyboard": {
+        "choice": "English (US)",
+        "code": "us"
+      },
+      "user": {
+        "username": "admin",
+        "password": "securepass123",
+        "full_name": "Administrator",
+        "email_address": "admin@example.com"
+      },
+      "system": {
+        "hostname": "homerchy-prod",
+        "timezone": "UTC"
+      }
+    }
+  }
+}

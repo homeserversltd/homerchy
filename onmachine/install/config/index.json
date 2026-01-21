@@ -1,0 +1,31 @@
+{
+    "metadata": {
+        "schema_version": "1.0.0",
+        "name": "Config Phase",
+        "description": System onmachine/onmachine/configuration"
+    },
+    "children": [
+        onmachine/onmachine/config",
+        "theme",
+        "branding",
+        "git",
+        "gpg",
+        "timezones",
+        "increase-sudo-tries",
+        "increase-lockout-limit",
+        "ssh-flakiness",
+        "detect-keyboard-layout",
+        "xcompose",
+        "fix-powerprofilesctl-shebang",
+        "mimetypes",
+        "localdb",
+        "walker-elephant",
+        "fast-shutdown",
+        "sudoless-asdcontrol",
+        "hardware"
+    ],
+    "execution": {
+        "mode": "sequential",
+        "continue_on_error": true
+    }
+}

@@ -1,0 +1,155 @@
+{
+  "packages": [
+    "zsh",
+    "micro",
+    "fastfetch",
+    "zoxide",
+    "atuin",
+    "oh-my-posh",
+    "nnn",
+    "fzf",
+    "eza",
+    "bat",
+    "bc",
+    "tree",
+    "net-tools",
+    "usbutils",
+    "pciutils",
+    "ripgrep",
+    "git",
+    "yay",
+    "chezmoi",
+    "inetutils",
+    "moar"
+  ],
+  "deployments": [
+    {
+      "source": "dot/.aliases",
+      "destination": "~/.aliases",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source": "dot/.functions",
+      "destination": "~/.functions",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source": "dot/.inputrc",
+      "destination": "~/.inputrc",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source": "dot/.nanorc",
+      "destination": "~/.nanorc",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source": "dot/.profile",
+      "destination": "~/.profile",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source": "dot/.zshrc",
+      "destination": "~/.zshrc",
+      "type": "dotfile",
+      "permissions": "644"
+    },
+    {
+      "source: onmachine/onmachine/onmachine/onmachine/bin/cycle-apps",
+      "destination: ~/onmachine/onmachine/onmachine/onmachine/bin/cycle-apps",
+      "type": "script",
+      "permissions": "755"
+    },
+    {
+      "source: onmachine/onmachine/onmachine/onmachine/bin/nnn_opener.sh",
+      "destination: ~/onmachine/onmachine/onmachine/onmachine/bin/nnn_opener.sh",
+      "type": "script",
+      "permissions": "755"
+    },
+    {
+      "source: onmachine/onmachine/onmachine/onmachine/bin/workspace-nav",
+      "destination: ~/onmachine/onmachine/onmachine/onmachine/bin/workspace-nav",
+      "type": "script",
+      "permissions": "755"
+    },
+    {
+      "source": hypr/onmachine/onmachine/autostart.conf",
+      destination: ~/.onmachine/onmachine/onmachine/onmachine/config/hypr/onmachine/onmachine/autostart.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    },
+    {
+      "source": hypr/onmachine/onmachine/bindings.conf",
+      destination: ~/.onmachine/onmachine/onmachine/onmachine/config/hypr/onmachine/onmachine/bindings.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/envs.conf",
+      "destination: ~/.onmachine/onmachine/onmachine/onmachine/config/hypr/envs.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/hypridle.conf",
+      "destination: ~/.onmachine/onmachine/onmachine/onmachine/config/hypr/hypridle.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/hyprland.conf",
+      "destination: ~/.onmachine/onmachine/onmachine/onmachine/config/hypr/hyprland.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/hyprlock.conf",
+      "destination: ~/.onmachine/onmachine/onmachine/onmachine/config/hypr/hyprlock.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/hyprsunset.conf",
+      "destination: ~/.onmachine/onmachine/onmachine/onmachine/config/hypr/hyprsunset.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/input.conf",
+      "destination: ~/.onmachine/onmachine/onmachine/onmachine/config/hypr/input.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/looknfeel.conf",
+      "destination: ~/.onmachine/onmachine/onmachine/onmachine/config/hypr/looknfeel.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    },
+    {
+      "source": "hypr/monitors.conf",
+      "destination: ~/.onmachine/onmachine/onmachine/onmachine/config/hypr/monitors.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    },
+    {
+      "source": "kitty/kitty.conf",
+      "destination: ~/.onmachine/onmachine/onmachine/onmachine/config/kitty/kitty.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    },
+    {
+      "source": "kitty/theme.conf",
+      "destination: ~/.onmachine/onmachine/onmachine/onmachine/config/kitty/theme.conf",
+      "type": onmachine/onmachine/config",
+      "permissions": "644"
+    }
+  ]
+}
+
+

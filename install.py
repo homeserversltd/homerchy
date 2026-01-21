@@ -211,15 +211,15 @@ def setup_environment():
         
         # Try user's home directory first (normal installation)
         candidate = Path.home() / '.local' / 'share' / 'omarchy'
-        if (candidate / 'install').exists():
+        if (candidate / 'onmachine' / 'install').exists():
             omarchy_path = candidate
         # Try /root/omarchy (ISO location)
-        elif (Path('/root/omarchy') / 'install').exists():
+        elif (Path('/root/omarchy') / 'onmachine' / 'install').exists():
             omarchy_path = Path('/root/omarchy')
         # Try script's parent directory (if run from repo)
         else:
             script_dir = Path(__file__).parent
-            if (script_dir / 'install').exists():
+            if (script_dir / 'onmachine' / 'install').exists():
                 omarchy_path = script_dir
         
         if omarchy_path is None:
@@ -237,7 +237,7 @@ def setup_environment():
         os.environ['OMARCHY_INSTALL_LOG_FILE'] = '/var/log/omarchy-install.log'
     
     # Add OMARCHY bin to PATH
-    omarchy_bin = omarchy_path / 'bin'
+    omarchy_bin = omarchy_path / 'onmachine' / 'bin'
     if omarchy_bin.exists():
         current_path = os.environ.get('PATH', '')
         os.environ['PATH'] = f"{omarchy_bin}:{current_path}"
@@ -365,15 +365,15 @@ def main():
         pass  # Ignore errors - account might not exist yet or might not be locked
     
     # Get install path
-    install_path = Path(os.environ.get('OMARCHY_INSTALL', Path(__file__).parent / 'install'))
+    install_path = Path(os.environ.get('OMARCHY_INSTALL', Path(__file__).parent / 'onmachine' / 'install'))
     
     # Verify install directory exists
     if not install_path.exists():
         print("ERROR: Installation directory not found!", file=sys.stderr)
         print("ERROR: Tried:", file=sys.stderr)
-        print(f"ERROR:   {Path.home() / '.local' / 'share' / 'omarchy' / 'install'}", file=sys.stderr)
-        print(f"ERROR:   {Path('/root/omarchy/install')}", file=sys.stderr)
-        print(f"ERROR:   {Path(__file__).parent / 'install'}", file=sys.stderr)
+        print(f"ERROR:   {Path.home() / '.local' / 'share' / 'omarchy' / 'onmachine' / 'install'}", file=sys.stderr)
+        print(f"ERROR:   {Path('/root/omarchy/onmachine/install')}", file=sys.stderr)
+        print(f"ERROR:   {Path(__file__).parent / 'onmachine' / 'install'}", file=sys.stderr)
         print(f"ERROR: OMARCHY_PATH={os.environ.get('OMARCHY_PATH')}", file=sys.stderr)
         print(f"ERROR: HOME={os.environ.get('HOME')}", file=sys.stderr)
         lockout_and_reboot()
