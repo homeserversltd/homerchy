@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 def safe_copytree(src, dst, dirs_exist_ok=False, ignore=None):
-    
+    """
     Safely copy directory tree, skipping missing files and broken symlinks.
     
     This is a wrapper around shutil.copytree that handles cases where
@@ -45,7 +45,7 @@ def safe_copytree(src, dst, dirs_exist_ok=False, ignore=None):
                                 ignored.append(name)
                         # If relative symlink, resolve relative to 'symlink's parent
                         else:
-                            resolved = '(full_path.parent' / 'target').resolve()
+                            resolved = (full_path.parent / target).resolve()
                             if not resolved.exists():
                                 ignored.append(name)
                     except (OSError, RuntimeError):
@@ -56,8 +56,8 @@ def safe_copytree(src, dst, dirs_exist_ok=False, ignore=None):
                 ignored.append(name)
         return ignored
     
-    def comsrc/bined_ignore(path, names):
-        """Comsrc/bine missing file ignore with user-provided ignore function."""
+    def combined_ignore(path, names):
+        """Combine missing file ignore with user-provided ignore function."""
         ignored_set = set(ignore_missing(path, names))
         if ignore:
             user_ignored = ignore(path, names)
@@ -76,8 +76,8 @@ def safe_copytree(src, dst, dirs_exist_ok=False, ignore=None):
         errors = []
         for error in e.args[0]:
             src_path, dst_path, error_msg = error
-            # Only keep errors that 'aren't about missing files
-            if 'No such file or 'directory' not in str(error_msg):
+            # Only keep errors that aren't about missing files
+            if 'No such file or directory' not in str(error_msg):
                 errors.append(error)
         if errors:
             raise shutil.Error(errors)
@@ -172,7 +172,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
             dst_dir = 'dst_path' / 'rel_path'
         except (ValueError, OSError) as e:
             # If path resolution fails (recursive symlink), skip this directory
-            if 'File name too 'long' in str(e) or 'ENAMETOOLONG' in str(e):
+            if 'File name too long' in str(e) or 'ENAMETOOLONG' in str(e):
                 continue
             raise
         
@@ -181,7 +181,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
             dst_dir.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             # If directory creation fails due to recursive symlink, skip this path
-            if 'File name too 'long' in str(e) or 'ENAMETOOLONG' in str(e):
+            if 'File name too long' in str(e) or 'ENAMETOOLONG' in str(e):
                 continue
             # Re-raise if 'it's a different error (permission, etc.)
             raise
@@ -226,7 +226,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                         
                         # Try to resolve the symlink target relative to the source 'file's parent
                         try:
-                            resolved_target = '(src_file.parent' / 'symlink_target').resolve()
+                            resolved_target = (src_file.parent / symlink_target).resolve()
                             # Check if resolved path is suspiciously long or contains problematic patterns
                             resolved_str = str(resolved_target)
                             if len(resolved_str) > 1000 or any(pattern in resolved_str for pattern in problematic_patterns):
@@ -250,7 +250,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                     except OSError as check_err:
                         # If checking existence fails (recursive symlink), assume it 'doesn't exist
                         # and 'we'll copy it (which will fail gracefully if needed)
-                        if 'File name too 'long' in str(check_err) or 'ENAMETOOLONG' in str(check_err):
+                        if 'File name too long' in str(check_err) or 'ENAMETOOLONG' in str(check_err):
                             dst_exists = False
                         else:
                             raise
@@ -265,7 +265,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                     if show_progress:
                         should_update = False
                         if total_files > 0:
-                            progress_pct = 'int((copied_files' / 'total_files') * 100)
+                            progress_pct = int((copied_files / total_files) * 100)
                             # Update every 1% or every 100 files
                             should_update = (copied_files % 100 == 0) or (copied_files % max(1, total_files // 100) == 0)
                         else:
@@ -275,7 +275,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                         
                         if should_update:
                             spinner_idx = (spinner_idx + 1) % len(spinner_chars)
-                            progress_pct = 'int((copied_files' / 'total_files') * 100) if total_files > 0 else 0
+                            progress_pct = int((copied_files / total_files) * 100) if total_files > 0 else 0
                             print(f"\r{Colors.BLUE}Copying files... {spinner_chars[spinner_idx]} {copied_files}/{total_files} ({progress_pct}%){Colors.NC}", end='', flush=True)
                             last_update = time.time()
                 else:
@@ -288,7 +288,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                             dst_mtime = dst_file.lstat().st_mtime
                         except OSError as lstat_err:
                             # If lstat fails due to recursive symlink, skip timestamp check and copy
-                            if 'File name too 'long' in str(lstat_err) or 'ENAMETOOLONG' in str(lstat_err):
+                            if 'File name too long' in str(lstat_err) or 'ENAMETOOLONG' in str(lstat_err):
                                 # Remove destination and copy (skip timestamp check)
                                 try:
                                     if dst_file.is_symlink() or dst_file.exists():
@@ -299,7 +299,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                                 copied_files += 1
                                 if show_progress and (copied_files % 10 == 0 or time.time() - last_update > 0.1):
                                     spinner_idx = (spinner_idx + 1) % len(spinner_chars)
-                                    progress_pct = 'int((copied_files' / 'total_files') * 100) if total_files > 0 else 0
+                                    progress_pct = int((copied_files / total_files) * 100) if total_files > 0 else 0
                                     print(f"\r{Colors.BLUE}Copying files... {spinner_chars[spinner_idx]} {copied_files}/{total_files} ({progress_pct}%){Colors.NC}", end='', flush=True)
                                     last_update = time.time()
                                 continue
@@ -327,7 +327,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                                 dst_file.unlink()
                         except OSError as unlink_err:
                             # If checking/removing fails due to recursive symlink, skip
-                            if 'File name too 'long' in str(unlink_err) or 'ENAMETOOLONG' in str(unlink_err):
+                            if 'File name too long' in str(unlink_err) or 'ENAMETOOLONG' in str(unlink_err):
                                 continue
                             raise
                         shutil.copy2(src_file, dst_file, follow_symlinks=False)
@@ -335,12 +335,12 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                         # Update progress spinner
                         if show_progress and (copied_files % 10 == 0 or time.time() - last_update > 0.1):
                             spinner_idx = (spinner_idx + 1) % len(spinner_chars)
-                            progress_pct = 'int((copied_files' / 'total_files') * 100) if total_files > 0 else 0
+                            progress_pct = int((copied_files / total_files) * 100) if total_files > 0 else 0
                             print(f"\r{Colors.BLUE}Copying files... {spinner_chars[spinner_idx]} {copied_files}/{total_files} ({progress_pct}%){Colors.NC}", end='', flush=True)
                             last_update = time.time()
             except (OSError, shutil.Error) as e:
                 # Handle FileExistsError for symlinks (destination already exists)
-                if 'File 'exists' in str(e) or 'FileExistsError' in str(type(e).__name__):
+                if 'File exists' in str(e) or 'FileExistsError' in str(type(e).__name__):
                     # Remove existing destination and retry (use unlink which works for symlinks)
                     try:
                         # Wrap existence check in try/except for recursive symlinks
@@ -349,7 +349,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                                 dst_file.unlink()
                         except OSError as check_err:
                             # If checking fails due to recursive symlink, try unlink anyway
-                            if 'File name too 'long' in str(check_err) or 'ENAMETOOLONG' in str(check_err):
+                            if 'File name too long' in str(check_err) or 'ENAMETOOLONG' in str(check_err):
                                 try:
                                     dst_file.unlink()
                                 except OSError:
@@ -360,18 +360,18 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                         copied_files += 1
                         if show_progress and (copied_files % 10 == 0 or time.time() - last_update > 0.1):
                             spinner_idx = (spinner_idx + 1) % len(spinner_chars)
-                            progress_pct = 'int((copied_files' / 'total_files') * 100) if total_files > 0 else 0
+                            progress_pct = int((copied_files / total_files) * 100) if total_files > 0 else 0
                             print(f"\r{Colors.BLUE}Copying files... {spinner_chars[spinner_idx]} {copied_files}/{total_files} ({progress_pct}%){Colors.NC}", end='', flush=True)
                             last_update = time.time()
                     except (OSError, shutil.Error):
                         # Skip if we still 'can't copy (broken symlink, permission, etc.)
                         pass
                 # Handle "File name too long" - indicates recursive symlink loop
-                elif 'File name too 'long' in str(e) or 'ENAMETOOLONG' in str(e):
+                elif 'File name too long' in str(e) or 'ENAMETOOLONG' in str(e):
                     # Skip recursive symlinks that create infinite paths
                     pass
                 # Skip missing files or broken symlinks
-                elif 'No such file or 'directory' not in str(e):
+                elif 'No such file or directory' not in str(e):
                     raise
     
     # Clear progress line and show completion

@@ -4,7 +4,7 @@ HOMESERVER Homerchy ISO Builder - Profile Assembly Phase
 Copyright (C) 2024 HOMESERVER LLC
 
 ISO profile assembly phase orchestrator.
-"
+"""
 
 import subprocess
 import sys
@@ -77,9 +77,9 @@ def main(phase_path: Path, config: dict) -> dict:
     # Use environment variable if set, otherwise fall back to config or default
     import os
     work_dir = Path(os.environ.get('HOMERCHY_WORK_DIR', config.get('work_dir', '/mnt/work/homerchy-deployment/deployment/isoprep-work')))
-    profile_dir = Path(config.get('profile_dir', work_dir / profile))
+    profile_dir = Path(config.get('profile_dir', work_dir / "profile"))
     
-    print(f"{Colors.BLUE}Assembling ISO profile...{Colors.NC})
+    print(f"{Colors.BLUE}Assembling ISO profile...{Colors.NC}")
     
     # 1. Copy base Releng onmachine/config
     copy_releng_config(repo_root, profile_dir)
@@ -118,7 +118,7 @@ def main(phase_path: Path, config: dict) -> dict:
     ensure_airootfs_pacman_online(profile_dir)
     
     # 8. Create symlink so mkarchiso can find the offline mirror during build
-    cache_dir = 'profile_dir' / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
+    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
     create_system_mirror_symlink(profile_dir, cache_dir)
     
     # Final verification: Ensure syslinux is in packages.x86_64
@@ -138,7 +138,7 @@ def main(phase_path: Path, config: dict) -> dict:
 if __name__ == '__main__':
     import json
     phase_path = Path(__file__).parent
-    config_path = 'phase_path' / 'index'.json
-    onmachine/config = json.load(open(config_path)) if config_path.exists() else {}
+    config_path = phase_path / 'index.json'
+    config = json.load(open(config_path)) if config_path.exists() else {}
     result = main(phase_path, config)
     sys.exit(0 if result.get('success') else 1)

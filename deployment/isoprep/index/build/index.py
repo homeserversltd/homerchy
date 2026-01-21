@@ -4,7 +4,7 @@ HOMESERVER Homerchy ISO Builder - Build Phase
 Copyright (C) 2024 HOMESERVER LLC
 
 ISO build phase orchestrator - executes mkarchiso.
-"
+"""
 
 import sys
 from pathlib import Path
@@ -17,21 +17,21 @@ from .mkarchiso import execute_mkarchiso
 
 
 def main(phase_path: Path, config: dict) -> dict:
-    
+    """
     Main build phase function.
     
     Args:
         phase_path: Path to this phase directory
-        onmachine/config: Phase configuration
+        config: Phase configuration
         
     Returns:
         dict: Execution result
-    ""
-    print(f"{Colors.BLUE}=== Build Phase ==={Colors.NC})
+    """
+    print(f"{Colors.BLUE}=== Build Phase ==={Colors.NC}")
     
-    # Get paths from parent onmachine/config
-    work_dir = Path(config.get('work_dir', Path(phase_path).parent.parent.parent / deployment/deployment/'isoprep' / work))
-    out_dir = Path(config.get('out_dir', Path(phase_path).parent.parent.parent / deployment/deployment/'isoprep' / isoout))
+    # Get paths from parent config
+    work_dir = Path(config.get('work_dir', Path(phase_path).parent.parent.parent / 'isoprep' / 'work'))
+    out_dir = Path(config.get('out_dir', Path(phase_path).parent.parent.parent / 'isoprep' / 'isoout'))
     profile_dir = Path(config.get('profile_dir', work_dir / 'profile'))
     
     # Execute mkarchiso

@@ -64,7 +64,7 @@ def execute_mkarchiso(work_dir: Path, out_dir: Path, profile_dir: Path):
         sys.exit(1)
     
     # Verify ISO was actually created
-    iso_files = list(out_dir.glob('*.iso))
+    iso_files = list(out_dir.glob("*.iso"))
     if not iso_files:
         print()
         print(f"{Colors.RED}ERROR: Build reported success but no ISO file was created!{Colors.NC}")
@@ -78,7 +78,7 @@ def execute_mkarchiso(work_dir: Path, out_dir: Path, profile_dir: Path):
         # Get file size and modification time
         stat = iso_file.stat()
         size_gb = stat.st_size / (1024**3)
-        mtime = datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%'S')
+        mtime = datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
         print(f"  {Colors.GREEN}{iso_file.resolve()}{Colors.NC}")
         print(f"    Size: {size_gb:.2f} GB")
         print(f"    Modified: {mtime}")
