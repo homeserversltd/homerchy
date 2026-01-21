@@ -47,8 +47,8 @@ def do_build(full_clean: bool = False, cache_db_only: bool = False) -> int:
             pass
     
     # Get repo root (parent of controller directory, which is deployment/)
-    repo_root = Path(__file__).parent.parent.resolve()
-    build_script = repo_root / "isoprep" / "build.py"
+    repo_root = Path(__file__).parent.parent.parent.resolve()
+    build_script = repo_root / "deployment" / "isoprep" / "build.py"
     
     if not build_script.exists():
         print(f"Error: Build script not found at {build_script}")

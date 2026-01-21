@@ -12,9 +12,9 @@ from .utils import run_command
 def do_launch() -> None:
     """Launch VM from installed disk."""
     print(">>> Launching VM from installed disk...")
-    
-    repo_root = Path(__file__).parent.parent.resolve()
-    launch_disk_script = repo_root / "vmtools" / "launch-disk.sh"
+
+    repo_root = Path(__file__).parent.parent.parent.resolve()
+    launch_disk_script = repo_root / "deployment" / "vmtools" / "launch-disk.sh"
     
     if not launch_disk_script.exists() or not os.access(launch_disk_script, os.X_OK):
         print(f"Error: Launch disk script not found or executable at {launch_disk_script}")
@@ -26,9 +26,9 @@ def do_launch() -> None:
 def do_launch_iso() -> None:
     """Launch VM from ISO (fresh install)."""
     print(">>> Launching VM from ISO (fresh install)...")
-    
-    repo_root = Path(__file__).parent.parent.resolve()
-    launch_iso_script = repo_root / "vmtools" / "launch-iso.sh"
+
+    repo_root = Path(__file__).parent.parent.parent.resolve()
+    launch_iso_script = repo_root / "deployment" / "vmtools" / "launch-iso.sh"
     
     if not launch_iso_script.exists() or not os.access(launch_iso_script, os.X_OK):
         print(f"Error: Launch ISO script not found or executable at {launch_iso_script}")

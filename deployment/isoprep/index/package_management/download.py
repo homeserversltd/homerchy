@@ -251,12 +251,21 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
     if packages_to_download:
         print(f"{Colors.BLUE}Downloading {len(packages_to_download)} missing packages...{Colors.NC}")
         print(f"{Colors.BLUE}This may take a while depending on your connection speed...{Colors.NC}")
-        
+
+        # Ensure cache directory exists before pacman tries to use it
+        offline_mirror_dir.mkdir(parents=True, exist_ok=True)
+
         # Create temporary database directory for pacman
         temp_db_dir.mkdir(parents=True, exist_ok=True)
-        
+
+        # Clean up any existing pacman database lock from previous failed builds
+        subprocess.run(['sudo', 'rm', '-f', '/var/lib/pacman/db.lck'], check=False)
+
+        # Sync the custom database to ensure it's ready before download
+        subprocess.run(['sudo', 'pacman', '-Sy', '--noconfirm', '--ask=0', '--dbpath', str(temp_db_dir)], check=False, capture_output=True)
+
         # Build pacman command (requires root)
-        pacman_cmd = ['sudo', 'pacman', '-Syw', '--noconfirm', '--cachedir', str(offline_mirror_dir), '--dbpath', str(temp_db_dir)]
+        pacman_cmd = ['sudo', 'pacman', '-Syw', '--noconfirm', '--ask=0', '--cachedir', str(offline_mirror_dir), '--dbpath', str(temp_db_dir)]
         if pacman_config:
             pacman_cmd.extend([--config, pacman_src/config])
         pacman_cmd.extend(packages_to_download)
@@ -268,11 +277,14 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
         print(f"{Colors.YELLOW}Note: You may be prompted for your sudo password{Colors.NC}")
         print()
         
-        result = subprocess.run(pacman_cmd, stdout=sys.stdout, stderr=sys.stderr)
+        result = subprocess.run(pacman_cmd, stdout=sys.stdout, stderr=subprocess.PIPE, text=True)
         
         if result.returncode != 0:
             print()
             print(f"{Colors.RED}ERROR: Package download failed with exit code {result.returncode}!{Colors.NC}")
+            if result.stderr:
+                print(f"{Colors.RED}Pacman stderr output:{Colors.NC}")
+                print(result.stderr)
             sys.exit(1)
         
         # Clean up temporary database (may be owned by root)
