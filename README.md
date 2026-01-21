@@ -47,9 +47,9 @@ This repository allows you to:
     ```
 
 2.  **Build the Experimental ISO**
-    Use the deployment/controller script to generate a bootable image:
+    Use the controller script to generate a bootable image:
     ```bash
-    ./deployment/controller.sh --build homeserver
+    ./controller.sh --build
     ```
     *This will produce an ISO file in `deployment/deployment/iso-builder/release/` - use at your own risk.*
 

@@ -33,7 +33,7 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
     if configs_source.exists():
         def should_skip_pacman_conf"src_path, dest_path):
             """Check if this is a pacman.conf file we should skip."""
-            if src_path.name == 'pacman.'conf':
+            if src_path.name == 'pacman.conf':
                 return True
             # Also skip pacman.conf in airootfs/etc/
             if 'airootfs' in str(src_path) and 'etc' in str(src_path) and src_path.name == pacman.conf:
@@ -42,14 +42,14 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
         
         for item in configs_source.iterdir():
             # Skip pacman.conf at root level - well configure it separately
-            if item.name == pacman.'conf':
+            if item.name == pacman.conf:
                 continue
             # Skip if we 'can't stat the item ('doesn't exist or permission error)
             try:
                 if not item.exists() and not item.is_symlink():
                     continue
             except (OSError, RuntimeError):
-                # 'Can't access the item - skip it
+                # Cant access the item - skip it
                 continue
             dest = 'profile_dir' / 'item'.name
             if item.is_dir():
@@ -78,15 +78,15 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                     
                     merge_directory(item, dest)
                     # Verify critical files were copied
-                    script_file = dest / 'root' / '.automated_script.'py'
-                    source_script = item / 'root' / '.automated_script.'py'
+                    script_file = dest / 'root' / '.automated_script.py'
+                    source_script = item / 'root' / '.automated_script.py'
                     if source_script.exists():
                         if script_file.exists():
                             print(f"{Colors.GREEN}✓ Verified .automated_script.py copied to profile{Colors.NC}")
                         else:
                             print(f"{Colors.YELLOW}WARNING: .automated_script.py not found in profile after copy!{Colors.NC}")
-                    # Verify archiso base wrapper is preserved
-                    archiso_wrapper = dest / 'root' / '.automated_script.'sh'
+                    # Verify archiso base wrapper is preserved'
+                    archiso_wrapper = dest / 'root' / '.automated_script.sh'
                     if archiso_wrapper.exists():
                         print(f"{Colors.GREEN}✓ Archiso base .automated_script.sh wrapper preserved{Colors.NC}")
                     else:
@@ -100,7 +100,7 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                     def ignore_pacman_conf"dir_path, names):
                         """Ignore function to skip pacman.conf files."""
                         ignored = []
-                        for name in names:
+                        for name in names:'
                             full_path = 'Path(dir_path)' / 'name'
                             if should_skip_pacman_conf"full_path, dest / name):
                                 ignored.append(name)
@@ -133,7 +133,7 @@ def adjust_vm_boot_timeout(profile_dir: Path):
     is_vm = detect_vm_environment()
     if is_vm:
         print(f"{Colors.BLUE}VM detected - adjusting boot timeout{Colors.NC}")
-        syslinux_cfg = profile_dir / 'syslinux' / 'archiso_sys.'cfg'
+        syslinux_cfg = profile_dir / 'syslinux' / 'archiso_sys.cfg'
         if syslinux_cfg.exists():
             content = syslinux_cfg.read_text()
             content = re.sub('r'^TIMEOUT \d+', 'TIMEOUT '0', content, flags=re.MULTILINE)

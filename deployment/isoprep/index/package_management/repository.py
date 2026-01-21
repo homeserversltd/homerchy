@@ -37,28 +37,28 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
     # Find all package files (exclude .sig signature files)
     # Package files are .pkg.tar.zst or .pkg.tar.xz, but NOT .sig files
     all_files = list(offline_mirror_dir.glob('*.pkg.tar.*'))
-    package_files = [f for f in all_files if not f.name.endswith('.'sig')]
+    package_files = [f for f in all_files if not f.name.endswith('.sig')]
     
     if not package_files:
         print(f"{Colors.YELLOW}WARNING: No package files found in offline mirror directory{Colors.NC}")
         return
     
     # Count signature files for info
-    sig_files = [f for f in all_files if f.name.endswith('.'sig')]
+    sig_files = [f for f in all_files if f.name.endswith('.sig')]
     if sig_files:
         print(f"{Colors.BLUE}Found {len(sig_files)} signature files{Colors.NC}")
     
     # Check if we can reuse existing database
     # We need to create databases for both [offline] and [omarchy] repos
     # They point to the same directory, so we create one and symlink/copy the other
-    db_path = offline_mirror_dir / 'offline.db.tar.'gz'
-    db_files_path = offline_mirror_dir / 'offline.files.tar.'gz'
-    omarchy_db_path = offline_mirror_dir / 'omarchy.db.tar.'gz'
-    omarchy_db_files_path = offline_mirror_dir / 'omarchy.files.tar.'gz'
+    db_path = offline_mirror_dir / 'offline.db.tar.gz'
+    db_files_path = offline_mirror_dir / 'offline.files.tar.gz'
+    omarchy_db_path = offline_mirror_dir / 'omarchy.db.tar.gz'
+    omarchy_db_files_path = offline_mirror_dir / 'omarchy.files.tar.gz'
     
     cache_valid = False
     # Check if offline database exists and is valid ('don't require omarchy databases for cache check)
-    # 'We'll create omarchy databases if 'they're missing
+    # Well create omarchy databases if 'they're missing
     # If force_regenerate is True, skip cache check entirely
     if force_regenerate:
         print(f"{Colors.BLUE}New packages were downloaded, forcing repository database regeneration...{Colors.NC}")
@@ -93,11 +93,11 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
                 # We need to extract "linux-firmware" from the filename
                 # Use repo-query to get package names from files (most reliable method)
                 package_names_in_dir = set()
-                if shutil.which('repo-'query'):
+                if shutil.which('repo-query'):
                     # repo-query can query individual package files with -f flag
                     for pkg_file in package_files:
                         result = subprocess.run(
-                            ['repo-'query', '-'f', '%'n', str(pkg_file)],
+                            ['repo-query', '-f', '%n', str(pkg_file)],
                             capture_output=True,
                             text=True
                         )
@@ -108,9 +108,9 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
                             # Format: name-version-release-arch.pkg.tar.zst
                             # Remove .pkg.tar.zst or .pkg.tar.xz extension
                             base_name = pkg_file.name
-                            if base_name.endswith('.pkg.tar.'zst'):
+                            if base_name.endswith('.pkg.tar.zst'):
                                 base_name = base_name[:-13]
-                            elif base_name.endswith('.pkg.tar.'xz'):
+                            elif base_name.endswith('.pkg.tar.xz'):
                                 base_name = base_name[:-11]
                             # Try to find arch pattern (x86_64, any, etc.) and work backwards
                             # Arch is usually the last part before .pkg.tar
@@ -121,16 +121,16 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
                                 pkg_name = '-'.join(parts[:-3])
                                 package_names_in_dir.add(pkg_name)
                             else:
-                                # 'Can't parse, skip this file ('shouldn't happen)
+                                # Cant parse, skip this file ('shouldn't happen)
                                 print(f"{Colors.YELLOW}⚠ Could not extract package name from {pkg_file.name}{Colors.NC}")
                 else:
                     # repo-query not available, use filename parsing (less reliable)
                     for pkg_file in package_files:
                         # Remove .pkg.tar.zst or .pkg.tar.xz extension
                         base_name = pkg_file.name
-                        if base_name.endswith('.pkg.tar.'zst'):
+                        if base_name.endswith('.pkg.tar.zst'):
                             base_name = base_name[:-13]
-                        elif base_name.endswith('.pkg.tar.'xz'):
+                        elif base_name.endswith('.pkg.tar.xz'):
                             base_name = base_name[:-11]
                         parts = base_name.split('-')
                         if len(parts) >= 4:
@@ -141,9 +141,9 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
                             package_names_in_dir.add(base_name)
                 
                 # Query database for all packages using repo-query
-                if shutil.which('repo-'query'):
+                if shutil.which('repo-query'):
                     result = subprocess.run(
-                        ['repo-'query', '-'l', str(db_path)],
+                        ['repo-query', '-l', str(db_path)],
                         capture_output=True,
                         text=True
                     )
@@ -221,18 +221,18 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
                 try:
                     omarchy_db_path.unlink()
                 except PermissionError:
-                    subprocess.run(['sudo', 'rm', '-'f', str(omarchy_db_path)], check=False)
+                    subprocess.run(['sudo', 'rm', '-f', str(omarchy_db_path)], check=False)
             if need_omarchy_db_files and omarchy_db_files_path.exists():
                 try:
                     omarchy_db_files_path.unlink()
                 except PermissionError:
-                    subprocess.run(['sudo', 'rm', '-'f', str(omarchy_db_files_path)], check=False)
+                    subprocess.run(['sudo', 'rm', '-f', str(omarchy_db_files_path)], check=False)
             
             try:
                 if need_omarchy_db:
-                    omarchy_db_path.symlink_to('offline.db.tar.'gz')
+                    omarchy_db_path.symlink_to('offline.db.tar.gz')
                 if need_omarchy_db_files:
-                    omarchy_db_files_path.symlink_to('offline.files.tar.'gz')
+                    omarchy_db_files_path.symlink_to('offline.files.tar.gz')
                 print(f"{Colors.GREEN}✓ Created omarchy database symlinks{Colors.NC}")
             except (OSError, PermissionError):
                 # If symlink fails, copy instead
@@ -246,33 +246,33 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
                         try:
                             os.chown(db_file, current_uid, current_gid)
                         except PermissionError:
-                            subprocess.run(['sudo', 'chown', 'f'{current_uid}:{current_gid}', str(db_file)], check=True)
+                            subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(db_file)], check=True)
                 print(f"{Colors.GREEN}✓ Created omarchy database copies{Colors.NC}")
         else:
             print(f"{Colors.GREEN}✓ Omarchy database already exists{Colors.NC}")
         
         # Create symlinks without .tar.gz extension (pacman needs both)
-        omarchy_db_short = offline_mirror_dir / 'omarchy.'db'
-        omarchy_db_files_short = offline_mirror_dir / 'omarchy.'files'
+        omarchy_db_short = offline_mirror_dir / 'omarchy.db'
+        omarchy_db_files_short = offline_mirror_dir / 'omarchy.files'
         if not omarchy_db_short.exists():
             try:
-                omarchy_db_short.symlink_to('omarchy.db.tar.'gz')
+                omarchy_db_short.symlink_to('omarchy.db.tar.gz')
             except (OSError, PermissionError):
                 shutil.copy2(omarchy_db_path, omarchy_db_short)
                 try:
                     os.chown(omarchy_db_short, current_uid, current_gid)
                 except PermissionError:
-                    subprocess.run(['sudo', 'chown', 'f'{current_uid}:{current_gid}', str(omarchy_db_short)], check=True)
+                    subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(omarchy_db_short)], check=True)
         
         if not omarchy_db_files_short.exists():
             try:
-                omarchy_db_files_short.symlink_to('omarchy.files.tar.'gz')
+                omarchy_db_files_short.symlink_to('omarchy.files.tar.gz')
             except (OSError, PermissionError):
                 shutil.copy2(omarchy_db_files_path, omarchy_db_files_short)
                 try:
                     os.chown(omarchy_db_files_short, current_uid, current_gid)
                 except PermissionError:
-                    subprocess.run(['sudo', 'chown', 'f'{current_uid}:{current_gid}', str(omarchy_db_files_short)], check=True)
+                    subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(omarchy_db_files_short)], check=True)
         return
     
     # Need to regenerate database
@@ -285,31 +285,31 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
             db_path.unlink()
         except PermissionError:
             # If owned by root, use sudo to remove
-            subprocess.run(['sudo', 'rm', '-'f', str(db_path)], check=False)
+            subprocess.run(['sudo', 'rm', '-f', str(db_path)], check=False)
     
     if db_files_path.exists():
         try:
             db_files_path.unlink()
         except PermissionError:
-            subprocess.run(['sudo', 'rm', '-'f', str(db_files_path)], check=False)
+            subprocess.run(['sudo', 'rm', '-f', str(db_files_path)], check=False)
     
     # Remove omarchy database files if they exist
     if omarchy_db_path.exists():
         try:
             omarchy_db_path.unlink()
         except PermissionError:
-            subprocess.run(['sudo', 'rm', '-'f', str(omarchy_db_path)], check=False)
+            subprocess.run(['sudo', 'rm', '-f', str(omarchy_db_path)], check=False)
     
     if omarchy_db_files_path.exists():
         try:
             omarchy_db_files_path.unlink()
         except PermissionError:
-            subprocess.run(['sudo', 'rm', '-'f', str(omarchy_db_files_path)], check=False)
+            subprocess.run(['sudo', 'rm', '-f', str(omarchy_db_files_path)], check=False)
     
     # Run repo-add to create database
     # repo-add will automatically detect and add all .pkg.tar.* files in the directory
     result = subprocess.run(
-        ['repo-'add', '--'new', str(db_path)] + [str(pkg) for pkg in package_files],
+        ['repo-add', '--new', str(db_path)] + [str(pkg) for pkg in package_files],
         capture_output=True,
         text=True
     )
@@ -329,7 +329,7 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
             try:
                 os.chown(db_file, current_uid, current_gid)
             except PermissionError:
-                subprocess.run(['sudo', 'chown', 'f'{current_uid}:{current_gid}', str(db_file)], check=True)
+                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(db_file)], check=True)
     
     # Create omarchy database (same content, different name for pacman.conf compatibility)
     # Try symlink first (more efficient), fall back to copy if symlink fails
@@ -348,18 +348,18 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
                         # Already correct symlink, skip
                         continue
                 except (OSError, RuntimeError):
-                    # 'Can't resolve, remove and recreate
+                    # Cant resolve, remove and recreate
                     pass
             
             # Remove existing file/symlink
             try:
                 symlink_path.unlink()
             except PermissionError:
-                subprocess.run(['sudo', 'rm', '-'f', str(symlink_path)], check=False)
+                subprocess.run(['sudo', 'rm', '-f', str(symlink_path)], check=False)
     
     try:
-        omarchy_db_path.symlink_to('offline.db.tar.'gz')
-        omarchy_db_files_path.symlink_to('offline.files.tar.'gz')
+        omarchy_db_path.symlink_to('offline.db.tar.gz')
+        omarchy_db_files_path.symlink_to('offline.files.tar.gz')
         print(f"{Colors.GREEN}✓ Created omarchy database symlinks{Colors.NC}")
     except (OSError, PermissionError):
         # If symlink fails (e.g., cross-filesystem), copy instead
@@ -374,34 +374,34 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
                 try:
                     os.chown(db_file, current_uid, current_gid)
                 except PermissionError:
-                    subprocess.run(['sudo', 'chown', 'f'{current_uid}:{current_gid}', str(db_file)], check=True)
+                    subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(db_file)], check=True)
         print(f"{Colors.GREEN}✓ Created omarchy database copies{Colors.NC}")
     
     # Create symlinks without .tar.gz extension (pacman needs both)
     # repo-add creates offline.db automatically, but we need omarchy.db
-    omarchy_db_short = offline_mirror_dir / 'omarchy.'db'
-    omarchy_db_files_short = offline_mirror_dir / 'omarchy.'files'
+    omarchy_db_short = offline_mirror_dir / 'omarchy.db'
+    omarchy_db_files_short = offline_mirror_dir / 'omarchy.files'
     if not omarchy_db_short.exists():
         try:
-            omarchy_db_short.symlink_to('omarchy.db.tar.'gz')
+            omarchy_db_short.symlink_to('omarchy.db.tar.gz')
         except (OSError, PermissionError):
             # If symlink fails, copy instead
             shutil.copy2(omarchy_db_path, omarchy_db_short)
             try:
                 os.chown(omarchy_db_short, current_uid, current_gid)
             except PermissionError:
-                subprocess.run(['sudo', 'chown', 'f'{current_uid}:{current_gid}', str(omarchy_db_short)], check=True)
+                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(omarchy_db_short)], check=True)
     
     if not omarchy_db_files_short.exists():
         try:
-            omarchy_db_files_short.symlink_to('omarchy.files.tar.'gz')
+            omarchy_db_files_short.symlink_to('omarchy.files.tar.gz')
         except (OSError, PermissionError):
             # If symlink fails, copy instead
             shutil.copy2(omarchy_db_files_path, omarchy_db_files_short)
             try:
                 os.chown(omarchy_db_files_short, current_uid, current_gid)
             except PermissionError:
-                subprocess.run(['sudo', 'chown', 'f'{current_uid}:{current_gid}', str(omarchy_db_files_short)], check=True)
+                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(omarchy_db_files_short)], check=True)
     
     print(f"{Colors.GREEN}✓ Created repository database: {db_path.name}{Colors.NC}")
     

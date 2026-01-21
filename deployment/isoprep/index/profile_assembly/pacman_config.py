@@ -60,8 +60,8 @@ def configure_pacman_for_build(repo_root: Path, profile_dir: Path):
     "
     print(f"{Colors.BLUE}Configuring pacman.conf for build...{Colors.NC}")
     
-    releng_source = 'repo_root' / 'deployment'/deployment/iso-'builder' / 'archiso / configs / 'releng'
-    releng_pacman_conf = releng_source / 'pacman.'conf'
+    releng_source = 'repo_root' / 'deployment'/deployment/iso-'builder' / 'archiso / configs / 'releng''
+    releng_pacman_conf = releng_source / 'pacman.conf'
     
     # For profile: Use releng pacman.conf (standard Arch repos) + add omarchy online repo
     # This ensures mkarchiso can build with online repos
@@ -85,7 +85,7 @@ SigLevel = Optional TrustAll
 Server = 'https://pkgs.omarchy.org' / 'stable'/$arch
 """
             releng_content += omarchy_repo
-        (profile_dir / 'pacman.'conf').write_text(releng_content)
+        (profile_dir / 'pacman.conf').write_text(releng_content)
         print(f"{Colors.GREEN}✓ Using releng pacman.conf with omarchy repo for mkarchiso build{Colors.NC})
     else:
         print(f"{Colors.YELLOW}WARNING: releng pacman.conf not found, using onmachine/src/default{Colors.NC})
@@ -107,7 +107,7 @@ def ensure_airootfs_pacman_online(profile_dir: Path):
     profile_pacman_conf = 'profile_dir' / 'pacman'.conf
     if profile_pacman_conf.exists():
         # Remove any existing pacman.conf in airootfs/etc that might have offline config
-        airootfs_pacman_conf = 'airootfs_etc' / 'pacman'.'conf'
+        airootfs_pacman_conf = 'airootfs_etc' / 'pacman'.conf
         if airootfs_pacman_conf.exists():
             airootfs_pacman_conf.unlink()
         # Copy profile pacman.conf (online) to airootfs/etc
@@ -131,7 +131,7 @@ def verify_syslinux_in_packages(profile_dir: Path):
     """
     print(f"{Colors.BLUE}Verifying syslinux in packages.x86_64...{Colors.NC}")
     
-    packages_file = profile_dir / 'packages.'x86_64'
+    packages_file = profile_dir / 'packages.x86_64'
     if packages_file.exists():
         content = packages_file.read_text()
         # Check if syslinux is present (as a whole word, case-insensitive)
@@ -163,12 +163,12 @@ def copy_mirrorlist_to_archiso_tmp(profile_dir: Path, work_dir: Path, preserve_a
     
     print(f"{Colors.BLUE}Copying mirrorlist to preserved archiso-tmp...{Colors.NC}")
     
-    profile_mirrorlist = profile_dir / 'airootfs' / 'etc' / 'pacman.'d' / 'mirrorlist'
+    profile_mirrorlist = profile_dir / 'airootfs' / 'etc' / 'pacman.d' / 'mirrorlist'
     if profile_mirrorlist.exists():
-        archiso_tmp_dir = work_dir / 'archiso-'tmp'
+        archiso_tmp_dir = work_dir / 'archiso-tmp'
         preserved_airootfs = archiso_tmp_dir / 'x86_64' / 'airootfs'
         if preserved_airootfs.exists():
-            preserved_mirrorlist = preserved_airootfs / 'etc' / 'pacman.'d' / 'mirrorlist'
+            preserved_mirrorlist = preserved_airootfs / 'etc' / 'pacman.d' / 'mirrorlist'
             preserved_mirrorlist_dir = preserved_mirrorlist.parent
             try:
                 preserved_mirrorlist_dir.mkdir(parents=True, exist_ok=True)
@@ -179,11 +179,11 @@ def copy_mirrorlist_to_archiso_tmp(profile_dir: Path, work_dir: Path, preserve_a
                 # Directory might be owned by root from previous sudo mkarchiso
                 # Use sudo to create directory and copy file
                 import subprocess
-                subprocess.run(['sudo', 'mkdir', '-'p', str(preserved_mirrorlist_dir)], check=True)
+                subprocess.run(['sudo', 'mkdir', '-p', str(preserved_mirrorlist_dir)], check=True)
                 subprocess.run(['sudo', 'cp', str(profile_mirrorlist), str(preserved_mirrorlist)], check=True)
                 # Fix ownership to current user
                 import os
                 current_uid = os.getuid()
                 current_gid = os.getgid()
-                subprocess.run(['sudo', 'chown', 'f'{current_uid}:{current_gid}', str(preserved_mirrorlist)], check=True)
+                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(preserved_mirrorlist)], check=True)
                 print(f"{Colors.GREEN}✓ Copied mirrorlist to preserved archiso-tmp (with sudo){Colors.NC}")

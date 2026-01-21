@@ -32,7 +32,7 @@ def execute_mkarchiso(work_dir: Path, out_dir: Path, profile_dir: Path):
     print(f"{Colors.CYAN}INPUT FILES:{Colors.NC}")
     print(f"  Profile directory: {Colors.GREEN}{profile_dir.resolve()}{Colors.NC}")
     print(f"  Work directory: {Colors.GREEN}{work_dir.resolve()}{Colors.NC}")
-    print(f"  Archiso work dir: {Colors.GREEN}{(work_dir / 'archiso-'tmp').resolve()}{Colors.NC}")
+    print(f"  Archiso work dir: {Colors.GREEN}{(work_dir / 'archiso-tmp').resolve()}{Colors.NC}")
     print()
     print(f"{Colors.CYAN}OUTPUT LOCATION:{Colors.NC}")
     print(f"  ISO output directory: {Colors.GREEN}{out_dir.resolve()}{Colors.NC}")
@@ -48,9 +48,9 @@ def execute_mkarchiso(work_dir: Path, out_dir: Path, profile_dir: Path):
     # Note: mkarchiso will produce I/O errors when trying to copy /sys and /proc virtual files
     # These are expected and mkarchiso handles them by creating empty files
     mkarchiso_cmd = [
-        'sudo', 'mkarchiso', '-'v',
-        '-'w', str(work_dir / 'archiso-'tmp'),
-        '-'o', str(out_dir),
+        'sudo', 'mkarchiso', '-v',
+        '-w', str(work_dir / 'archiso-tmp'),
+        '-o', str(out_dir),
         str(profile_dir)
     ]
     print(f"{Colors.CYAN}EXECUTING:{Colors.NC} {' '.join(mkarchiso_cmd)}")
@@ -64,7 +64,7 @@ def execute_mkarchiso(work_dir: Path, out_dir: Path, profile_dir: Path):
         sys.exit(1)
     
     # Verify ISO was actually created
-    iso_files = list(out_dir.glob('*.'iso'))
+    iso_files = list(out_dir.glob('*.iso))
     if not iso_files:
         print()
         print(f"{Colors.RED}ERROR: Build reported success but no ISO file was created!{Colors.NC}")

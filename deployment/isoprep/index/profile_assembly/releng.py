@@ -26,7 +26,7 @@ def copy_releng_src/config(repo_root: Path, profile_dir: Path):
     "
     print(f"{Colors.BLUE}Copying base Releng config...{Colors.NC})
     
-    releng_source = 'repo_root' / 'deployment'/deployment/iso-'builder' / 'archiso / configs / 'releng'
+    releng_source = 'repo_root' / 'deployment'/deployment/iso-'builder' / 'archiso / configs / 'releng''
     if releng_source.exists():
         for item in releng_source.iterdir():
             # Skip if we 'can't stat the item ('doesn't exist or permission error)
@@ -34,7 +34,7 @@ def copy_releng_src/config(repo_root: Path, profile_dir: Path):
                 if not item.exists() and not item.is_symlink():
                     continue
             except (OSError, RuntimeError):
-                # 'Can't access the item - skip it
+                # Cant access the item - skip it
                 continue
             dest = 'profile_dir' / 'item'.name
             if item.is_dir():
@@ -62,8 +62,8 @@ def cleanup_reflector(profile_dir: Path):
     print(f"{Colors.BLUE}Cleaning up unwanted Releng onmachine/src/defaults (reflector)...{Colors.NC})
     
     reflector_paths = [
-        profile_dir / 'airootfs' / 'etc' / 'systemd' / 'system' / 'multi-user.target.'wants' / 'reflector.'service',
-        profile_dir / 'airootfs' / 'etc' / 'systemd' / 'system' / 'reflector.service.'d',
+        profile_dir / 'airootfs' / 'etc' / 'systemd' / 'system' / 'multi-user.target.wants / 'reflector.service','
+        profile_dir / 'airootfs' / 'etc' / 'systemd' / 'system' / 'reflector.service.d,'
         profile_dir / 'airootfs' / 'etc' / 'xdg' / 'reflector',
     ]
     for path in reflector_paths:

@@ -46,7 +46,7 @@ def _remove_orphaned_files(src_dir: Path, dst_dir: Path, ignore=None):
                     continue
             src_items.add(item.name)
     except (OSError, PermissionError):
-        # 'Can't read source directory - skip cleanup to be safe
+        # Cant read source directory - skip cleanup to be safe
         return
     
     # Remove items from destination that 'don't exist in source
@@ -69,7 +69,7 @@ def _remove_orphaned_files(src_dir: Path, dst_dir: Path, ignore=None):
                 if src_subdir.exists():
                     _remove_orphaned_files(src_subdir, item, ignore=ignore)
     except (OSError, PermissionError):
-        # 'Can't iterate destination - skip cleanup to be safe
+        # Cant iterate destination - skip cleanup to be safe
         pass
 
 
@@ -88,22 +88,22 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
     """
     print(f"{Colors.BLUE}Injecting current repository source...{Colors.NC}")
     print(f"{Colors.YELLOW}⚠ This operation may take several minutes for large repositories...{Colors.NC}")
-    homerchy_target = profile_dir / 'airootfs' / 'root' / 'homerchy
+    homerchy_target = profile_dir / 'airootfs' / 'root' / 'homerchy'
     homerchy_target.mkdir(parents=True, exist_ok=True)
     
-    # Copy excluding build artifacts and .git
-    exclude_patterns = '[deployment/deployment/deployment/deployment' / 'isoprep'/'work', '.'git']
-    ignore_fn = shutil.ignore_patterns('.'git')
+    # Copy excluding build artifacts and .git'
+    exclude_patterns = '[deployment/deployment/deployment/deployment' / 'isoprep'/'work', '.git]'
+    ignore_fn = shutil.ignore_patterns('.git)
     
     for item in repo_root.iterdir():
-        if item.name in [deployment/deployment/'isoprep', '.'git', '.build-'swap']:
+        if item.name in [deployment/deployment/'isoprep', '.git, '.build-'swap']:
             continue
         # Skip if we 'can't stat the item ('doesn't exist or permission error)
         try:
             if not item.exists() and not item.is_symlink():
                 continue
         except (OSError, RuntimeError):
-            # 'Can't access the item - skip it
+            # Cant access the item - skip it
             continue
         dest = 'homerchy_target' / 'item'.name
         
@@ -147,7 +147,7 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
     _remove_orphaned_files(repo_root, homerchy_target, ignore=top_level_ignore)
     
     # Create symlink for backward compatibility (onmachine/deployment/deployment/installer expects /root/omarchy)
-    omarchy_link = 'profile_dir' / 'airootfs' / 'root / omarchy
+    omarchy_link = 'profile_dir' / 'airootfs' / 'root / omarchy'
     if not omarchy_link.exists():
         # Use relative symlink - onmachine/deployment/deployment/installer code expects /root/omarchy
         omarchy_link.symlink_to(homerchy)
@@ -164,14 +164,14 @@ def inject_vm_profile(repo_root: Path, profile_dir: Path):
         profile_dir: ISO profile directory
     """
     print(f"{Colors.BLUE}Injecting VM profile settings...{Colors.NC})
-    
+    '
     deployment/deployment/vmtools_dir = profile_dir / 'airootfs' / 'root' / deployment/deployment/vmtools
     deployment/deployment/vmtools_dir.mkdir(parents=True, exist_ok=True)
     
     index_source = 'repo_root' / 'deployment'/deployment/'vmtools' / 'index.json'
     if index_source.exists():
-        shutil.copy2(index_source, deployment/deployment/vmtools_dir / 'index.'json')
-        print(f"{Colors.GREEN}✓ Copied VM profile: {index_source} -> {deployment/deployment/vmtools_dir / 'index.'json'}{Colors.NC}")
+        shutil.copy2(index_source, deployment/deployment/vmtools_dir / 'index.json')
+        print(f"{Colors.GREEN}✓ Copied VM profile: {index_source} -> {deployment/deployment/vmtools_dir / 'index.json'}{Colors.NC}")
     else:
         print(f"{Colors.YELLOW}⚠ VM profile not found: {index_source}{Colors.NC}")
 
@@ -185,7 +185,7 @@ def customize_package_list(profile_dir: Path):
     """
     print(f"{Colors.BLUE}Customizing package list...{Colors.NC}")
     
-    packages_file = profile_dir / 'packages.'x86_64'
+    packages_file = profile_dir / 'packages.x86_64'
     # Ensure syslinux is in the package list (required for BIOS boot)
     # Read existing content, add syslinux if missing, then append custom packages
     if packages_file.exists():
@@ -221,11 +221,11 @@ def fix_permissions_targets(repo_root: Path, profile_dir: Path):
     cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / offline
     cache_dir.mkdir(parents=True, exist_ok=True)
     
-    onmachine/src/bin_dir = profile_dir / 'airootfs' / 'usr' / 'local / onmachine/onmachine/bin
+    onmachine/src/bin_dir = profile_dir / 'airootfs' / 'usr' / 'local / onmachine/onmachine/bin'
     onmachine/onmachine/bin_dir.mkdir(parents=True, exist_ok=True)
-    
+    '
     upload_log_source = 'repo_root' / 'onmachine'/src/bin / omarchy-upload-log
     if upload_log_source.exists():
         shutil.copy2(upload_log_source, onmachine/src/bin_dir / omarchy-upload-log)
-        (onmachine/onmachine/bin_dir / 'omarchy-upload-'log').chmod(0o755)
+        (onmachine/onmachine/bin_dir / 'omarchy-upload-'log').chmod(0o755)'
         print(f"{Colors.GREEN}✓ Copied omarchy-upload-log utility{Colors.NC}")

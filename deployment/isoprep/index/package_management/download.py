@@ -158,7 +158,7 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
         pacman_online_conf = repo_root / 'deployment' / 'iso-builder' / 'configs' / 'pacman-online.conf'
     
     if not pacman_online_conf.exists():
-        print(f"{Colors.YELLOW}WARNING: pacman-online.conf not found, using default pacman config{Colors.NC})"
+        print(f"{Colors.YELLOW}WARNING: pacman-online.conf not found, using default pacman config{Colors.NC}")
         pacman_config = None
     else:
         pacman_config = str(pacman_online_conf)

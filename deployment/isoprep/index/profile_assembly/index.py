@@ -35,27 +35,27 @@ def create_system_mirror_symlink(profile_dir: Path, cache_dir: Path):
     """
     print(f"{Colors.BLUE}Creating system mirror directory structure...{Colors.NC}")
     
-    system_mirror_dir = Path('/var/cache/omarchy/mirror/'offline')
+    system_mirror_dir = Path('/var/cache/omarchy/mirror/offline')
     
     # Create parent directories with sudo (requires root permissions)
     system_mirror_parent = system_mirror_dir.parent
     print(f"{Colors.BLUE}Creating system mirror directory structure with sudo...{Colors.NC}")
-    subprocess.run(['sudo', 'mkdir', '-'p', str(system_mirror_parent)], check=True)
+    subprocess.run(['sudo', 'mkdir', '-p', str(system_mirror_parent)], check=True)
     
     # Remove existing symlink or directory if it exists
     if system_mirror_dir.exists() or system_mirror_dir.is_symlink():
         print(f"{Colors.BLUE}Removing existing symlink/directory...{Colors.NC}")
         if system_mirror_dir.is_symlink():
-            subprocess.run(['sudo', 'rm', '-'f', str(system_mirror_dir)], check=False)
+            subprocess.run(['sudo', 'rm', '-f', str(system_mirror_dir)], check=False)
         else:
             # If 'it's a directory, we need sudo to remove it
-            subprocess.run(['sudo', 'rm', '-'rf', str(system_mirror_dir)], check=False)
+            subprocess.run(['sudo', 'rm', '-rf', str(system_mirror_dir)], check=False)
     
     # Create symlink from system location to profile directory
     # Use absolute path for the symlink target
     cache_dir_absolute = cache_dir.resolve()
     print(f"{Colors.BLUE}Creating symlink with sudo: {system_mirror_dir} -> {cache_dir_absolute}{Colors.NC}")
-    subprocess.run(['sudo', 'ln', '-'sf', str(cache_dir_absolute), str(system_mirror_dir)], check=True)
+    subprocess.run(['sudo', 'ln', '-sf', str(cache_dir_absolute), str(system_mirror_dir)], check=True)
     print(f"{Colors.GREEN}✓ Created symlink{Colors.NC})
 
 

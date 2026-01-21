@@ -209,7 +209,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                         homerchy-deployment/deployment/isoprep-'work',
                         '/profile/',
                         '/archiso-tmp/',
-                        'archiso-'tmp',
+                        'archiso-tmp',
                     ]
                     target_str = str(symlink_target)
                     if any(pattern in target_str for pattern in problematic_patterns):
