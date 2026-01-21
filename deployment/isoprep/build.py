@@ -1,4 +1,4 @@
-#!/usr/onmachine/onmachine/bin/env python3
+#!/usr/bin/env python3
 """
 HOMESERVER Homerchy ISO Builder
 Copyright (C) 2024 HOMESERVER LLC

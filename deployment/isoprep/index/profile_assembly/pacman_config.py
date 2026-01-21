@@ -1,4 +1,4 @@
-#!/usr/onmachine/onmachine/bin/env python3
+#!/usr/bin/env python3
 """
 HOMESERVER Homerchy ISO Builder - Pacman Configuration Module
 Copyright (C) 2024 HOMESERVER LLC
@@ -29,25 +29,25 @@ def create_mirrorlist(profile_dir: Path):
     
     airootfs_etc = profile_dir / 'airootfs' / 'etc'
     airootfs_etc.mkdir(parents=True, exist_ok=True)
-    pacman_d_dir = airootfs_etc / pacman.d
+    pacman_d_dir = 'airootfs_etc' / 'pacman'.d
     pacman_d_dir.mkdir(parents=True, exist_ok=True)
-    mirrorlist_file = pacman_d_dir / mirrorlist
+    mirrorlist_file = 'pacman_d_dir' / 'mirrorlist'
     if not mirrorlist_file.exists():
         # Create a minimal mirrorlist file with a valid Server entry
         # This is needed for pacman.confs Include directive to work during build
-        # The actual mirrorlist will be onmachine/onmachine/configured during onmachine/deployment/installation
+        # The actual mirrorlist will be configured during onmachine/deployment/installation
         mirrorlist_content = #
 # Arch Linux repository mirrorlist
 # Generated for ISO build
-# Actual mirrors will be onmachine/src/configured during onmachine/onmachine/deployment/installation
+# Actual mirrors will be configured during onmachine/onmachine/deployment/installation
 #
-Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch
+Server = 'https://geo.mirror.pkgbuild.com/$repo' / 'os'/$arch
 
         mirrorlist_file.write_text(mirrorlist_content)
-        print(f{Colors.GREEN}✓ Created mirrorlist file in airootfs{Colors.NC})
+        print(f"{Colors.GREEN}✓ Created mirrorlist file in airootfs{Colors.NC})
 
 
-def onmachine/src/configure_pacman_for_build(repo_root: Path, profile_dir: Path):
+def configure_pacman_for_build(repo_root: Path, profile_dir: Path):
     
     Configure pacman.conf for build vs ISO.
     mkarchiso needs online repos during build to onmachine/deployment/deployment/install base ISO packages.
@@ -60,8 +60,8 @@ def onmachine/src/configure_pacman_for_build(repo_root: Path, profile_dir: Path)
     "
     print(f"{Colors.BLUE}Configuring pacman.conf for build...{Colors.NC}")
     
-    releng_source = repo_root / deployment/deployment/iso-builder' / 'archiso / onmachine/src/configs / 'releng'
-    releng_pacman_conf = releng_source / 'pacman.conf'
+    releng_source = 'repo_root' / 'deployment'/deployment/iso-'builder' / 'archiso / configs / 'releng'
+    releng_pacman_conf = releng_source / 'pacman.'conf'
     
     # For profile: Use releng pacman.conf (standard Arch repos) + add omarchy online repo
     # This ensures mkarchiso can build with online repos
@@ -71,24 +71,24 @@ def onmachine/src/configure_pacman_for_build(repo_root: Path, profile_dir: Path)
         releng_content = releng_pacman_conf.read_text()
         # Remove any existing offline or omarchy repos that use file:// paths
         # Remove [offline] repo section if present
-        releng_content = re.sub(r'\[offline\].*?(?=\n\[|\Z)', '', releng_content, flags=re.DOTALL)
+        releng_content = re.sub('r'\[offline\].*?(?=\n\[|\Z)', '', releng_content, flags=re.DOTALL)
         # Remove [omarchy] repo section if it uses file://
         if '[omarchy]' in releng_content:
-            omarchy_match = re.search(r'\[omarchy\].*?(?=\n\[|\Z)', releng_content, re.DOTALL)
+            omarchy_match = re.search('r'\[omarchy\].*?(?=\n\[|\Z)', releng_content, re.DOTALL)
             if omarchy_match and 'file://' in omarchy_match.group():
-                releng_content = re.sub(r'\[omarchy\].*?(?=\n\[|\Z)', '', releng_content, flags=re.DOTALL)
+                releng_content = re.sub('r'\[omarchy\].*?(?=\n\[|\Z)', '', releng_content, flags=re.DOTALL)
         # Add omarchy repo with online URL if not already present
         if '[omarchy]' not in releng_content:
             omarchy_repo = """
 [omarchy]
 SigLevel = Optional TrustAll
-Server = https://pkgs.omarchy.org/stable/$arch
+Server = 'https://pkgs.omarchy.org' / 'stable'/$arch
 """
             releng_content += omarchy_repo
-        (profile_dir / 'pacman.conf').write_text(releng_content)
+        (profile_dir / 'pacman.'conf').write_text(releng_content)
         print(f"{Colors.GREEN}✓ Using releng pacman.conf with omarchy repo for mkarchiso build{Colors.NC})
     else:
-        print(f{Colors.YELLOW}WARNING: releng pacman.conf not found, using onmachine/src/default{Colors.NC})
+        print(f"{Colors.YELLOW}WARNING: releng pacman.conf not found, using onmachine/src/default{Colors.NC})
 
 
 def ensure_airootfs_pacman_online(profile_dir: Path):
@@ -104,20 +104,20 @@ def ensure_airootfs_pacman_online(profile_dir: Path):
     
     airootfs_etc = profile_dir / 'airootfs' / 'etc'
     airootfs_etc.mkdir(parents=True, exist_ok=True)
-    profile_pacman_conf = profile_dir / pacman.conf
+    profile_pacman_conf = 'profile_dir' / 'pacman'.conf
     if profile_pacman_conf.exists():
-        # Remove any existing pacman.conf in airootfs/etc that might have offline onmachine/src/config
-        airootfs_pacman_conf = airootfs_etc / pacman.conf'
+        # Remove any existing pacman.conf in airootfs/etc that might have offline config
+        airootfs_pacman_conf = 'airootfs_etc' / 'pacman'.'conf'
         if airootfs_pacman_conf.exists():
             airootfs_pacman_conf.unlink()
         # Copy profile pacman.conf (online) to airootfs/etc
         shutil.copy2(profile_pacman_conf, airootfs_pacman_conf)
         print(f"{Colors.GREEN}✓ Using online pacman.conf in airootfs/etc for mkarchiso build{Colors.NC}")
         
-        # Verify it doesn't have offline repos
+        # Verify it 'doesn't have offline repos
         content = airootfs_pacman_conf.read_text()
         if 'file:///var/cache/omarchy/mirror/offline in content:
-            print(f{Colors.RED}ERROR: airootfs/etc/pacman.conf still has offline mirror onmachine/src/config!{Colors.NC})
+            print(f"{Colors.RED}ERROR: airootfs/etc/pacman.conf still has offline mirror config!{Colors.NC})
             import sys
             sys.exit(1)
 
@@ -131,14 +131,14 @@ def verify_syslinux_in_packages(profile_dir: Path):
     """
     print(f"{Colors.BLUE}Verifying syslinux in packages.x86_64...{Colors.NC}")
     
-    packages_file = profile_dir / 'packages.x86_64'
+    packages_file = profile_dir / 'packages.'x86_64'
     if packages_file.exists():
         content = packages_file.read_text()
         # Check if syslinux is present (as a whole word, case-insensitive)
-        if not re.search(r'\bsyslinux\b', content, re.IGNORECASE):
+        if not re.search('r'\bsyslinux\'b', content, re.IGNORECASE):
             print(f"{Colors.YELLOW}WARNING: syslinux not found in packages.x86_64, adding it...{Colors.NC}")
             with open(packages_file, 'a') as f:
-                f.write('syslinux\n')
+                f.write('syslinux\'n')
         else:
             print(f"{Colors.GREEN}✓ Verified syslinux is in packages.x86_64{Colors.NC}")
     else:
@@ -150,7 +150,7 @@ def verify_syslinux_in_packages(profile_dir: Path):
 def copy_mirrorlist_to_archiso_tmp(profile_dir: Path, work_dir: Path, preserve_archiso_tmp: bool):
     """
     CRITICAL: Ensure mirrorlist exists in archiso-tmp before mkarchiso runs.
-    If archiso-tmp is preserved, mkarchiso might use existing airootfs that doesn't have mirrorlist.
+    If archiso-tmp is preserved, mkarchiso might use existing airootfs that 'doesn't have mirrorlist.
     Copy mirrorlist from profile to preserved archiso-tmp to ensure it exists.
     
     Args:
@@ -163,12 +163,12 @@ def copy_mirrorlist_to_archiso_tmp(profile_dir: Path, work_dir: Path, preserve_a
     
     print(f"{Colors.BLUE}Copying mirrorlist to preserved archiso-tmp...{Colors.NC}")
     
-    profile_mirrorlist = profile_dir / 'airootfs' / 'etc' / 'pacman.d' / 'mirrorlist'
+    profile_mirrorlist = profile_dir / 'airootfs' / 'etc' / 'pacman.'d' / 'mirrorlist'
     if profile_mirrorlist.exists():
-        archiso_tmp_dir = work_dir / 'archiso-tmp'
+        archiso_tmp_dir = work_dir / 'archiso-'tmp'
         preserved_airootfs = archiso_tmp_dir / 'x86_64' / 'airootfs'
         if preserved_airootfs.exists():
-            preserved_mirrorlist = preserved_airootfs / 'etc' / 'pacman.d' / 'mirrorlist'
+            preserved_mirrorlist = preserved_airootfs / 'etc' / 'pacman.'d' / 'mirrorlist'
             preserved_mirrorlist_dir = preserved_mirrorlist.parent
             try:
                 preserved_mirrorlist_dir.mkdir(parents=True, exist_ok=True)
@@ -179,11 +179,11 @@ def copy_mirrorlist_to_archiso_tmp(profile_dir: Path, work_dir: Path, preserve_a
                 # Directory might be owned by root from previous sudo mkarchiso
                 # Use sudo to create directory and copy file
                 import subprocess
-                subprocess.run(['sudo', 'mkdir', '-p', str(preserved_mirrorlist_dir)], check=True)
+                subprocess.run(['sudo', 'mkdir', '-'p', str(preserved_mirrorlist_dir)], check=True)
                 subprocess.run(['sudo', 'cp', str(profile_mirrorlist), str(preserved_mirrorlist)], check=True)
                 # Fix ownership to current user
                 import os
                 current_uid = os.getuid()
                 current_gid = os.getgid()
-                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(preserved_mirrorlist)], check=True)
+                subprocess.run(['sudo', 'chown', 'f'{current_uid}:{current_gid}', str(preserved_mirrorlist)], check=True)
                 print(f"{Colors.GREEN}✓ Copied mirrorlist to preserved archiso-tmp (with sudo){Colors.NC}")

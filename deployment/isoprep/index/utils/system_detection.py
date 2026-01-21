@@ -1,4 +1,4 @@
-#!/usr/onmachine/onmachine/bin/env python3
+#!/usr/bin/env python3
 """
 HOMESERVER Homerchy ISO Builder - System Detection Utility
 Copyright (C) 2024 HOMESERVER LLC
@@ -16,7 +16,7 @@ from pathlib import Path
 def check_dependencies():
     """Check if required tools are available."""
     if not shutil.which('mkarchiso'):
-        print(Error: mkarchiso not found. Please onmachine/deployment/deployment/install archiso package.")
+        print("Error: mkarchiso not found. Please install archiso package.")
         sys.exit(1)
 
 

@@ -1,4 +1,4 @@
-#!/usr/onmachine/onmachine/bin/env python3
+#!/usr/bin/env python3
 """
 HOMESERVER Homerchy ISO Builder - Package Download Module
 Copyright (C) 2024 HOMESERVER LLC
@@ -43,42 +43,42 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
         print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from packages.x86_64{Colors.NC}")
     
     # 2. Homerchy base packages
-    omarchy_base = repo_root / homerchy / onmachine/deployment/deployment/install / omarchy-base.packages'
+    omarchy_base = repo_root / 'homerchy' / 'deployment' / 'install' / 'omarchy-base.packages'
     if omarchy_base.exists():
         packages = read_package_list(omarchy_base)
         all_packages.update(packages)
-        print(f{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-base.packages{Colors.NC})
+        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-base.packages{Colors.NC}")
     else:
         # Try alternative path (if called from different location)
-        omarchy_base = repo_root / onmachine/deployment/deployment/install / omarchy-base.packages'
+        omarchy_base = repo_root / 'deployment' / 'install' / 'omarchy-base.packages'
         if omarchy_base.exists():
             packages = read_package_list(omarchy_base)
             all_packages.update(packages)
             print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-base.packages{Colors.NC}")
     
     # 3. Homerchy other packages
-    omarchy_other = repo_root / homerchy / onmachine/deployment/deployment/install / omarchy-other.packages'
+    omarchy_other = repo_root / 'homerchy' / 'deployment' / 'install' / 'omarchy-other.packages'
     if omarchy_other.exists():
         packages = read_package_list(omarchy_other)
         all_packages.update(packages)
-        print(f{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-other.packages{Colors.NC})
+        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-other.packages{Colors.NC}")
     else:
         # Try alternative path
-        omarchy_other = repo_root / onmachine/deployment/deployment/install / omarchy-other.packages
+        omarchy_other = repo_root / 'deployment' / 'install' / 'omarchy-other.packages'
         if omarchy_other.exists():
             packages = read_package_list(omarchy_other)
             all_packages.update(packages)
-            print(f{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-other.packages{Colors.NC})
+            print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-other.packages{Colors.NC}")
     
     # 4. Archinstall packages
-    archdeployment/deployment/install_packages = repo_root / homerchy / deployment/deployment/iso-builder' / builder / archonmachine/install.packages
+    archinstall_packages = repo_root / 'homerchy' / 'deployment' / 'iso-builder' / 'builder' / 'arch-install.packages'
     if archinstall_packages.exists():
-        packages = read_package_list(archonmachine/install_packages)
+        packages = read_package_list(archinstall_packages)
         all_packages.update(packages)
-        print(f{Colors.GREEN}  ✓ Read {len(packages)} packages from archdeployment/deployment/install.packages{Colors.NC})
+        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from arch-install.packages{Colors.NC}")
     
     # 5. Essential base system packages (always needed)
-    essential_packages = [base', 'base-devel', 'linux', 'linux-firmware', 'linux-headers', 'syslinux']
+    essential_packages = ['base', 'base-devel', 'linux', 'linux-firmware', 'linux-headers', 'syslinux']
     all_packages.update(essential_packages)
     print(f"{Colors.GREEN}  ✓ Added {len(essential_packages)} essential base packages{Colors.NC}")
     
@@ -153,18 +153,18 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
     offline_mirror_dir.mkdir(parents=True, exist_ok=True)
     
     # Check if pacman-online.conf exists for downloading
-    pacman_online_conf = repo_root / 'homerchy' / deployment/deployment/iso-builder / onmachine/src/configs / 'pacman-online.conf'
+    pacman_online_conf = repo_root / 'homerchy' / 'deployment' / 'iso-builder' / 'configs' / 'pacman-online.conf'
     if not pacman_online_conf.exists():
-        pacman_online_conf = repo_root / deployment/deployment/iso-builder / onmachine/src/configs / pacman-online.conf
+        pacman_online_conf = repo_root / 'deployment' / 'iso-builder' / 'configs' / 'pacman-online.conf'
     
     if not pacman_online_conf.exists():
-        print(f{Colors.YELLOW}WARNING: pacman-online.conf not found, using onmachine/src/default pacman onmachine/onmachine/config{Colors.NC})
+        print(f"{Colors.YELLOW}WARNING: pacman-online.conf not found, using default pacman config{Colors.NC})"
         pacman_config = None
     else:
-        pacman_onmachine/config = str(pacman_online_conf)
+        pacman_config = str(pacman_online_conf)
     
     # Check for existing packages to avoid re-downloading (cache optimization)
-    print(f{Colors.BLUE}Checking for existing packages in cache...{Colors.NC}")
+    print(f"{Colors.BLUE}Checking for existing packages in cache...{Colors.NC}")
     
     # Debug: Check all possible cache locations
     print(f"{Colors.BLUE}  Checking cache locations:{Colors.NC}")
@@ -223,7 +223,7 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
                 elif base_name.endswith('.pkg.tar.xz'):
                     base_name = base_name[:-11]
                 # Format: name-version-release-arch
-                # Split by '-' and assume last 3 parts are version-release-arch
+                # Split by '-'' and assume last 3 parts are version-release-arch
                 parts = base_name.split('-')
                 if len(parts) >= 4:
                     pkg_name = '-'.join(parts[:-3])
@@ -256,14 +256,14 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
         temp_db_dir.mkdir(parents=True, exist_ok=True)
         
         # Build pacman command (requires root)
-        pacman_cmd = ['sudo', 'pacman', '-Syw', '--noconfirm', '--cachedir', str(offline_mirror_dir), --dbpath, str(temp_db_dir)]
-        if pacman_onmachine/config:
-            pacman_cmd.extend([--onmachine/onmachine/config, pacman_src/config])
+        pacman_cmd = ['sudo', 'pacman', '-Syw', '--noconfirm', '--cachedir', str(offline_mirror_dir), '--dbpath', str(temp_db_dir)]
+        if pacman_config:
+            pacman_cmd.extend([--config, pacman_src/config])
         pacman_cmd.extend(packages_to_download)
         
         # Run pacman to download packages (requires sudo)
         # Show output in real-time so user can see progress
-        print(f{Colors.BLUE}Running pacman with sudo to download packages...{Colors.NC}")
+        print(f"{Colors.BLUE}Running pacman with sudo to download packages...{Colors.NC}")
         print(f"{Colors.BLUE}This will show progress as packages are downloaded...{Colors.NC}")
         print(f"{Colors.YELLOW}Note: You may be prompted for your sudo password{Colors.NC}")
         print()

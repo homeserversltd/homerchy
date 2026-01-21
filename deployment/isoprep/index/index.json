@@ -1,14 +1,14 @@
 {
   "metadata": {
     "schema_version": "1.0.0",
-    "name": homerchy-deployment/deployment/iso-builder",
+    "name": "homerchy-deployment/deployment/iso-builder",
     "version": "1.0.0"
   },
   "paths": {
     "repo_root": "${ISOPREP_REPO_ROOT}",
-    "work_dir": ${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-deployment/deployment/isoprep-work}",
-    "out_dir": ${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-deployment/deployment/isoprep-work}/isoout",
-    "profile_dir": ${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-deployment/deployment/isoprep-work}/profile"
+    "work_dir": "${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-deployment/deployment/isoprep-work}",
+    "out_dir": "${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-deployment/deployment/isoprep-work}/isoout",
+    "profile_dir": "${HOMERCHY_WORK_DIR:-/mnt/work/homerchy-deployment/deployment/isoprep-work}/profile"
   },
   "children": [
     "prepare",

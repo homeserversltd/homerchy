@@ -1,161 +1,181 @@
-#!/usr/onmachine/onmachine/bin/env python3
-"""
-HOMESERVER Homerchy ISO Builder - Main Orchestrator
-Copyright (C) 2024 HOMESERVER LLC
-
-Main orchestrator for ISO build process using recursive index pattern.
-"""
+#!/usr/bin/env python3
 
 import json
 import os
 import sys
 from pathlib import Path
-import re
-# Add utils to path
-sys.path.insert(0, str(Path(__file__).parent))
+from typing import Dict, Any, Optional
 
 from utils import Colors
 
-
 class Orchestrator:
-    """Main orchestrator for ISO build process."
-    
+    """Main orchestrator for ISO build process."""
+
     def __init__(self, index_path: Path):
         self.index_path = index_path
-        self.onmachine/src/config_path = index_path / index.json
-        self.onmachine/config = self._load_config()
+        self.config_path = index_path / 'index.json'
+        self.config = self._load_config()
         self.paths = self._resolve_paths()
-    
-    def _load_onmachine/config(self) -> dict:
-        "Load onmachine/src/configuration from index.json.
-        if not self.onmachine/onmachine/config_path.exists():
-            raise FileNotFoundError(fConfig file not found: {self.onmachine/onmachine/config_path})
-        
-        with open(self.onmachine/src/config_path, r) as f:
-            onmachine/config = json.load(f)
-        
-        return onmachine/onmachine/config
-    
-    def _resolve_paths(self) -> dict:
-        "Resolve paths from onmachine/src/config, expanding environment variables.
 
-        
-        paths_config = self.onmachine/onmachine/config.get(paths, {})
+    def _load_config(self):
+        """Load configuration from index.json.
+
+        Returns:
+            Dict[str, Any]: Configuration dictionary
+        """
+        if not self.config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {self.config_path}")
+
+        with open(self.config_path, 'r') as f:
+            config = json.load(f)
+
+        return config
+
+    def _resolve_paths(self):
+        """Resolve paths from config, expanding environment variables.
+
+        Returns:
+            Dict[str, Any]: Resolved paths dictionary with Path objects for paths
+        """
+        paths_config = self.config.get('paths', {}).copy()
+
+        # Set default repo_root if not provided
+        if 'repo_root' not in paths_config or not paths_config['repo_root']:
+            default_repo_root = Path(__file__).parent.parent.parent.resolve()
+            os.environ['ISOPREP_REPO_ROOT'] = str(default_repo_root)
+            paths_config['repo_root'] = str(default_repo_root)
+
+        # Expand bash-style variables first (${VAR:-default} syntax)
+        for key, value in paths_config.items():
+            if isinstance(value, str):
+                paths_config[key] = self._expand_vars(value)
+
+        # Then expand standard $VAR syntax
+        for key, value in paths_config.items():
+            if isinstance(value, str):
+                paths_config[key] = os.path.expandvars(value)
+
+        # Check paths exist and convert to Path objects
         resolved = {}
-        
-        # Set onmachine/src/default repo_root if not provided
-        if repo_root not in paths_config or not paths_onmachine/config[repo_root]:
-            # Default to parent of deployment/deployment/isoprep directory
-            onmachine/onmachine/default_repo_root = Path(__file__).parent.parent.parent.resolve()
-            os.environ[ISOPREP_REPO_ROOT] = str(onmachine/src/default_repo_root)
-        
-        def expand_bash_var(value: str) -> str:
-            Expand bash-style ${VAR:-onmachine/src/default} syntax.
-            # Pattern to match ${VAR:-onmachine/onmachine/default}
-            pattern = r\$\{([^:}]+):-([^}]+)\}
-            def replacer(match):
-                var_name = match.group(1)
-                onmachine/default = match.group(2)
-                return os.environ.get(var_name, onmachine/default)
-            return re.sub(pattern, replacer, value)
-        
-        for key, value in paths_src/config.items():
-            # First expand bash-style ${VAR:-onmachine/src/default} syntax
-            expanded = expand_bash_var(str(value))
-            # Then expand standard $VAR syntax
-            resolved_value = os.path.expandvars(expanded)
-            # Convert to Path if its a path
-            resolved[key] = Path(resolved_value) if /' in resolved_value or '\\' in resolved_value else resolved_value
-        
+        for key, path_str in paths_config.items():
+            if key.endswith('_dir') or key in ['repo_root']:
+                path = Path(path_str)
+                # Only check existence for paths that should exist (not output dirs that will be created)
+                if key == 'repo_root' and not path.exists():
+                    raise FileNotFoundError(f"Required path {key} does not exist: {path}")
+                resolved[key] = path
+            else:
+                resolved[key] = path_str
+
         return resolved
-    
+
+    def _expand_vars(self, value: str) -> str:
+        """Expand bash-style ${VAR:-default} syntax.
+
+        Args:
+            value: String with variable references
+
+        Returns:
+            str: String with variables expanded
+        """
+        import re
+        pattern = r'\$\{([^:]+):-([^}]+)\}'
+
+        def replacer(match):
+            var_name = match.group(1)
+            default = match.group(2)
+            return os.environ.get(var_name, default)
+
+        return re.sub(pattern, replacer, value)
+
+    def execute(self) -> bool:
+        """Execute all build children phases.
+
+        Returns:
+            bool: True if all phases succeeded, False otherwise
+        """
+        children = self.config.get('children', [])
+        execution_config = self.config.get('execution', {})
+        continue_on_error = execution_config.get('continue_on_error', False)
+        results = {}
+        success = True
+
+        for phase_name in children:
+            try:
+                phase_result = self._execute_phase(phase_name, results)
+                results[phase_name] = phase_result
+            except Exception as e:
+                print(f'{Colors.BLUE}Error in phase {phase_name}: {e}{Colors.NC}')
+                if not continue_on_error:
+                    return False
+                success = False
+
+        return success
+
     def _execute_phase(self, phase_name: str, phase_results: dict = None) -> dict:
-        """Execute a phase module."""
+        """Execute a single build phase.
+
+        Args:
+            phase_name: Name of the phase to execute
+            phase_results: Previous phase results (optional)
+
+        Returns:
+            dict: Phase execution results
+        """
         phase_dir = self.index_path / phase_name
-        
+
         if not phase_dir.exists():
-            print(f"{Colors.YELLOW}WARNING: Phase directory not found: {phase_dir}{Colors.NC}")
-            return {"success": False, "error": f"Phase directory not found: {phase_dir}"}
-        
-        phase_index = phase_dir / 'index.py'
-        if not phase_index.exists():
-            print(f"{Colors.YELLOW}WARNING: Phase index.py not found: {phase_index}{Colors.NC}")
-            return {"success": False, "error": f"Phase index.py not found: {phase_index}"}
-        
-        # Import and execute phase
+            raise FileNotFoundError(f"Phase directory not found: {phase_dir}")
+
+        # Load phase config
+        phase_config = {**self.paths, **self.config.get(phase_name, {})}
+
+        # Import and run phase module
         import importlib.util
         # Add phase directory parent to path BEFORE loading (for relative imports to work)
-        # This ensures that when the module uses relative imports like "from .download import ...",
-        # Python can resolve them correctly
         sys.path.insert(0, str(phase_dir.parent))
         
         # Use phase directory name as module name so relative imports resolve correctly
-        # The module name should match the directory structure for relative imports to work
-        module_name = f{phase_name}.index
-        spec = importlib.util.spec_from_file_location(module_name, phase_index)
+        module_name = f"{phase_name}.index"
+        spec = importlib.util.spec_from_file_location(module_name, phase_dir / 'index.py')
         module = importlib.util.module_from_spec(spec)
         
         # Set __package__ attribute so relative imports work
-        # This tells Python what package this module belongs to
         module.__package__ = phase_name
         spec.loader.exec_module(module)
-        
-        # Prepare onmachine/config for phase (include paths and previous phase results)
-        phase_config = {**self.paths, **self.onmachine/config.get(phase_name, {})}
-        if phase_results:
-            # Merge previous phase results into onmachine/config so subsequent phases can access them
-            phase_src/config.update(phase_results)
-        
-        # Call main function
-        if hasattr(module, main):
-            result = module.main(phase_dir, phase_onmachine/config)
-            return result if isinstance(result, dict) else {"success": bool(result)}
+
+        if hasattr(module, 'main'):
+            result = module.main(phase_dir, phase_config)
+            phase_config.update(result)
+            return phase_config
         else:
-            return {"success": False, "error": f"Phase {phase_name} has no main() function"}
-    
-    def execute(self) -> bool:
-        """Execute all phases in order."""
-        print(f"{Colors.BLUE}Starting Homerchy ISO Build...{Colors.NC}")
-        print(f"{Colors.BLUE}Repository root: {self.paths.get('repo_root', 'N/A)}{Colors.NC})
-        
-        children = self.onmachine/src/config.get(children, [])
-        execution_config = self.onmachine/onmachine/config.get(execution, {})
-        continue_on_error = execution_src/config.get(continue_on_error', False)
-        
-        results = {}
-        accumulated_results = {}
-        
-        for phase_name in children:
-            print(f"\n{Colors.BLUE}{'='*60}{Colors.NC}")
-            result = self._execute_phase(phase_name, accumulated_results)
-            results[phase_name] = result
-            
-            # Accumulate results for next phases (excluding internal fields)
-            if result.get('success'):
-                for key, value in result.items():
-                    if key not in ['success', 'error']:
-                        accumulated_results[key] = value
-            
-            if not result.get('success', False):
-                error_msg = result.get('error', 'Unknown error')
-                print(f"{Colors.RED}Phase {phase_name} failed: {error_msg}{Colors.NC}")
-                
-                if not continue_on_error:
-                    print(f"{Colors.RED}Build aborted due to phase failure{Colors.NC}")
-                    return False
-        
-        print(f"\n{Colors.GREEN}{'='*60}{Colors.NC}")
-        print(f"{Colors.GREEN}All phases completed successfully!{Colors.NC}")
-        return True
+            raise AttributeError(f"Phase {phase_name} does not have main() function")
+
+    def print_summary(self):
+        """Print build summary."""
+        repo_root = self.paths.get('repo_root', 'N/A')
+        if isinstance(repo_root, Path):
+            repo_root = str(repo_root)
+        print(f"{Colors.BLUE}Repository root: {repo_root}{Colors.NC}")
+
+        children = self.config.get('children', [])
+        print(f"{Colors.BLUE}Build phases: {', '.join(children)}{Colors.NC}")
+
+        execution_config = self.config.get('execution', {})
+        continue_on_error = execution_config.get('continue_on_error', False)
+        print(f"{Colors.BLUE}Continue on error: {continue_on_error}{Colors.NC}")
+
+        # Print status of each phase if results are available
+        if hasattr(self, '_phase_results') and self._phase_results:
+            print(f"{Colors.BLUE}Phase results:{Colors.NC}")
+            for phase_name, result in self._phase_results.items():
+                status = "SUCCESS" if result.get('success', False) else "FAILED"
+                print(f"  {phase_name}: {status}")
 
 
 def main():
-    """Main entry point."""
-    index_path = Path(__file__).parent
-    orchestrator = Orchestrator(index_path)
+    """Main entry point for the ISO build orchestration system."""
+    orchestrator = Orchestrator(Path(__file__).parent)
     success = orchestrator.execute()
+    import sys
     sys.exit(0 if success else 1)
-
-
-if __name__ == '__main__':
-    main()

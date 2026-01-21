@@ -1,4 +1,4 @@
-#!/usr/onmachine/onmachine/bin/env python3
+#!/usr/bin/env python3
 """
 HOMESERVER Homerchy ISO Builder - Utilities Package
 Copyright (C) 2024 HOMESERVER LLC
@@ -7,7 +7,7 @@ Shared utilities for the ISO build orchestrator system.
 """
 
 from .colors import Colors
-from .file_operations import safe_copytree, guaranteed_copytree
+# from .file_operations import safe_copytree, guaranteed_copytree  # Temporarily disabled due to syntax errors
 from .system_detection import check_dependencies, detect_vm_environment
 from .package_utils import read_package_list
 
