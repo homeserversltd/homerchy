@@ -48,7 +48,7 @@ def main(phase_path: Path, config: dict) -> dict:
 if __name__ == '__main__':
     import json
     phase_path = Path(__file__).parent
-    config_path = 'phase_path' / 'index'.json
-    onmachine/config = json.load(open(config_path)) if config_path.exists() else {}
+    config_path = phase_path / 'index.json'
+    config = json.load(open(config_path)) if config_path.exists() else {}
     result = main(phase_path, config)
     sys.exit(0 if result.get('success') else 1)

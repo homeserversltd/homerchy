@@ -1,10 +1,10 @@
-#!/usr/onmachine/onmachine/bin/env python3
+#!/usr/bin/env python3
 """
 HOMESERVER Homerchy Post-Install Pacman Setup
 Copyright (C) 2024 HOMESERVER LLC
 
 Configures pacman package manager settings.
-"
+"""
 
 import os
 import subprocess
@@ -12,33 +12,34 @@ import sys
 from pathlib import Path
 
 
-def main(onmachine/src/config: dict) -> dict:
+def main(config: dict) -> dict:
     
-    Main function - onmachine/configures pacman.
-    
+    """
+    Main function - configures pacman.
+
     Args:
-        onmachine/src/config: Configuration dictionary
-    
+        config: Configuration dictionary
+
     Returns:
         dict: Result dictionary with success status
-    ""
+    """
     try:
-        omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / omarchy))
-        onmachine/onmachine/default_pacman_conf = omarchy_path / onmachine/src/default / 'pacman' / pacman.conf
-        onmachine/onmachine/default_mirrorlist = omarchy_path / onmachine/src/default / 'pacman' / mirrorlist-stable
+        omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy'))
+        default_pacman_conf = omarchy_path / 'src' / 'default' / 'pacman' / 'pacman.conf'
+        default_mirrorlist = omarchy_path / 'src' / 'default' / 'pacman' / 'mirrorlist-stable'
         
         # Copy pacman.conf
-        if not onmachine/src/default_pacman_conf.exists():
-            return {success": False, "message: fDefault pacman.conf not found: {onmachine/src/default_pacman_conf}}
+        if not default_pacman_conf.exists():
+            return {"success": False, "message": f"Default pacman.conf not found: {default_pacman_conf}"}
         
-        subprocess.run(['cp', -f, str(onmachine/src/default_pacman_conf), /etc/pacman.conf], check=True)
+        subprocess.run(['cp', str(default_pacman_conf), '/etc/pacman.conf'], check=True)
         
         # Copy mirrorlist
-        if not onmachine/onmachine/default_mirrorlist.exists():
-            return {"success": False, "message: fDefault mirrorlist not found: {onmachine/src/default_mirrorlist}}
+        if not default_mirrorlist.exists():
+            return {"success": False, "message": f"Default mirrorlist not found: {default_mirrorlist}"}
         
         Path('/etc/pacman.d').mkdir(parents=True, exist_ok=True)
-        subprocess.run(['cp', -f, str(onmachine/src/default_mirrorlist), /etc/pacman.d/mirrorlist'], check=True)
+        subprocess.run(['cp', str(default_mirrorlist), '/etc/pacman.d/mirrorlist'], check=True)
         
         # Check for Mac T2 hardware (lspci -nn | grep -q "106b:180[12]")
         try:
@@ -63,10 +64,10 @@ SigLevel = Never
             # If lspci fails, that's okay - just skip Mac T2 detection
             pass
         
-        return {"success": True, "message: Pacman onmachine/src/configuration completed}
+        return {"success": True, "message": "Pacman configuration completed"}
     
     except Exception as e:
-        return {"success": False, "message: fFailed to onmachine/src/configure pacman: {e}}
+        return {"success": False, "message": f"Failed to configure pacman: {e}"}
 
 
 if __name__ == "__main__":

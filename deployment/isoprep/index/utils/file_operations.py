@@ -29,11 +29,11 @@ def safe_copytree(src, dst, dirs_exist_ok=False, ignore=None):
         """Ignore function that skips missing files and broken symlinks."""
         ignored = []
         for name in names:
-            full_path = 'Path(path)' / 'name'
+            full_path = Path(path) / name
             try:
                 # Check if path exists (this works for files, dirs, and symlinks)
                 if not full_path.exists() and not full_path.is_symlink():
-                    # File/dir 'doesn't exist and 'it's not a symlink
+                    # File/dir doesn't exist and it's not a symlink
                     ignored.append(name)
                 elif full_path.is_symlink():
                     # For symlinks, check if target exists
@@ -68,8 +68,8 @@ def safe_copytree(src, dst, dirs_exist_ok=False, ignore=None):
         return list(ignored_set)
     
     try:
-        shutil.copytree(src, dst, dirs_exist_ok=dirs_exist_ok, 
-                       ignore = 'comsrc' / 'bined_ignore' if ignore else ignore_missing, 
+        shutil.copytree(src, dst, dirs_exist_ok=dirs_exist_ok,
+                       ignore=combined_ignore if ignore else ignore_missing,
                        ignore_dangling_symlinks=True)
     except shutil.Error as e:
         # Filter out errors about missing files (theyre already ignored)
@@ -136,7 +136,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
     # Use followlinks=False to prevent following symlinks (avoids infinite loops from recursive symlinks)
     for root, dirs, files in os.walk(src_path, followlinks=False):
         # Skip if root path is suspiciously long (might be recursive symlink)
-        # Linux max path length is 4096, but 'we'll be more conservative
+        # Linux max path length is 4096, but we'll be more conservative
         if len(str(root)) > 2000:
             continue
         
@@ -144,12 +144,12 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
         # Check each directory to see if 'it's a symlink
         dirs_to_remove = []
         for d in dirs:
-            dir_path = 'Path(root)' / 'd'
+            dir_path = Path(root) / d
             try:
                 if dir_path.is_symlink():
                     dirs_to_remove.append(d)
             except OSError:
-                # If we 'can't check (recursive symlink, etc.), skip it
+                # If we can't check (recursive symlink, etc.), skip it
                 dirs_to_remove.append(d)
         for d in dirs_to_remove:
             dirs.remove(d)
@@ -169,7 +169,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
         # Calculate relative path from source root
         try:
             rel_path = Path(root).relative_to(src_path)
-            dst_dir = 'dst_path' / 'rel_path'
+            dst_dir = dst_path / rel_path
         except (ValueError, OSError) as e:
             # If path resolution fails (recursive symlink), skip this directory
             if 'File name too long' in str(e) or 'ENAMETOOLONG' in str(e):
@@ -183,15 +183,15 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
             # If directory creation fails due to recursive symlink, skip this path
             if 'File name too long' in str(e) or 'ENAMETOOLONG' in str(e):
                 continue
-            # Re-raise if 'it's a different error (permission, etc.)
+            # Re-raise if it's a different error (permission, etc.)
             raise
         
         # Copy/update all files
         for file in files:
-            src_file = 'Path(root)' / 'file'
-            dst_file = 'dst_dir' / 'file'
+            src_file = Path(root) / file
+            dst_file = dst_dir / file
             
-            # Skip if source 'doesn't exist ('shouldn't happen, but be safe)
+            # Skip if source doesn't exist (shouldn't happen, but be safe)
             if not src_file.exists():
                 continue
             
@@ -206,7 +206,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                     # Skip symlinks that point to paths containing work directory, profile, or archiso-tmp
                     problematic_patterns = [
                         'HOMERCHY_WORK_DIR',
-                        homerchy-deployment/deployment/isoprep-'work',
+                        'homerchy-deployment/deployment/isoprep-work',
                         '/profile/',
                         '/archiso-tmp/',
                         'archiso-tmp',
@@ -233,7 +233,7 @@ def guaranteed_copytree(src, dst, ignore=None, show_progress=False):
                                 # Skip this symlink - it would create a problematic path
                                 continue
                         except (OSError, RuntimeError, ValueError):
-                            # If we 'can't resolve it, skip it to be safe
+                            # If we can't resolve it, skip it to be safe
                             continue
                 except (OSError, RuntimeError):
                     # If we 'can't read the symlink, skip it to be safe

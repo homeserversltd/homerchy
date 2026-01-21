@@ -26,7 +26,7 @@ def copy_releng_config(repo_root: Path, profile_dir: Path):
     """
     print(f"{Colors.BLUE}Copying base Releng config...{Colors.NC}")
     
-    releng_source = repo_root / 'deployment' / 'iso-builder' / 'archiso' / 'configs' / 'releng'
+    releng_source = repo_root / 'iso-builder' / 'archiso' / 'configs' / 'releng'
     if releng_source.exists():
         for item in releng_source.iterdir():
             # Skip if we 'can't stat the item ('doesn't exist or permission error)

@@ -25,24 +25,24 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
         repo_root: Root of the repository
         profile_dir: ISO profile directory
     """
-    print(f"{Colors.BLUE}Applying Homerchy custom overlays...{Colors.NC})
+    print(f"{Colors.BLUE}Applying Homerchy custom overlays...{Colors.NC}")
     
     # Note: We skip pacman.conf here because well onmachine/configure it separately for build vs ISO
     # Also skip any pacman.conf files in subdirectories (like airootfs/etc/pacman.conf)
-    configs_source = 'repo_root' / 'deployment'/deployment/iso-builder / configs
+    configs_source = repo_root / 'iso-builder' / 'configs'
     if configs_source.exists():
-        def should_skip_pacman_conf"src_path, dest_path):
+        def should_skip_pacman_conf(src_path, dest_path):
             """Check if this is a pacman.conf file we should skip."""
             if src_path.name == 'pacman.conf':
                 return True
             # Also skip pacman.conf in airootfs/etc/
-            if 'airootfs' in str(src_path) and 'etc' in str(src_path) and src_path.name == pacman.conf:
+            if 'airootfs' in str(src_path) and 'etc' in str(src_path) and src_path.name == 'pacman.conf':
                 return True
             return False
         
         for item in configs_source.iterdir():
             # Skip pacman.conf at root level - well configure it separately
-            if item.name == pacman.conf:
+            if item.name == 'pacman.conf':
                 continue
             # Skip if we 'can't stat the item ('doesn't exist or permission error)
             try:
@@ -51,7 +51,7 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
             except (OSError, RuntimeError):
                 # Cant access the item - skip it
                 continue
-            dest = 'profile_dir' / 'item'.name
+            dest = profile_dir / item.name
             if item.is_dir():
                 # Special handling for airootfs: merge files instead of replacing entire directory
                 # This preserves the archiso base .automated_script.sh wrapper that runs on boot
@@ -61,7 +61,7 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                     def merge_directory(src: Path, dst: Path):
                         """Recursively merge source directory into destination."""
                         for src_item in src.iterdir():
-                            dst_item = 'dst' / 'src_item'.name
+                            dst_item = dst / src_item.name
                             if src_item.is_dir():
                                 if dst_item.exists():
                                     merge_directory(src_item, dst_item)
@@ -69,7 +69,7 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                                     shutil.copytree(src_item, dst_item, dirs_exist_ok=False)
                             else:
                                 # Skip pacman.conf files
-                                if should_skip_pacman_conf"src_item, dst_item):
+                                if should_skip_pacman_conf(src_item, dst_item):
                                     continue
                                 # Always overwrite files to ensure latest code changes
                                 if dst_item.exists():
@@ -85,7 +85,7 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                             print(f"{Colors.GREEN}✓ Verified .automated_script.py copied to profile{Colors.NC}")
                         else:
                             print(f"{Colors.YELLOW}WARNING: .automated_script.py not found in profile after copy!{Colors.NC}")
-                    # Verify archiso base wrapper is preserved'
+                    # Verify archiso base wrapper is preserved
                     archiso_wrapper = dest / 'root' / '.automated_script.sh'
                     if archiso_wrapper.exists():
                         print(f"{Colors.GREEN}✓ Archiso base .automated_script.sh wrapper preserved{Colors.NC}")
@@ -97,12 +97,12 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                         print(f"{Colors.BLUE}Removing existing {dest.name} directory to force fresh copy...{Colors.NC}")
                         shutil.rmtree(dest)
                     # Use custom copytree that skips pacman.conf files
-                    def ignore_pacman_conf"dir_path, names):
+                    def ignore_pacman_conf(dir_path, names):
                         """Ignore function to skip pacman.conf files."""
                         ignored = []
-                        for name in names:'
-                            full_path = 'Path(dir_path)' / 'name'
-                            if should_skip_pacman_conf"full_path, dest / name):
+                        for name in names:
+                            full_path = Path(dir_path) / name
+                            if should_skip_pacman_conf(full_path, dest / name):
                                 ignored.append(name)
                         return ignored
                     safe_copytree(item, dest, dirs_exist_ok=False, ignore=ignore_pacman_conf)
@@ -115,12 +115,12 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                     shutil.copy2(item, dest, follow_symlinks=False)
                 except (OSError, shutil.Error) as e:
                     # Skip missing files or broken symlinks
-                    if 'No such file or 'directory' not in str(e):
+                    if 'No such file or directory' not in str(e):
                         raise
         
-        print(f"{Colors.GREEN}✓ Custom overlays applied{Colors.NC})
+        print(f"{Colors.GREEN}✓ Custom overlays applied{Colors.NC}")
     else:
-        print(f"{Colors.YELLOW}WARNING: Configs source not found: {configs_source}{Colors.NC})
+        print(f"{Colors.YELLOW}WARNING: Configs source not found: {configs_source}{Colors.NC}")
 
 
 def adjust_vm_boot_timeout(profile_dir: Path):
@@ -136,6 +136,6 @@ def adjust_vm_boot_timeout(profile_dir: Path):
         syslinux_cfg = profile_dir / 'syslinux' / 'archiso_sys.cfg'
         if syslinux_cfg.exists():
             content = syslinux_cfg.read_text()
-            content = re.sub('r'^TIMEOUT \d+', 'TIMEOUT '0', content, flags=re.MULTILINE)
+            content = re.sub(r'^TIMEOUT \d+', 'TIMEOUT 0', content, flags=re.MULTILINE)
             syslinux_cfg.write_text(content)
             print(f"{Colors.GREEN}Boot timeout set to 0 for instant VM boot{Colors.NC}")

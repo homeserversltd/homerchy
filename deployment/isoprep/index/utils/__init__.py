@@ -7,7 +7,7 @@ Shared utilities for the ISO build orchestrator system.
 """
 
 from .colors import Colors
-# from .file_operations import safe_copytree, guaranteed_copytree  # Temporarily disabled due to syntax errors
+from .file_operations import safe_copytree, guaranteed_copytree
 from .system_detection import check_dependencies, detect_vm_environment
 from .package_utils import read_package_list
 
