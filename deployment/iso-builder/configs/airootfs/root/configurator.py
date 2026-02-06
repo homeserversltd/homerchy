@@ -45,12 +45,15 @@ def log(message: str):
     print(log_line, flush=True)
 
 
-def get_helpers_path() -> Path:
-    """Get path to helpers/all.sh file."""
+# Python helpers module (loaded in main(); None if not available)
+_helpers = None
+
+
+def get_install_path() -> Path:
+    """Get path to install directory and set environment variables. Prefers Python helpers (helpers/__init__.py)."""
     homerchy_path = Path('/root/homerchy')
     omarchy_path = Path('/root/omarchy')
     
-    # Use symlink if it exists, otherwise check for direct path
     if omarchy_path.exists() or omarchy_path.is_symlink():
         os.environ['OMARCHY_PATH'] = str(omarchy_path)
     elif homerchy_path.exists():
@@ -58,30 +61,19 @@ def get_helpers_path() -> Path:
     else:
         os.environ['OMARCHY_PATH'] = '/root/omarchy'
     
-    # VM test mode is auto-detected in main(), no need to source vm-env.sh
-    
     omarchy_path = Path(os.environ['OMARCHY_PATH'])
-    install_path = omarchy_path / 'deployment' / 'install'
+    install_path = omarchy_path / 'install'
+    helpers_init = install_path / 'helpers' / '__init__.py'
+    if not helpers_init.exists():
+        install_path = omarchy_path / 'deployment' / 'install'
+        helpers_init = install_path / 'helpers' / '__init__.py'
+    
+    if not install_path.exists():
+        raise FileNotFoundError(f"Homerchy install directory not found: {install_path}")
     
     os.environ['OMARCHY_INSTALL'] = str(install_path)
     os.environ['OMARCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
-    
-    helpers_file = install_path / 'helpers' / 'all.sh'
-    if not helpers_file.exists():
-        raise FileNotFoundError(f"Homerchy helpers not found: {helpers_file}")
-    
-    return helpers_file
-
-
-def shell_cmd(cmd: str, check: bool = False, capture_output: bool = False) -> subprocess.CompletedProcess:
-    """Execute a shell command with helpers sourced."""
-    helpers_file = get_helpers_path()
-    full_cmd = f'source {helpers_file} && {cmd}'
-    kwargs = {'check': check}
-    if capture_output:
-        kwargs['capture_output'] = True
-        kwargs['text'] = True
-    return subprocess.run(['bash', '-c', full_cmd], **kwargs)
+    return install_path
 
 
 def abort(message: str = "Aborted installation"):
@@ -94,9 +86,12 @@ def abort(message: str = "Aborted installation"):
 
 def step(title: str):
     """Display step title with logo clearing on first call."""
-    global STEP_COUNT
+    global STEP_COUNT, _helpers
     if STEP_COUNT == 0:
-        shell_cmd('clear_logo', check=False)
+        if _helpers is not None:
+            _helpers.clear_logo()
+        else:
+            subprocess.run(['clear'], check=False)
         STEP_COUNT = 1
     print()
     subprocess.run(['gum', 'style', title], check=False)
@@ -586,14 +581,22 @@ def main():
     debug_log(f"OMARCHY_DEBUG={os.environ.get('OMARCHY_DEBUG', 'not set')}")
     debug_log(f"OMARCHY_VM_PROFILE={vm_profile_status}")
     
-    # Load helpers (required for clear_logo, PADDING_LEFT, etc.)
+    # Load Python helpers (clear_logo, PADDING_LEFT, etc.). Optional: continue without if not found.
+    global _helpers
     try:
-        get_helpers_path()
-        # Source helpers to make functions available
-        shell_cmd('true', check=False)  # Just verify helpers are accessible
+        install_path = get_install_path()
+        if (install_path / 'helpers' / '__init__.py').exists():
+            sys.path.insert(0, str(install_path))
+            import helpers as _helpers_mod
+            _helpers = _helpers_mod
+            _helpers.init_environment()
+            debug_log("Python helpers loaded successfully")
+        else:
+            _helpers = None
+            debug_log("Python helpers package not found; continuing without logo/padding")
     except Exception as e:
-        log(f"ERROR: Failed to load helpers: {e}")
-        sys.exit(1)
+        log(f"WARNING: Could not load helpers ({e}); continuing without logo/padding")
+        _helpers = None
     
     # Ensure tzupdate is available for guessing timezone (optional, AUR package)
     if not shutil.which('tzupdate'):

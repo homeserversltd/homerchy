@@ -18,6 +18,9 @@ from pathlib import Path
 
 LOG_FILE = Path('/var/log/omarchy-install.log')
 
+# Python helpers module (set in main() after import; used by install_arch())
+helpers = None
+
 
 def debug_log(message: str):
     """Log debug messages if OMARCHY_DEBUG is set."""
@@ -591,11 +594,13 @@ WantedBy=multi-user.target
 
 def install_arch():
     """Install base Arch Linux system."""
-    # Call clear_logo from helpers
-    helpers.clear_logo()
-
-    # Use gum to display message
-    helpers.gum_style("Installing...", foreground=3)
+    # Call clear_logo from helpers (module-level ref set in main())
+    if helpers is not None:
+        helpers.clear_logo()
+        helpers.gum_style("Installing...", foreground=3)
+    else:
+        subprocess.run(['clear'], check=False)
+        subprocess.run(['gum', 'style', 'Installing...'], check=False)
     print()
     
     os.environ['CURRENT_SCRIPT'] = 'install_base_system'
@@ -684,9 +689,11 @@ def main():
     
     os.environ['OMARCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
 
+    global helpers
     install_path = get_install_path()
     sys.path.insert(0, str(install_path))
-    import helpers
+    import helpers as _helpers_mod
+    helpers = _helpers_mod
     helpers.init_environment()
     helpers.start_install_log()
     
