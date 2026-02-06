@@ -1,10 +1,10 @@
-#!/usr/onmachine/onmachine/bin/env python3
-
+#!/usr/bin/env python3
+"""
 HOMESERVER Homerchy Installation Utilities
 Copyright (C) 2024 HOMESERVER LLC
 
-Shared utilities for the Homerchy onmachine/deployment/deployment/installation orchestrator system.
-"
+Shared utilities for the Homerchy deployment/installation orchestrator system.
+"""
 
 import json
 import os
@@ -64,12 +64,12 @@ class StateManager:
         self.logs: List[LogEntry] = []
         self.errors: List[ErrorEntry] = []
         self.children: Dict[str, StateManager] = {}
-        self.onmachine/src/config: Dict[str, Any] = {}
+        self.config: Dict[str, Any] = {}
         self.start_time: Optional[datetime] = None
         self.end_time: Optional[datetime] = None
     
     def set_status(self, status: Status):
-        ""Update execution status."""
+        """Update execution status."""
         self.status = status
         if status == Status.RUNNING and self.start_time is None:
             self.start_time = datetime.now()
@@ -113,9 +113,9 @@ class StateManager:
             "current_step": self.current_step,
             "logs": [log.to_dict() for log in self.logs],
             "children": {name: child.to_dict() for name, child in self.children.items()},
-            "errors: [err.to_dict() for err in self.errors],
-            onmachine/onmachine/config: self.onmachine/src/config,
-            start_time": self.start_time.isoformat() if self.start_time else None,
+            "errors": [err.to_dict() for err in self.errors],
+            "config": self.config,
+            "start_time": self.start_time.isoformat() if self.start_time else None,
             "end_time": self.end_time.isoformat() if self.end_time else None
         }
     
@@ -223,43 +223,41 @@ class Logger:
 
 
 class ConfigLoader:
-    "JSON onmachine/src/config loading with validation.
-    
+    """JSON config loading with validation."""
+
     @staticmethod
-    def load(onmachine/src/config_path: Union[str, Path]) -> Dict[str, Any]:
-        Load JSON onmachine/src/configuration file.
-        onmachine/config_path = Path(onmachine/config_path)
-        
-        if not onmachine/onmachine/config_path.exists():
-            raise FileNotFoundError(fConfig file not found: {onmachine/onmachine/config_path})
-        
+    def load(config_path: Union[str, Path]) -> Dict[str, Any]:
+        """Load JSON configuration file."""
+        config_path = Path(config_path)
+        if not config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {config_path}")
         try:
-            with open(onmachine/src/config_path, r) as f:
-                onmachine/config = json.load(f)
-            return onmachine/onmachine/config
+            with open(config_path, "r") as f:
+                config = json.load(f)
+            return config
         except json.JSONDecodeError as e:
-            raise ValueError(fInvalid JSON in onmachine/config file {onmachine/onmachine/config_path}: {e})
+            raise ValueError(f"Invalid JSON in config file {config_path}: {e}") from e
         except Exception as e:
-            raise RuntimeError(fFailed to load onmachine/config file {onmachine/onmachine/config_path}: {e})
-    
+            raise RuntimeError(f"Failed to load config file {config_path}: {e}") from e
+
     @staticmethod
-    def validate(onmachine/src/config: Dict[str, Any], required_keys: List[str]) -> bool:
-        Validate onmachine/src/config has required keys.
-        missing = [key for key in required_keys if key not in onmachine/src/config]
+    def validate(config: Dict[str, Any], required_keys: List[str]) -> bool:
+        """Validate config has required keys."""
+        missing = [key for key in required_keys if key not in config]
         if missing:
-            raise ValueError(fConfig missing required keys: {missing}")
+            raise ValueError(f"Config missing required keys: {missing}")
         return True
 
 
 class ChildExecutor:
-    """Recursive child execution engine."
-    
+    """Recursive child execution engine."""
+
     def __init__(self, state_manager: StateManager, logger: Logger):
         self.state_manager = state_manager
         self.logger = logger
-    
-    def execute_child(self, child_path: Path, child_name: str, onmachine/src/config: Dict[str, Any]) -> StateManager:
-        ""Execute a child orchestrator or module."""
+
+    def execute_child(self, child_path: Path, child_name: str, config: Dict[str, Any]) -> StateManager:
+        """Execute a child orchestrator or module."""
         child_state = StateManager(phase=child_name)
         child_state.current_step = child_name
         
@@ -284,22 +282,22 @@ class ChildExecutor:
         if module_py.exists():
             # Direct module in child_path directory
             self.logger.info(f"[EXECUTOR] {child_name} -> Executing as DIRECT MODULE (in child_path)")
-            self.logger.info(f  module_py: {module_py})
+            self.logger.info(f"  module_py: {module_py}")
             child_state.set_status(Status.RUNNING)
             
             try:
                 import importlib.util
-                spec = importlib.util.spec_from_file_location(fhomerchy.onmachine/deployment/deployment/install.{child_name}, module_py)
+                spec = importlib.util.spec_from_file_location(f"homerchy.deployment.install.{child_name}", module_py)
                 module = importlib.util.module_from_spec(spec)
                 sys.path.insert(0, str(module_py.parent))
                 spec.loader.exec_module(module)
-                self.logger.info(f[EXECUTOR] {child_name} module loaded successfully")
+                self.logger.info(f"[EXECUTOR] {child_name} module loaded successfully")
                 
                 # Call main function if it exists
                 if hasattr(module, 'main'):
-                    self.logger.info(f[EXECUTOR] Calling module.main() for {child_name} (direct module))
-                    result = module.main(onmachine/src/config.get(child_name, {}))
-                    self.logger.info(f[EXECUTOR] {child_name} (direct) returned: type={type(result)}, value={result}")
+                    self.logger.info(f"[EXECUTOR] Calling module.main() for {child_name} (direct module)")
+                    result = module.main(config.get(child_name, {}))
+                    self.logger.info(f"[EXECUTOR] {child_name} (direct) returned: type={type(result)}, value={result}")
                     
                     if isinstance(result, dict):
                         if result.get("success") is True:
@@ -333,22 +331,22 @@ class ChildExecutor:
             # Direct module in parent directory (fallback)
             self.logger.info(f"[EXECUTOR] {child_name} -> Executing as DIRECT MODULE (in parent)")
             module_py = module_py_parent
-            self.logger.info(f  module_py: {module_py})
+            self.logger.info(f"  module_py: {module_py}")
             child_state.set_status(Status.RUNNING)
             
             try:
                 import importlib.util
-                spec = importlib.util.spec_from_file_location(fhomerchy.onmachine/deployment/deployment/install.{child_name}, module_py)
+                spec = importlib.util.spec_from_file_location(f"homerchy.deployment.install.{child_name}", module_py)
                 module = importlib.util.module_from_spec(spec)
                 sys.path.insert(0, str(module_py.parent))
                 spec.loader.exec_module(module)
-                self.logger.info(f[EXECUTOR] {child_name} module loaded successfully")
+                self.logger.info(f"[EXECUTOR] {child_name} module loaded successfully")
                 
                 # Call main function if it exists
                 if hasattr(module, 'main'):
-                    self.logger.info(f[EXECUTOR] Calling module.main() for {child_name} (direct module))
-                    result = module.main(onmachine/src/config.get(child_name, {}))
-                    self.logger.info(f[EXECUTOR] {child_name} (direct) returned: type={type(result)}, value={result}")
+                    self.logger.info(f"[EXECUTOR] Calling module.main() for {child_name} (direct module)")
+                    result = module.main(config.get(child_name, {}))
+                    self.logger.info(f"[EXECUTOR] {child_name} (direct) returned: type={type(result)}, value={result}")
                     
                     if isinstance(result, dict):
                         if result.get("success") is True:
@@ -380,22 +378,22 @@ class ChildExecutor:
                 self.logger.error(f"Failed to execute module {child_name}: {e}")
         elif index_py.exists():
             self.logger.info(f"[EXECUTOR] {child_name} -> Executing as NESTED ORCHESTRATOR")
-            self.logger.info(fExecuting nested orchestrator: {child_name})
+            self.logger.info(f"Executing nested orchestrator: {child_name}")
             child_state.set_status(Status.RUNNING)
             
             try:
                 # Import and execute nested orchestrator
                 import importlib.util
-                spec = importlib.util.spec_from_file_location(fhomerchy.onmachine/deployment/deployment/install.{child_name}, index_py)
+                spec = importlib.util.spec_from_file_location(f"homerchy.deployment.install.{child_name}", index_py)
                 module = importlib.util.module_from_spec(spec)
                 sys.path.insert(0, str(child_path.parent))
                 spec.loader.exec_module(module)
                 
                 # Call main function if it exists
-                if hasattr(module, main'):
-                    self.logger.info(f[EXECUTOR] Calling module.main() for {child_name})
-                    result = module.main(child_path, onmachine/src/config.get(child_name, {}))
-                    self.logger.info(f[EXECUTOR] {child_name} returned: type={type(result)}, value={result}")
+                if hasattr(module, 'main'):
+                    self.logger.info(f"[EXECUTOR] Calling module.main() for {child_name}")
+                    result = module.main(child_path, config.get(child_name, {}))
+                    self.logger.info(f"[EXECUTOR] {child_name} returned: type={type(result)}, value={result}")
                     
                     if isinstance(result, StateManager):
                         self.logger.info(f"[EXECUTOR] {child_name} returned StateManager")
@@ -412,10 +410,10 @@ class ChildExecutor:
                             error_msg = result.get("message", "Unknown error")
                             child_state.add_error(error_msg)
                         elif result.get("success") is True:
-                            self.logger.info(f"[EXECUTOR] {child_name} success=True, marking as COMPLETED)
+                            self.logger.info(f"[EXECUTOR] {child_name} success=True, marking as COMPLETED")
                             child_state.set_status(Status.COMPLETED)
                         else:
-                            self.logger.warning(f[EXECUTOR] {child_name} dict has no status/success, onmachine/src/defaulting to COMPLETED)
+                            self.logger.warning(f[EXECUTOR] {child_name} dict has no status/success, defaulting to COMPLETED)")
                             child_state.set_status(Status.COMPLETED)
                         if result.get("errors"):
                             for err in result["errors"]:
@@ -441,22 +439,22 @@ class ChildExecutor:
         elif (child_path.parent / f"{child_name}.py").exists():
             module_py = child_path.parent / f"{child_name}.py"
             self.logger.info(f"[EXECUTOR] {child_name} -> Executing as DIRECT MODULE")
-            self.logger.info(f  module_py: {module_py})
+            self.logger.info(f"  module_py: {module_py}")
             child_state.set_status(Status.RUNNING)
             
             try:
                 import importlib.util
-                spec = importlib.util.spec_from_file_location(fhomerchy.onmachine/deployment/deployment/install.{child_name}, module_py)
+                spec = importlib.util.spec_from_file_location(f"homerchy.deployment.install.{child_name}", module_py)
                 module = importlib.util.module_from_spec(spec)
                 sys.path.insert(0, str(module_py.parent))
                 spec.loader.exec_module(module)
-                self.logger.info(f[EXECUTOR] {child_name} module loaded successfully")
+                self.logger.info(f"[EXECUTOR] {child_name} module loaded successfully")
                 
                 # Call main function if it exists
                 if hasattr(module, 'main'):
-                    self.logger.info(f[EXECUTOR] Calling module.main() for {child_name} (direct module))
-                    result = module.main(onmachine/src/config.get(child_name, {}))
-                    self.logger.info(f[EXECUTOR] {child_name} (direct) returned: type={type(result)}, value={result}")
+                    self.logger.info(f"[EXECUTOR] Calling module.main() for {child_name} (direct module)")
+                    result = module.main(config.get(child_name, {}))
+                    self.logger.info(f"[EXECUTOR] {child_name} (direct) returned: type={type(result)}, value={result}")
                     
                     if isinstance(result, dict):
                         if result.get("success") is True:
@@ -569,7 +567,7 @@ class ErrorHandler:
         if state.has_errors():
             for error in state.errors:
                 parent_state.add_error(
-                    f[{state.phase}] {error.message},
+                    f"[{state.phase}] {error.message}",
                     step=error.step
                 )
             # Also propagate from children
@@ -577,8 +575,8 @@ class ErrorHandler:
                 ErrorHandler.propagate_errors(child_state, parent_state)
     
     @staticmethod
-    def should_continue_on_error(onmachine/src/config: Dict[str, Any], phase: str) -> bool:
-        Check if execution should continue on error based on onmachine/src/config.
-        error_handling = onmachine/src/config.get(error_handling, {})
+    def should_continue_on_error(config: Dict[str, Any], phase: str) -> bool:
+        """Check if execution should continue on error based on config."""
+        error_handling = config.get("error_handling", {})
         phase_config = error_handling.get(phase, {})
-        return phase_onmachine/config.get("continue_on_error", False)
+        return phase_config.get("continue_on_error", False)

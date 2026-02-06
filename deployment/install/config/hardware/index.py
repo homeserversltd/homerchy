@@ -1,11 +1,11 @@
-#!/usr/onmachine/onmachine/bin/env python3
-
+#!/usr/bin/env python3
+"""
 HOMESERVER Homerchy Hardware Config Orchestrator
 Copyright (C) 2024 HOMESERVER LLC
 
-Nested orchestrator for hardware-specific onmachine/src/configuration.
+Nested orchestrator for hardware-specific configuration.
 Demonstrates infinite nesting pattern.
-
+"""
 
 import sys
 from pathlib import Path
@@ -16,19 +16,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from index import Orchestrator, StateManager, Status
 
 
-def main(phase_path: Path, onmachine/src/config: dict) -> StateManager:
-    
-    Main entry point for hardware onmachine/config orchestrator.
-    
+def main(phase_path: Path, config: dict) -> StateManager:
+    """
+    Main entry point for hardware config orchestrator.
+
     Args:
-        phase_path: Path to hardware onmachine/config directory
-        onmachine/src/config: Configuration dictionary
-    
+        phase_path: Path to hardware config directory
+        config: Configuration dictionary
+
     Returns:
         StateManager: Execution state with results
-    
-    orchestrator = Orchestrator(onmachine/deployment/deployment/install_path=phase_path, phase=hardware)
-    # Execute children of this phase (demonstrates infinite nesting)
+    """
+    orchestrator = Orchestrator(install_path=phase_path, phase="hardware")
     return orchestrator.execute_children()
 
 

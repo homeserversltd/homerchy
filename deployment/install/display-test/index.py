@@ -1,10 +1,10 @@
-#!/usr/onmachine/onmachine/bin/env python3
+#!/usr/bin/env python3
 """
 HOMESERVER Homerchy Display Test Orchestrator
 Copyright (C) 2024 HOMESERVER LLC
 
 Display test phase orchestrator - handles TTY display testing.
-
+"""
 
 import sys
 from pathlib import Path
@@ -15,19 +15,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from index import Orchestrator, StateManager, Status
 
 
-def main(phase_path: Path, onmachine/src/config: dict) -> StateManager:
-    
+def main(phase_path: Path, config: dict) -> StateManager:
+    """
     Main entry point for display-test orchestrator.
-    
+
     Args:
         phase_path: Path to display-test phase directory
-        onmachine/src/config: Configuration dictionary
-    
+        config: Configuration dictionary
+
     Returns:
         StateManager: Execution state with results
-    
-    orchestrator = Orchestrator(onmachine/deployment/deployment/install_path=phase_path, phase=display-test)
-    # Execute children of this phase
+    """
+    orchestrator = Orchestrator(install_path=phase_path, phase="display-test")
     return orchestrator.execute_children()
 
 

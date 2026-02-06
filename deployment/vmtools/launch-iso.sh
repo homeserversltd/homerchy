@@ -53,6 +53,44 @@ qemu-img create -f qcow2 "$DISK_FILE" 100G
 echo "Launching ISO: $ISO_FILE"
 echo "Using disk: $DISK_FILE"
 
+# Kill any existing Homerchy QEMU session so port 2222 and monitor socket are free
+HOMERCHY_MONITOR_SOCK="/tmp/homerchy-qemu-monitor.sock"
+existing_pids=""
+if [ -S "$HOMERCHY_MONITOR_SOCK" ]; then
+    # Find qemu process using our monitor socket (same process holds port 2222)
+    for pid in $(pgrep -f "qemu-system-x86_64.*homerchy-qemu-monitor"); do
+        existing_pids="${existing_pids} ${pid}"
+    done
+fi
+if [ -z "$existing_pids" ]; then
+    # No socket; check if something is listening on 2222 and is qemu with homerchy args
+    for pid in $(pgrep -f "qemu-system-x86_64.*homerchy"); do
+        existing_pids="${existing_pids} ${pid}"
+    done
+fi
+if [ -n "$existing_pids" ]; then
+    echo "Stopping existing Homerchy QEMU session (PIDs:${existing_pids})..."
+    for pid in $existing_pids; do
+        kill -TERM "$pid" 2>/dev/null || true
+    done
+    for _ in 1 2 3 4 5; do
+        still=""
+        for pid in $existing_pids; do
+            kill -0 "$pid" 2>/dev/null && still="${still} ${pid}"
+        done
+        [ -z "$still" ] && break
+        sleep 1
+    done
+    for pid in $existing_pids; do
+        if kill -0 "$pid" 2>/dev/null; then
+            echo "Killing stubborn QEMU PID $pid"
+            kill -KILL "$pid" 2>/dev/null || true
+        fi
+    done
+    rm -f "$HOMERCHY_MONITOR_SOCK"
+    sleep 1
+fi
+
 # Check which profile will be used
 INDEX_FILE="${REPO_ROOT}/deployment/vmtools/index.json"
 if [ -f "$INDEX_FILE" ]; then

@@ -1,14 +1,14 @@
 {
     "metadata": {
         "schema_version": "1.0.0",
-        "name": Homerchy Installation System,
-        description: Root orchestrator onmachine/src/configuration for Homerchy onmachine/deployment/deployment/installation
+        "name": "Homerchy Installation System",
+        "description": "Root orchestrator configuration for Homerchy deployment/installation"
     },
-    paths: {
-        "omarchy_path": ${HOME}/.local/share/omarchy,
-        onmachine/deployment/install_path: ${OMARCHY_PATH}/onmachine/onmachine/deployment/install,
-        log_file: /var/log/omarchy-onmachine/deployment/deployment/install.log,
-        log_dir": "/var/log"
+    "paths": {
+        "omarchy_path": "${HOME}/.local/share/omarchy",
+        "install_path": "${OMARCHY_PATH}/deployment/install",
+        "log_file": "/var/log/omarchy/install.log",
+        "log_dir": "/var/log"
     },
     "execution": {
         "mode": "sequential",
@@ -17,16 +17,16 @@
                 "continue_on_error": false
             },
             "packaging": {
-                "continue_on_error: false
+                "continue_on_error": false
             },
-            onmachine/src/config: {
+            "config": {
                 "continue_on_error": true
             },
             "login": {
-                continue_on_error: false
+                "continue_on_error": false
             },
-            post-onmachine/deployment/deployment/install: {
-                continue_on_error": false
+            "post-install": {
+                "continue_on_error": false
             },
             "first-run": {
                 "continue_on_error": true
@@ -36,28 +36,28 @@
     "phases": {
         "preflight": {
             "enabled": true,
-            description: Pre-onmachine/deployment/deployment/installation checks and setup,
-            order": 1
+            "description": "Pre-installation checks and setup",
+            "order": 1
         },
         "packaging": {
             "enabled": true,
-            description: Package onmachine/deployment/deployment/installation,
-            order: 2
+            "description": "Package installation",
+            "order": 2
         },
-        onmachine/src/config: {
+        "config": {
             "enabled": true,
-            "description: System onmachine/src/configuration,
+            "description": "System configuration",
             "order": 3
         },
         "login": {
             "enabled": true,
             "description": "Login manager setup",
-            order: 4
+            "order": 4
         },
-        post-onmachine/deployment/deployment/install: {
-            enabled": true,
-            description: Post-onmachine/deployment/deployment/installation tasks,
-            order": 5
+        "post-install": {
+            "enabled": true,
+            "description": "Post-installation tasks",
+            "order": 5
         },
         "first-run": {
             "enabled": true,
