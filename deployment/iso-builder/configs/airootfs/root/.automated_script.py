@@ -58,14 +58,18 @@ def get_helpers_path():
     
     omarchy_path = Path(os.environ['OMARCHY_PATH'])
     install_path = omarchy_path / 'install'
-    
-    os.environ['OMARCHY_INSTALL'] = str(install_path)
-    os.environ['OMARCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
-    
     helpers_file = install_path / 'helpers' / 'all.sh'
+
+    if not helpers_file.exists():
+        install_path = omarchy_path / 'deployment' / 'install'
+        helpers_file = install_path / 'helpers' / 'all.sh'
+
     if not helpers_file.exists():
         raise FileNotFoundError(f"Homerchy helpers not found: {helpers_file}")
-    
+
+    os.environ['OMARCHY_INSTALL'] = str(install_path)
+    os.environ['OMARCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
+
     return str(helpers_file)
 
 
