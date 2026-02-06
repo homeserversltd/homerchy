@@ -39,12 +39,12 @@ def log(message: str):
     print(log_line, flush=True)
 
 
-def get_helpers_path():
-    """Get path to helpers/all.sh file."""
+def get_install_path():
+    """Get path to install directory and set environment variables."""
     # Default path (backward compatibility - installer expects /root/omarchy)
     homerchy_path = Path('/root/homerchy')
     omarchy_path = Path('/root/omarchy')
-    
+
     # Use symlink if it exists, otherwise check for direct path
     if omarchy_path.exists() or omarchy_path.is_symlink():
         os.environ['OMARCHY_PATH'] = str(omarchy_path)
@@ -52,45 +52,30 @@ def get_helpers_path():
         os.environ['OMARCHY_PATH'] = str(homerchy_path)
     else:
         os.environ['OMARCHY_PATH'] = '/root/omarchy'
-    
+
     # VM detection and path override handled by configurator
     # No longer using vm-env.sh, configurator auto-detects VM mode from index.json
-    
+
     omarchy_path = Path(os.environ['OMARCHY_PATH'])
     install_path = omarchy_path / 'install'
-    helpers_file = install_path / 'helpers' / 'all.sh'
 
-    if not helpers_file.exists():
+    # Check for Python helpers
+    helpers_init = install_path / 'helpers' / '__init__.py'
+    if not helpers_init.exists():
         install_path = omarchy_path / 'deployment' / 'install'
-        helpers_file = install_path / 'helpers' / 'all.sh'
+        helpers_init = install_path / 'helpers' / '__init__.py'
 
-    if not helpers_file.exists():
-        raise FileNotFoundError(f"Homerchy helpers not found: {helpers_file}")
+    if not install_path.exists():
+        raise FileNotFoundError(f"Homerchy install directory not found: {install_path}")
 
     os.environ['OMARCHY_INSTALL'] = str(install_path)
     os.environ['OMARCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
 
-    return str(helpers_file)
+    return install_path
 
 
-def use_homerchy_helpers():
-    """Load Homerchy installation helpers."""
-    helpers_file = get_helpers_path()
-    # Source helpers
-    subprocess.run(['bash', '-c', f'source {helpers_file}'], check=True)
 
 
-def shell_cmd(cmd: str, check: bool = False):
-    """
-    Execute a shell command with helpers sourced.
-    
-    Args:
-        cmd: Shell command to execute
-        check: Whether to raise exception on non-zero exit code
-    """
-    helpers_file = get_helpers_path()
-    full_cmd = f'source {helpers_file} && {cmd}'
-    return subprocess.run(['bash', '-c', full_cmd], check=check)
 
 
 def set_tokyo_night_colors():
@@ -213,7 +198,7 @@ def install_base_system():
     """Install base Arch Linux system via archinstall."""
     # Ensure OMARCHY_PATH is set before we need it
     if 'OMARCHY_PATH' not in os.environ:
-        get_helpers_path()
+        get_install_path()
     
     debug_log("install_base_system: Initializing pacman keyring")
     
@@ -606,11 +591,11 @@ WantedBy=multi-user.target
 
 def install_arch():
     """Install base Arch Linux system."""
-    # Call clear_logo from helpers (shell function)
-    shell_cmd('clear_logo', check=False)
-    
-    # Use gum to display message (from helpers)
-    shell_cmd('gum style --foreground 3 --padding "1 0 0 $PADDING_LEFT" "Installing..."', check=False)
+    # Call clear_logo from helpers
+    helpers.clear_logo()
+
+    # Use gum to display message
+    helpers.gum_style("Installing...", foreground=3)
     print()
     
     os.environ['CURRENT_SCRIPT'] = 'install_base_system'
@@ -698,15 +683,12 @@ def main():
         f.write(f"[{timestamp}] PWD: {os.getcwd()}\n")
     
     os.environ['OMARCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
-    
-    try:
-        use_homerchy_helpers()
-    except Exception as e:
-        log(f"ERROR: Failed to load Homerchy helpers: {e}")
-        sys.exit(1)
-    
-    # Start proper logging (shell function)
-    shell_cmd('start_install_log', check=False)
+
+    install_path = get_install_path()
+    sys.path.insert(0, str(install_path))
+    import helpers
+    helpers.init_environment()
+    helpers.start_install_log()
     
     # Run configurator
     log("Starting configurator...")
