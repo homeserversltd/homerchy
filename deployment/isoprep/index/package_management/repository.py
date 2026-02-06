@@ -273,6 +273,28 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
                     os.chown(omarchy_db_files_short, current_uid, current_gid)
                 except PermissionError:
                     subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(omarchy_db_files_short)], check=True)
+
+        # Create homerchy symlinks (offline pacman.conf uses [homerchy] repo)
+        homerchy_db_short = offline_mirror_dir / 'homerchy.db'
+        homerchy_db_files_short = offline_mirror_dir / 'homerchy.files'
+        if not homerchy_db_short.exists():
+            try:
+                homerchy_db_short.symlink_to('omarchy.db.tar.gz')
+            except (OSError, PermissionError):
+                shutil.copy2(omarchy_db_path, homerchy_db_short)
+                try:
+                    os.chown(homerchy_db_short, current_uid, current_gid)
+                except PermissionError:
+                    subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(homerchy_db_short)], check=True)
+        if not homerchy_db_files_short.exists():
+            try:
+                homerchy_db_files_short.symlink_to('omarchy.files.tar.gz')
+            except (OSError, PermissionError):
+                shutil.copy2(omarchy_db_files_path, homerchy_db_files_short)
+                try:
+                    os.chown(homerchy_db_files_short, current_uid, current_gid)
+                except PermissionError:
+                    subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(homerchy_db_files_short)], check=True)
         return
     
     # Need to regenerate database
@@ -402,6 +424,28 @@ def create_offline_repository(offline_mirror_dir: Path, force_regenerate: bool =
                 os.chown(omarchy_db_files_short, current_uid, current_gid)
             except PermissionError:
                 subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(omarchy_db_files_short)], check=True)
+
+    # Create homerchy symlinks (offline pacman.conf uses [homerchy] repo)
+    homerchy_db_short = offline_mirror_dir / 'homerchy.db'
+    homerchy_db_files_short = offline_mirror_dir / 'homerchy.files'
+    if not homerchy_db_short.exists():
+        try:
+            homerchy_db_short.symlink_to('omarchy.db.tar.gz')
+        except (OSError, PermissionError):
+            shutil.copy2(omarchy_db_path, homerchy_db_short)
+            try:
+                os.chown(homerchy_db_short, current_uid, current_gid)
+            except PermissionError:
+                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(homerchy_db_short)], check=True)
+    if not homerchy_db_files_short.exists():
+        try:
+            homerchy_db_files_short.symlink_to('omarchy.files.tar.gz')
+        except (OSError, PermissionError):
+            shutil.copy2(omarchy_db_files_path, homerchy_db_files_short)
+            try:
+                os.chown(homerchy_db_files_short, current_uid, current_gid)
+            except PermissionError:
+                subprocess.run(['sudo', 'chown', f'{current_uid}:{current_gid}', str(homerchy_db_files_short)], check=True)
     
     print(f"{Colors.GREEN}✓ Created repository database: {db_path.name}{Colors.NC}")
     
