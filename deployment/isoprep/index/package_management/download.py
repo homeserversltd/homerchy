@@ -69,8 +69,25 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
     all_packages.update(essential_packages)
     print(f"{Colors.GREEN}  ✓ Added {len(essential_packages)} essential base packages{Colors.NC}")
     
-    # Convert to sorted list for consistent output
-    package_list = sorted(all_packages)
+    # 6. Filter out packages not available from Arch official repos (isoprep uses default pacman; no AUR/custom/homerchy-repo at build time)
+    # These are installed later on the target (AUR helper, homerchy repo, or post-install).
+    PACKAGES_SKIP_MIRROR = frozenset({
+        # AUR-only
+        'yay', 'yay-debug', 'spotify', 'typora', 'pinta', 'python-terminaltexteffects',
+        'tobi-try', 'ttf-ia-writer', 'ufw-docker', 'wayfreeze', 'xdg-terminal-exec',
+        'yaru-icon-theme', 'tzupdate',
+        # Custom / homerchy repo (omarchy-*)
+        'omarchy-keyring', 'omarchy-chromium', 'omarchy-nvim', 'omarchy-walker',
+        # Apple / custom hardware
+        'apple-bcm-firmware', 'apple-t2-audio-config', 'asdcontrol', 'gpu-screen-recorder',
+        'limine-mkinitcpio-hook', 'limine-snapper-sync', 'linux-t2', 'linux-t2-headers',
+        'macbook12-spi-driver-dkms', 't2fanrd', 'tiny-dfr',
+    })
+    all_packages_filtered = {p for p in all_packages if p not in PACKAGES_SKIP_MIRROR and not p.startswith('omarchy-')}
+    skipped = all_packages - all_packages_filtered
+    if skipped:
+        print(f"{Colors.YELLOW}  Skipping {len(skipped)} packages not in Arch repos (AUR/custom/homerchy-repo): {', '.join(sorted(skipped)[:8])}{' ...' if len(skipped) > 8 else ''}{Colors.NC}")
+    package_list = sorted(all_packages_filtered)
     print(f"{Colors.BLUE}Total unique packages to download: {len(package_list)}{Colors.NC}")
     
     # Restore cache from temp location if it exists (from cache_db_only cleanup)
@@ -139,17 +156,13 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
     # Ensure offline mirror directory exists
     offline_mirror_dir.mkdir(parents=True, exist_ok=True)
     
-    # Check if pacman-online.conf exists for downloading
-    pacman_online_conf = repo_root / 'homerchy' / 'deployment' / 'iso-builder' / 'configs' / 'pacman-online.conf'
-    if not pacman_online_conf.exists():
-        pacman_online_conf = repo_root / 'deployment' / 'iso-builder' / 'configs' / 'pacman-online.conf'
-    
-    if not pacman_online_conf.exists():
-        print(f"{Colors.YELLOW}WARNING: pacman-online.conf not found, using default pacman config{Colors.NC}")
-        pacman_config = None
+    # Use pacman-download.conf (Arch repos only) so we never require [omarchy]/[arch-mact2] DBs.
+    pacman_download_conf = repo_root / 'iso-builder' / 'configs' / 'pacman-download.conf'
+    if pacman_download_conf.exists():
+        pacman_config_download = str(pacman_download_conf)
     else:
-        pacman_config = str(pacman_online_conf)
-    
+        pacman_config_download = None  # fallback to system config
+
     # Check for existing packages to avoid re-downloading (cache optimization)
     print(f"{Colors.BLUE}Checking for existing packages in cache...{Colors.NC}")
     
@@ -233,7 +246,7 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
         package_files_before = {f.name for f in offline_mirror_dir.glob('*.pkg.tar.*') if not f.name.endswith('.sig')}
     
     # Initialize temp_db_dir (may or may not be created depending on whether we download)
-    temp_db_dir = Path('/tmp/omarchy-offline-db')
+    temp_db_dir = Path('/tmp/homerchy-offline-db')
     
     if packages_to_download:
         print(f"{Colors.BLUE}Downloading {len(packages_to_download)} missing packages...{Colors.NC}")
@@ -252,24 +265,20 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
         subprocess.run(['sudo', 'rm', '-f', str(temp_db_dir / 'db.lck')], check=False)
         time.sleep(0.5)  # Small delay to ensure lock files are fully released
 
-        # Sync the custom database first (needed for package lookup)
-        # Use --dbpath to avoid locking system database
+        # Sync and download using Arch-only config so [omarchy]/[arch-mact2] are not required.
+        sync_cmd = ['sudo', 'pacman', '-Sy', '--noconfirm', '--ask=0', '--dbpath', str(temp_db_dir)]
+        if pacman_config_download:
+            sync_cmd.extend(['--config', pacman_config_download])
         subprocess.run(['sudo', 'rm', '-f', '/var/lib/pacman/db.lck'], check=False)
         subprocess.run(['sudo', 'rm', '-f', str(temp_db_dir / 'db.lck')], check=False)
         time.sleep(0.2)
-        sync_result = subprocess.run(
-            ['sudo', 'pacman', '-Sy', '--noconfirm', '--ask=0', '--dbpath', str(temp_db_dir)],
-            check=False,
-            capture_output=True
-        )
+        sync_result = subprocess.run(sync_cmd, check=False, capture_output=True)
         if sync_result.returncode != 0:
             print(f"{Colors.YELLOW}WARNING: Database sync failed, but continuing anyway...{Colors.NC}")
 
-        # Build pacman command (requires root)
-        # Use -Sw (skip sync, we already synced above)
         pacman_cmd = ['sudo', 'pacman', '-Sw', '--noconfirm', '--ask=0', '--cachedir', str(offline_mirror_dir), '--dbpath', str(temp_db_dir)]
-        if pacman_config:
-            pacman_cmd.extend([--config, pacman_src/config])
+        if pacman_config_download:
+            pacman_cmd.extend(['--config', pacman_config_download])
         pacman_cmd.extend(packages_to_download)
         
         # Clean locks one more time right before execution
