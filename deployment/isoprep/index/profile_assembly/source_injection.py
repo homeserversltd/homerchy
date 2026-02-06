@@ -146,11 +146,12 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
         return ignored
     _remove_orphaned_files(repo_root, homerchy_target, ignore=top_level_ignore)
     
-    # Create symlink for backward compatibility (onmachine/deployment/deployment/installer expects /root/omarchy)
+    # Create symlink for backward compatibility (installer expects /root/omarchy)
+    # Use RELATIVE target "homerchy" so it works inside the VM; absolute host path would be broken in ISO
     omarchy_link = profile_dir / 'airootfs' / 'root' / 'omarchy'
-    if not omarchy_link.exists():
-        # Use relative symlink - onmachine/deployment/deployment/installer code expects /root/omarchy
-        omarchy_link.symlink_to(homerchy_target)
+    if omarchy_link.exists():
+        omarchy_link.unlink()
+    omarchy_link.symlink_to('homerchy')
     
     print(f"{Colors.GREEN}✓ Repository source injected{Colors.NC}")
 
