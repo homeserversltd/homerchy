@@ -61,7 +61,7 @@ def main(phase_path: Path, config: dict) -> dict:
     # ONLY preserve downloaded packages - NEVER preserve archiso-tmp or any other build state
     archiso_tmp_dir = work_dir / 'archiso-tmp'
     
-    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
+    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'homerchy' / 'mirror' / 'offline'
     # Also check system temp location (from cache_db_only cleanup)
     system_temp_cache = Path("/mnt/work/.homerchy-cache-temp")
     preserve_cache = (

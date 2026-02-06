@@ -118,7 +118,7 @@ def main(phase_path: Path, config: dict) -> dict:
     ensure_airootfs_pacman_online(profile_dir)
     
     # 8. Create symlink so mkarchiso can find the offline mirror during build
-    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
+    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'homerchy' / 'mirror' / 'offline'
     create_system_mirror_symlink(profile_dir, cache_dir)
     
     # Final verification: Ensure syslinux is in packages.x86_64

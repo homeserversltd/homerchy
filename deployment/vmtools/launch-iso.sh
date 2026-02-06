@@ -9,7 +9,7 @@ DISK_FILE="${WORK_DIR}/homerchy-test-disk.qcow2"
 
 # Find the latest ISO
 echo "Looking for ISO files in: $ISO_DIR"
-ISO_FILE=$(ls -t "$ISO_DIR"/omarchy-*.iso 2>/dev/null | head -n 1)
+ISO_FILE=$(ls -t "$ISO_DIR"/homerchy-*.iso 2>/dev/null | head -n 1)
 
 if [ -z "$ISO_FILE" ]; then
     echo "Error: No ISO found in $ISO_DIR"
