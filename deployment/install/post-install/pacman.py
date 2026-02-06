@@ -24,7 +24,7 @@ def main(config: dict) -> dict:
         dict: Result dictionary with success status
     """
     try:
-        omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy'))
+        omarchy_path = Path(os.environ.get('HOMERCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy'))
         default_pacman_conf = omarchy_path / 'src' / 'default' / 'pacman' / 'pacman.conf'
         default_mirrorlist = omarchy_path / 'src' / 'default' / 'pacman' / 'mirrorlist-stable'
         

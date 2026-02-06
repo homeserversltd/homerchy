@@ -41,7 +41,7 @@ def main(phase_path: Path, config: dict) -> dict:
     # CRITICAL: Install offline pacman.conf into airootfs so the packed ISO is self-contained.
     # Profile_assembly leaves airootfs/etc/pacman.conf as online (for mkarchiso's install step).
     # We overwrite with offline config before packing so the live environment uses only the
-    # packed mirror (file:///var/cache/omarchy/mirror/offline).
+    # packed mirror (file:///var/cache/homerchy/mirror/offline).
     offline_pacman = repo_root / 'iso-builder' / 'configs' / 'pacman.conf'
     airootfs_pacman = profile_dir / 'airootfs' / 'etc' / 'pacman.conf'
     if offline_pacman.exists():

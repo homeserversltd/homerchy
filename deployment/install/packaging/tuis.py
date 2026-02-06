@@ -24,7 +24,7 @@ def main(onmachine/onmachine/config: dict) -> dict:
     "
     try:
         icon_dir = Path.home() / '.local' / 'share / onmachine/src/applications / 'icons'
-        omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy))
+        omarchy_path = Path(os.environ.get('HOMERCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy))
         icon_src_dir = omarchy_path / onmachine/src/applications / 'icons'
         
         # Ensure icon directory exists

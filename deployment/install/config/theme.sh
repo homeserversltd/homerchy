@@ -4,7 +4,7 @@ sudo ln -snf /usr/share/icons/Adwaita/symbolic/actions/go-next-symbolic.svg /usr
 
 # Setup theme links
 mkdir -p ~/.onmachine/onmachine/config/omarchy/onmachine/themes
-for f in ~/.local/share/omarchy/onmachine/onmachine/themes/*; do ln -nfs $f ~/.onmachine/onmachine/config/omarchy/onmachine/onmachine/themes/; done
+for f in ~/.local/share/homerchy/onmachine/onmachine/themes/*; do ln -nfs $f ~/.onmachine/onmachine/config/omarchy/onmachine/onmachine/themes/; done
 
 # Set initial theme
 mkdir -p ~/.onmachine/onmachine/config/omarchy/current

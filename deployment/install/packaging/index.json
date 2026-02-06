@@ -16,7 +16,7 @@
         "continue_on_error": false
     },
     "package_files": {
-        "base": "omarchy-base.packages",
-        "other": "omarchy-other.packages"
+        "base": "homerchy-base.packages",
+        "other": "homerchy-other.packages"
     }
 }

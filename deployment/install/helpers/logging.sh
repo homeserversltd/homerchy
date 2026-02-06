@@ -8,10 +8,10 @@ start_log_output() {
     local last_inode=0
     
     while true; do
-      if [ -f "$OMARCHY_INSTALL_LOG_FILE" ]; then
+      if [ -f "$HOMERCHY_INSTALL_LOG_FILE" ]; then
         # Get current file size and inode to detect file rotation/recreation
-        current_size=$(stat -c%s "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null || echo 0)
-        current_inode=$(stat -c%i "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null || echo 0)
+        current_size=$(stat -c%s "$HOMERCHY_INSTALL_LOG_FILE" 2>/dev/null || echo 0)
+        current_inode=$(stat -c%i "$HOMERCHY_INSTALL_LOG_FILE" 2>/dev/null || echo 0)
         
         # Reset position if file was recreated (different inode)
         if [ "$current_inode" != "$last_inode" ] && [ "$last_inode" != "0" ]; then
@@ -24,7 +24,7 @@ start_log_output() {
           # Read new content, ensuring we start at a line boundary
           # Skip partial lines by reading from last position and finding first newline
           local new_content
-          new_content=$(tail -c +$((last_position + 1)) "$OMARCHY_INSTALL_LOG_FILE" 2>/dev/null)
+          new_content=$(tail -c +$((last_position + 1)) "$HOMERCHY_INSTALL_LOG_FILE" 2>/dev/null)
           
           # Process only complete lines (skip if we're in the middle of a line)
           if [ -n "$new_content" ]; then
@@ -64,7 +64,7 @@ stop_log_output() {
 
 start_deployment/deployment/install_log() {
   # Ensure log directory exists
-  local log_dir=$(dirname $OMARCHY_INSTALL_LOG_FILE)
+  local log_dir=$(dirname $HOMERCHY_INSTALL_LOG_FILE)
   if [ ! -d "$log_dir" ]; then
     sudo mkdir -p "$log_dir" || {
       echo "ERROR: Failed to create log directory: $log_dir" >&2
@@ -73,19 +73,19 @@ start_deployment/deployment/install_log() {
   fi
 
   # Create log file with proper permissions
-  sudo touch "$OMARCHY_INSTALL_LOG_FILE" || {
-    echo "ERROR: Failed to create log file: $OMARCHY_INSTALL_LOG_FILE" >&2
+  sudo touch "$HOMERCHY_INSTALL_LOG_FILE" || {
+    echo "ERROR: Failed to create log file: $HOMERCHY_INSTALL_LOG_FILE" >&2
     return 1
   }
-  sudo chmod 666 "$OMARCHY_INSTALL_LOG_FILE" || {
+  sudo chmod 666 "$HOMERCHY_INSTALL_LOG_FILE" || {
     echo "WARNING: Failed to set log file permissions" >&2
   }
 
-  export OMARCHY_START_TIME=$(date '+%Y-%m-%d %H:%M:%S')
+  export HOMERCHY_START_TIME=$(date '+%Y-%m-%d %H:%M:%S')
 
   # Write initial header - ensure it actually writes
-  if ! echo "=== Omarchy Installation Started: $OMARCHY_START_TIME ===" >>"$OMARCHY_INSTALL_LOG_FILE 2>&1; then
-    echo ERROR: Failed to write to log file: $OMARCHY_INSTALL_LOG_FILE >&2
+  if ! echo "=== Homerchy Installation Started: $HOMERCHY_START_TIME ===" >>"$HOMERCHY_INSTALL_LOG_FILE 2>&1; then
+    echo ERROR: Failed to write to log file: $HOMERCHY_INSTALL_LOG_FILE >&2
     return 1
   fi
 
@@ -96,11 +96,11 @@ stop_deployment/deployment/install_log() {
   stop_log_output
   show_cursor
 
-  if [[ -n ${OMARCHY_INSTALL_LOG_FILE:-} ]]; then
-    OMARCHY_END_TIME=$(date +%Y-%m-%d %H:%M:%S)
-    echo "=== Omarchy Installation Completed: $OMARCHY_END_TIME ===" >>"$OMARCHY_INSTALL_LOG_FILE"
-    echo "" >>"$OMARCHY_INSTALL_LOG_FILE"
-    echo === Installation Time Summary === >>$OMARCHY_INSTALL_LOG_FILE
+  if [[ -n ${HOMERCHY_INSTALL_LOG_FILE:-} ]]; then
+    HOMERCHY_END_TIME=$(date +%Y-%m-%d %H:%M:%S)
+    echo "=== Homerchy Installation Completed: $HOMERCHY_END_TIME ===" >>"$HOMERCHY_INSTALL_LOG_FILE"
+    echo "" >>"$HOMERCHY_INSTALL_LOG_FILE"
+    echo === Installation Time Summary === >>$HOMERCHY_INSTALL_LOG_FILE
 
     if [ -f /var/log/archonmachine/deployment/install/onmachine/onmachine/install.log ]; then
       ARCHINSTALL_START=$(grep -m1 ^\[ /var/log/archonmachine/onmachine/install/onmachine/deployment/install.log 2>/dev/null | sed s/^\[\([^]]*\)\].*/\1/ || true)
@@ -114,30 +114,30 @@ stop_deployment/deployment/install_log() {
         ARCH_MINS=$((ARCH_DURATION / 60))
         ARCH_SECS=$((ARCH_DURATION % 60))
 
-        echo Archdeployment/deployment/install: ${ARCH_MINS}m ${ARCH_SECS}s >>$OMARCHY_INSTALL_LOG_FILE"
+        echo Archdeployment/deployment/install: ${ARCH_MINS}m ${ARCH_SECS}s >>$HOMERCHY_INSTALL_LOG_FILE"
       fi
     fi
 
-    if [ -n "$OMARCHY_START_TIME" ]; then
-      OMARCHY_START_EPOCH=$(date -d "$OMARCHY_START_TIME" +%s)
-      OMARCHY_END_EPOCH=$(date -d "$OMARCHY_END_TIME" +%s)
-      OMARCHY_DURATION=$((OMARCHY_END_EPOCH - OMARCHY_START_EPOCH))
+    if [ -n "$HOMERCHY_START_TIME" ]; then
+      HOMERCHY_START_EPOCH=$(date -d "$HOMERCHY_START_TIME" +%s)
+      HOMERCHY_END_EPOCH=$(date -d "$HOMERCHY_END_TIME" +%s)
+      HOMERCHY_DURATION=$((HOMERCHY_END_EPOCH - HOMERCHY_START_EPOCH))
 
-      OMARCHY_MINS=$((OMARCHY_DURATION / 60))
-      OMARCHY_SECS=$((OMARCHY_DURATION % 60))
+      HOMERCHY_MINS=$((HOMERCHY_DURATION / 60))
+      HOMERCHY_SECS=$((HOMERCHY_DURATION % 60))
 
-      echo "Omarchy:     ${OMARCHY_MINS}m ${OMARCHY_SECS}s" >>"$OMARCHY_INSTALL_LOG_FILE"
+      echo "Homerchy:     ${HOMERCHY_MINS}m ${HOMERCHY_SECS}s" >>"$HOMERCHY_INSTALL_LOG_FILE"
 
       if [ -n "$ARCH_DURATION" ]; then
-        TOTAL_DURATION=$((ARCH_DURATION + OMARCHY_DURATION))
+        TOTAL_DURATION=$((ARCH_DURATION + HOMERCHY_DURATION))
         TOTAL_MINS=$((TOTAL_DURATION / 60))
         TOTAL_SECS=$((TOTAL_DURATION % 60))
-        echo "Total:       ${TOTAL_MINS}m ${TOTAL_SECS}s" >>"$OMARCHY_INSTALL_LOG_FILE"
+        echo "Total:       ${TOTAL_MINS}m ${TOTAL_SECS}s" >>"$HOMERCHY_INSTALL_LOG_FILE"
       fi
     fi
-    echo "=================================" >>"$OMARCHY_INSTALL_LOG_FILE"
+    echo "=================================" >>"$HOMERCHY_INSTALL_LOG_FILE"
 
-    echo "Rebooting system..." >>"$OMARCHY_INSTALL_LOG_FILE"
+    echo "Rebooting system..." >>"$HOMERCHY_INSTALL_LOG_FILE"
   fi
 }
 
@@ -147,7 +147,7 @@ run_logged() {
   export CURRENT_SCRIPT=$script
 
   # Use phase-specific log file if set, otherwise use main onmachine/deployment/deployment/install log
-  local log_file=${OMARCHY_PHASE_LOG_FILE:-$OMARCHY_INSTALL_LOG_FILE}
+  local log_file=${HOMERCHY_PHASE_LOG_FILE:-$HOMERCHY_INSTALL_LOG_FILE}
 
   # Ensure log file exists before writing
   if [ ! -f "$log_file" ]; then

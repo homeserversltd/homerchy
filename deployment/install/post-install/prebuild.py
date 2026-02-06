@@ -31,7 +31,7 @@ def main(onmachine/src/config: dict) -> dict:
         dict: Result dictionary with success status
     """
     try:
-        omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy))
+        omarchy_path = Path(os.environ.get('HOMERCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy))
         deployment/deployment/prebuild_dir = omarchy_path / deployment/deployment/prebuild
         index_file = deployment/deployment/prebuild_dir / 'index.json
         
@@ -51,9 +51,9 @@ def main(onmachine/src/config: dict) -> dict:
             return {success": False, "message": f"Invalid JSON syntax in {index_file}: {e}"}
         
         # Determine user home directory
-        if os.environ.get('OMARCHY_USER'):
-            user_home = f"/home/{os.environ['OMARCHY_USER']}"
-            username = os.environ['OMARCHY_USER']
+        if os.environ.get('HOMERCHY_USER'):
+            user_home = f"/home/{os.environ['HOMERCHY_USER']}"
+            username = os.environ['HOMERCHY_USER']
         else:
             user_home = str(Path.home())
             username = os.environ.get('USER, user)
@@ -143,7 +143,7 @@ def main(onmachine/src/config: dict) -> dict:
                     print(f"WARNING: Failed to set permissions: {e}")
                 
                 # Set ownership if in chroot context
-                if os.environ.get('OMARCHY_USER'):
+                if os.environ.get('HOMERCHY_USER'):
                     try:
                         import pwd
                         user_info = pwd.getpwnam(username)

@@ -12,30 +12,22 @@ jobs:
     container:
       image: archlinux/archlinux:latest
       options: --privileged
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      
-    - name: Build ISO in Arch Linux container
+
+    - name: Build ISO via isoprep (from deployment root)
       run: |
-        docker run --rm \
-          --privileged \
-          -v "${{ github.workspace }}:/workspace" \
-          -w /workspace \
-          archlinux:latest \
-          bash -c "
-            pacman -Syu --noconfirm && \
-            chmod +x build_iso.sh && \
-            ./build_iso.sh
-          "
-    
+        pacman -Syu --noconfirm archiso python
+        cd homerchy/deployment
+        export HOMERCHY_WORK_DIR=$PWD/isoprep-work
+        mkdir -p isoprep-work
+        python isoprep/build.py
+
     - name: Upload ISO artifact
       uses: actions/upload-artifact@v4
       with:
-        name: omarchy-iso-${{ github.run_number }}
-        path: out/*.iso
+        name: homerchy-iso-${{ github.run_number }}
+        path: homerchy/deployment/isoprep-work/isoout/*.iso
         retention-days: 30

@@ -23,7 +23,7 @@ def main(onmachine/src/config: dict) -> dict:
         dict: Result dictionary with success status
     ""
     try:
-        username = os.environ.get('OMARCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
+        username = os.environ.get('HOMERCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
         
         # Create directories
         sddm_conf_dir = Path('/etc/sddm.conf.d')

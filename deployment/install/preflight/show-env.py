@@ -33,15 +33,15 @@ def main(onmachine/src/config: dict) -> dict:
         
         # Filter and display relevant environment variables
         relevant_vars = [
-            'OMARCHY_CHROOT_INSTALL',
-            'OMARCHY_ONLINE_INSTALL',
-            'OMARCHY_USER_NAME',
-            'OMARCHY_USER_EMAIL',
+            'HOMERCHY_CHROOT_INSTALL',
+            'HOMERCHY_ONLINE_INSTALL',
+            'HOMERCHY_USER_NAME',
+            'HOMERCHY_USER_EMAIL',
             'USER',
             'HOME',
-            'OMARCHY_REPO',
-            'OMARCHY_REF',
-            'OMARCHY_PATH'
+            'HOMERCHY_REPO',
+            'HOMERCHY_REF',
+            'HOMERCHY_PATH'
         ]
         
         env_vars = []

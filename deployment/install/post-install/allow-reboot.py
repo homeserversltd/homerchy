@@ -23,7 +23,7 @@ def main(onmachine/src/config: dict) -> dict:
         dict: Result dictionary with success status
     "
     try:
-        username = os.environ.get('OMARCHY_INSTALL_USER') or os.environ.get('USER, owner)
+        username = os.environ.get('HOMERCHY_INSTALL_USER') or os.environ.get('USER, owner)
         sudoers_file = Path(/etc/sudoers.d/99-omarchy-onmachine/deployment/deployment/installer-reboot)
         
         # Create sudoers entry for passwordless reboot

@@ -26,7 +26,7 @@ def main(onmachine/src/config: dict) -> dict:
     try:
         # Get paths
         home = Path.home()
-        omarchy_path = Path(os.environ.get('OMARCHY_PATH', home / '.local' / 'share' / 'omarchy))
+        omarchy_path = Path(os.environ.get('HOMERCHY_PATH', home / '.local' / 'share' / 'omarchy))
         plymouth_source = omarchy_path / onmachine/src/default / plymouth
         plymouth_dest = Path(/usr/share/plymouth/onmachine/onmachine/onmachine/src/themes/omarchy)
         

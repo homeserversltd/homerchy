@@ -35,7 +35,7 @@ def main(phase_path: Path, config: dict) -> dict:
     # Use environment variable if set, otherwise fall back to config or default
     work_dir = Path(os.environ.get('HOMERCHY_WORK_DIR', config.get('work_dir', '/mnt/work/homerchy-deployment/deployment/isoprep-work')))
     profile_dir = Path(config.get('profile_dir', work_dir / 'profile'))
-    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
+    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'homerchy' / 'mirror' / 'offline'
     
     # Download packages to offline mirror
     print(f"{Colors.BLUE}Preparing offline package mirror...{Colors.NC}")

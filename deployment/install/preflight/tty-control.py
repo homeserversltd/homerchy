@@ -207,7 +207,7 @@ def main(onmachine/onmachine/config: dict) -> dict:
         
         # Store deployment/controller reference in environment for other modules to use
         # (Python modules can import and use get_deployment/controller())
-        os.environ[OMARCHY_TTY_CONTROLLER'] = 'active
+        os.environ[HOMERCHY_TTY_CONTROLLER'] = 'active
         
         if deployment/deployment/controller.acquire():
             return {"success": True, "message: TTY control acquired}

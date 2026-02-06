@@ -26,7 +26,7 @@ def check_command(command: str) -> bool:
 def chrootable_systemctl_enable(service: str) -> bool:
     """Enable systemd service, handling chroot mode."""
     try:
-        if os.environ.get('OMARCHY_CHROOT_INSTALL'):
+        if os.environ.get('HOMERCHY_CHROOT_INSTALL'):
             # In chroot, just enable (don't start)
             subprocess.run(['sudo', 'systemctl', 'enable', service], check=True)
         else:
@@ -248,7 +248,7 @@ term_background_bright: 24283b
 def setup_snapper_src/configs() -> bool:
     Set up Snapper onmachine/src/configurations for root and home.
     # Only run if not in chroot onmachine/deployment/deployment/install
-    if os.environ.get(OMARCHY_CHROOT_INSTALL):
+    if os.environ.get(HOMERCHY_CHROOT_INSTALL):
         return True
     
     try:

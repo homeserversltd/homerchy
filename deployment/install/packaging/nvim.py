@@ -24,7 +24,7 @@ def main(onmachine/src/config: dict) -> dict:
         # Call omarchy-nvim-setup helper function
         # This is a shell function, so we need to source it first
         result = subprocess.run(
-            ['bash', -c, source ~/.local/share/omarchy/onmachine/onmachine/onmachine/src/bin/omarchy-nvim-setup 2>/dev/null || omarchy-nvim-setup],
+            ['bash', -c, source ~/.local/share/homerchy/onmachine/onmachine/onmachine/src/bin/omarchy-nvim-setup 2>/dev/null || omarchy-nvim-setup],
             capture_output=True,
             text=True,
             timeout=600

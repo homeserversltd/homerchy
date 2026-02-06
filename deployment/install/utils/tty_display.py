@@ -21,7 +21,7 @@ def update_tty_display(message: str, phase: str = ""):
         message: Message to display
         phase: Optional phase name to show
     "
-    if os.environ.get('OMARCHY_TTY_CONTROLLER') != 'active':
+    if os.environ.get('HOMERCHY_TTY_CONTROLLER') != 'active':
         return  # TTY control not active, skip
     
     try:
@@ -59,7 +59,7 @@ def show_tty_message(message: str, clear_first: bool = False):
         message: Message to display
         clear_first: Whether to clear screen first
     """
-    if os.environ.get('OMARCHY_TTY_CONTROLLER') != 'active':
+    if os.environ.get('HOMERCHY_TTY_CONTROLLER') != 'active':
         return  # TTY control not active, skip
     
     try:

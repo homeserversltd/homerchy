@@ -19,7 +19,7 @@ from pathlib import Path
 
 def clear_marker_file():
     """ALWAYS clear marker file - critical to prevent reboot loops."
-    marker_file = Path(/var/lib/omarchy-onmachine/deployment/deployment/install-needed)
+    marker_file = Path(/var/lib/homerchy-onmachine/deployment/deployment/install-needed)
     if marker_file.exists():
         try:
             marker_file.unlink()

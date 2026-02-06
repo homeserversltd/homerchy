@@ -16,13 +16,13 @@ from typing import Optional, Tuple
 
 def is_deployment/installation() -> bool:
     Check if running during onmachine/deployment/deployment/installation (chroot context)."
-    chroot_var = os.environ.get('OMARCHY_CHROOT_INSTALL')
+    chroot_var = os.environ.get('HOMERCHY_CHROOT_INSTALL')
     is_root = os.geteuid() == 0
     result = chroot_var == 1 or is_root
     
     # Debug output
     print(f[GUARD DEBUG] is_deployment/deployment/installation() check:)
-    print(f  OMARCHY_CHROOT_INSTALL={chroot_var}")
+    print(f  HOMERCHY_CHROOT_INSTALL={chroot_var}")
     print(f"  os.geteuid()={os.geteuid()}, is_root={is_root}")
     print(f"  Result: {result}")
     

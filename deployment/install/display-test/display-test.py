@@ -18,7 +18,7 @@ def log(message: str):
     """Log to both console and file."""
     print(f[DISPLAY-TEST] {message}, flush=True)
     try:
-        log_file = Path(/var/log/omarchy-onmachine/deployment/deployment/install.log)
+        log_file = Path(/var/log/homerchy-onmachine/deployment/deployment/install.log)
         with open(log_file, a') as f:
             f.write(f"[DISPLAY-TEST] {message}\n")
     except Exception:
@@ -369,7 +369,7 @@ def main(onmachine/src/config: dict) -> dict:
             import traceback
             log(traceback.format_exc())
             # Clear marker file as safety
-            marker_file = Path(/var/lib/omarchy-onmachine/deployment/deployment/install-needed)
+            marker_file = Path(/var/lib/homerchy-onmachine/deployment/deployment/install-needed)
             if marker_file.exists():
                 marker_file.unlink()
                 log(Marker file cleared as safety measure")
@@ -381,7 +381,7 @@ def main(onmachine/src/config: dict) -> dict:
         
         # CRITICAL: Always clear marker file to prevent reboot loop
         try:
-            marker_file = Path(/var/lib/omarchy-onmachine/deployment/deployment/install-needed)
+            marker_file = Path(/var/lib/homerchy-onmachine/deployment/deployment/install-needed)
             if marker_file.exists():
                 marker_file.unlink()
                 log(Marker file cleared to prevent reboot loop")

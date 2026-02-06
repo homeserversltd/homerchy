@@ -23,11 +23,11 @@ def main(onmachine/onmachine/config: dict) -> dict:
         dict: Result dictionary with success status
     
     # Only run if online onmachine/deployment/deployment/install
-    if not os.environ.get(OMARCHY_ONLINE_INSTALL):
+    if not os.environ.get(HOMERCHY_ONLINE_INSTALL):
         return {success": True, message: Skipped (not online onmachine/deployment/deployment/install)}
     
     try:
-        omarchy_path = Path(os.environ.get(OMARCHY_PATH', Path.home() / '.local' / 'share' / omarchy))
+        omarchy_path = Path(os.environ.get(HOMERCHY_PATH', Path.home() / '.local' / 'share' / omarchy))
         onmachine/onmachine/default_path = omarchy_path / onmachine/src/default / 'pacman'
         
         # Install build tools

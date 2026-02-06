@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
-iso_name="omarchy"
-iso_label="OMARCHY_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
+iso_name="homerchy"
+iso_label="HOMERCHY_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="Homerchy <https://omarchy.org>"
 iso_application="Homerchy Installer"
 iso_version="$(date --date=@${SOURCE_DATE_EPOCH:-$(date +%s)} +%Y.%m.%d)"
@@ -21,6 +21,6 @@ file_permissions=(
   ["/root/.automated_script.py"]="0:0:755"
   ["/root/.gnupg"]=0:0:700
   ["/usr/local/bin/choose-mirror"]="0:0:755"
-  ["/var/cache/omarchy/mirror/offline/"]=0:0:775
-  ["/usr/local/bin/omarchy-upload-log"]="0:0:755"
+  ["/var/cache/homerchy/mirror/offline/"]=0:0:775
+  ["/usr/local/bin/homerchy-upload-log"]="0:0:755"
 )

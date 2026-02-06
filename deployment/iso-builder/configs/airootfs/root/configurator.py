@@ -18,13 +18,13 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 # Set log file path early
-LOG_FILE = Path(os.environ.get('OMARCHY_INSTALL_LOG_FILE', '/var/log/omarchy-install.log'))
+LOG_FILE = Path(os.environ.get('HOMERCHY_INSTALL_LOG_FILE', '/var/log/homerchy-install.log'))
 STEP_COUNT = 0
 
 
 def debug_log(message: str):
-    """Log debug messages if OMARCHY_DEBUG is set."""
-    if os.environ.get('OMARCHY_DEBUG'):
+    """Log debug messages if HOMERCHY_DEBUG is set."""
+    if os.environ.get('HOMERCHY_DEBUG'):
         log(message)
     # Always print debug messages to console for visibility
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -52,27 +52,18 @@ _helpers = None
 def get_install_path() -> Path:
     """Get path to install directory and set environment variables. Prefers Python helpers (helpers/__init__.py)."""
     homerchy_path = Path('/root/homerchy')
-    omarchy_path = Path('/root/omarchy')
-    
-    if omarchy_path.exists() or omarchy_path.is_symlink():
-        os.environ['OMARCHY_PATH'] = str(omarchy_path)
-    elif homerchy_path.exists():
-        os.environ['OMARCHY_PATH'] = str(homerchy_path)
-    else:
-        os.environ['OMARCHY_PATH'] = '/root/omarchy'
-    
-    omarchy_path = Path(os.environ['OMARCHY_PATH'])
-    install_path = omarchy_path / 'install'
+    os.environ['HOMERCHY_PATH'] = str(homerchy_path)
+    install_path = homerchy_path / 'install'
     helpers_init = install_path / 'helpers' / '__init__.py'
     if not helpers_init.exists():
-        install_path = omarchy_path / 'deployment' / 'install'
+        install_path = homerchy_path / 'deployment' / 'install'
         helpers_init = install_path / 'helpers' / '__init__.py'
     
     if not install_path.exists():
         raise FileNotFoundError(f"Homerchy install directory not found: {install_path}")
     
-    os.environ['OMARCHY_INSTALL'] = str(install_path)
-    os.environ['OMARCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
+    os.environ['HOMERCHY_INSTALL'] = str(install_path)
+    os.environ['HOMERCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
     return install_path
 
 
@@ -109,11 +100,11 @@ def load_vm_settings() -> Optional[Dict]:
     """Load VM test settings from index.json."""
     vmtools_dir = Path('/root/vmtools')
     index_file = vmtools_dir / 'index.json'
-    profile_name = os.environ.get('OMARCHY_VM_PROFILE')
+    profile_name = os.environ.get('HOMERCHY_VM_PROFILE')
     
-    print(f"[LOAD_VM_SETTINGS] Called with OMARCHY_VM_TEST={os.environ.get('OMARCHY_VM_TEST')}", flush=True)
+    print(f"[LOAD_VM_SETTINGS] Called with HOMERCHY_VM_TEST={os.environ.get('HOMERCHY_VM_TEST')}", flush=True)
     
-    if os.environ.get('OMARCHY_VM_TEST') != '1':
+    if os.environ.get('HOMERCHY_VM_TEST') != '1':
         print(f"[LOAD_VM_SETTINGS] ✗ VM test mode not enabled", flush=True)
         debug_log("load_vm_settings: VM test mode not enabled")
         return None
@@ -176,13 +167,13 @@ def keyboard_form() -> Tuple[str, str]:
     """Collect keyboard layout selection."""
     # CRITICAL: Check for index.json FIRST, before ANYTHING else
     index_check = Path('/root/vmtools/index.json')
-    vm_test = os.environ.get('OMARCHY_VM_TEST')
+    vm_test = os.environ.get('HOMERCHY_VM_TEST')
     
     print(f"[KEYBOARD_FORM] ENTERED - VM_TEST={vm_test}, index.json exists={index_check.exists()}", flush=True)
     
     # Force enable VM mode if index.json exists
     if index_check.exists():
-        os.environ['OMARCHY_VM_TEST'] = '1'
+        os.environ['HOMERCHY_VM_TEST'] = '1'
         vm_test = '1'
         print(f"[KEYBOARD_FORM] ✓✓✓ FORCE ENABLED VM MODE ✓✓✓", flush=True)
     else:
@@ -269,13 +260,13 @@ def user_form() -> Dict[str, str]:
     
     # Check VM mode BEFORE calling step() which shows UI
     index_check = Path('/root/vmtools/index.json')
-    vm_test = os.environ.get('OMARCHY_VM_TEST')
+    vm_test = os.environ.get('HOMERCHY_VM_TEST')
     if index_check.exists() and vm_test != '1':
-        os.environ['OMARCHY_VM_TEST'] = '1'
+        os.environ['HOMERCHY_VM_TEST'] = '1'
         vm_test = '1'
         print(f"[USER_FORM] Force-enabled VM mode before step()", flush=True)
     
-    print(f"[USER_FORM] VM mode check: OMARCHY_VM_TEST={vm_test}, index.json exists={index_check.exists()}", flush=True)
+    print(f"[USER_FORM] VM mode check: HOMERCHY_VM_TEST={vm_test}, index.json exists={index_check.exists()}", flush=True)
     
     # Only show step UI if NOT in VM mode
     if vm_test != '1':
@@ -494,9 +485,9 @@ def disk_form() -> str:
     # Non-interactive mode for VM testing - use first available disk
     # Force check: if index.json exists, were in VM mode
     index_check = Path('/root/vmtools/index.json')
-    vm_test = os.environ.get('OMARCHY_VM_TEST')
+    vm_test = os.environ.get('HOMERCHY_VM_TEST')
     if index_check.exists() and vm_test != '1':
-        os.environ['OMARCHY_VM_TEST'] = '1'
+        os.environ['HOMERCHY_VM_TEST'] = '1'
         vm_test = '1'
     
     if vm_test == '1':
@@ -535,15 +526,15 @@ def main():
     index_file = vmtools_dir / 'index.json'
     
     if index_file.exists():
-        os.environ['OMARCHY_VM_TEST'] = '1'
+        os.environ['HOMERCHY_VM_TEST'] = '1'
         # Read profile immediately
         try:
             with open(index_file) as f:
                 index_data = json.load(f)
                 default_profile = index_data.get('default_profile', 'homerchy-test')
-                os.environ['OMARCHY_VM_PROFILE'] = default_profile
+                os.environ['HOMERCHY_VM_PROFILE'] = default_profile
         except Exception:
-            os.environ['OMARCHY_VM_PROFILE'] = 'homerchy-test'
+            os.environ['HOMERCHY_VM_PROFILE'] = 'homerchy-test'
     
     # CRITICAL: Print immediately to console (before any screen clearing)
     # This proves the Python configurator is running
@@ -556,10 +547,10 @@ def main():
     print(f"[CONFIGURATOR] Checking for VM profile: {index_file}", flush=True)
     
     # VM mode was already set above if index.json exists
-    if os.environ.get('OMARCHY_VM_TEST') == '1':
+    if os.environ.get('HOMERCHY_VM_TEST') == '1':
         print(f"[CONFIGURATOR] ✓✓✓ VM TEST MODE ENABLED ✓✓✓", flush=True)
         print(f"[CONFIGURATOR] Found: {index_file}", flush=True)
-        print(f"[CONFIGURATOR] ✓✓✓ Using profile: {os.environ.get('OMARCHY_VM_PROFILE', 'homerchy-test')} ✓✓✓", flush=True)
+        print(f"[CONFIGURATOR] ✓✓✓ Using profile: {os.environ.get('HOMERCHY_VM_PROFILE', 'homerchy-test')} ✓✓✓", flush=True)
         print("", flush=True)
     else:
         print(f"[CONFIGURATOR] ✗✗✗ VM test mode DISABLED ✗✗✗", flush=True)
@@ -567,19 +558,19 @@ def main():
         print("", flush=True)
     
     # Print to console FIRST for immediate visibility (before logging setup)
-    vm_test_status = os.environ.get('OMARCHY_VM_TEST', 'NOT SET')
-    vm_profile_status = os.environ.get('OMARCHY_VM_PROFILE', 'NOT SET')
+    vm_test_status = os.environ.get('HOMERCHY_VM_TEST', 'NOT SET')
+    vm_profile_status = os.environ.get('HOMERCHY_VM_PROFILE', 'NOT SET')
     print(f"[CONFIGURATOR] Status: VM_TEST={vm_test_status}", flush=True)
     print(f"[CONFIGURATOR] Status: VM_PROFILE={vm_profile_status}", flush=True)
     print("", flush=True)
     
     # Initialize logging
     log("Script started")
-    debug_log(f"OMARCHY_PATH={os.environ.get('OMARCHY_PATH', 'not set')}")
-    debug_log(f"OMARCHY_INSTALL={os.environ.get('OMARCHY_INSTALL', 'not set')}")
-    debug_log(f"OMARCHY_VM_TEST={vm_test_status}")
-    debug_log(f"OMARCHY_DEBUG={os.environ.get('OMARCHY_DEBUG', 'not set')}")
-    debug_log(f"OMARCHY_VM_PROFILE={vm_profile_status}")
+    debug_log(f"HOMERCHY_PATH={os.environ.get('HOMERCHY_PATH', 'not set')}")
+    debug_log(f"HOMERCHY_INSTALL={os.environ.get('HOMERCHY_INSTALL', 'not set')}")
+    debug_log(f"HOMERCHY_VM_TEST={vm_test_status}")
+    debug_log(f"HOMERCHY_DEBUG={os.environ.get('HOMERCHY_DEBUG', 'not set')}")
+    debug_log(f"HOMERCHY_VM_PROFILE={vm_profile_status}")
     
     # Load Python helpers (clear_logo, PADDING_LEFT, etc.). Optional: continue without if not found.
     global _helpers
@@ -609,7 +600,7 @@ def main():
     user_info = user_form()
     
     # Skip confirmation in VM test mode
-    if os.environ.get('OMARCHY_VM_TEST') != '1':
+    if os.environ.get('HOMERCHY_VM_TEST') != '1':
         while True:
             # Display summary table
             summary_data = f"""Field,Value
@@ -652,7 +643,7 @@ Keyboard,{keyboard_code}"""
     disk = disk_form()
     
     # Skip confirmation in VM test mode
-    if os.environ.get('OMARCHY_VM_TEST') != '1':
+    if os.environ.get('HOMERCHY_VM_TEST') != '1':
         while True:
             subprocess.run(['gum', 'style', 'Everything will be overwritten. There is no recovery possible.'], check=False)
             print()
@@ -730,22 +721,12 @@ Keyboard,{keyboard_code}"""
         debug_log("Using standard linux kernel")
     
     # Load packages from archinstall.packages
+    # On-ISO contract: list lives at /root/homerchy/iso-builder/builder/archinstall.packages (injection puts deployment at /root/homerchy).
     def load_archinstall_packages() -> list:
         """Load packages from archinstall.packages file."""
         packages = []
-        # Try multiple possible paths
-        possible_paths = [
-            Path('/root/omarchy/deployment/iso-builder/builder/archinstall.packages'),
-            Path('/root/homerchy/deployment/iso-builder/builder/archinstall.packages'),
-            Path('/root/omarchy/deployment/iso-builder/archinstall.packages'),
-            Path('/root/homerchy/deployment/iso-builder/archinstall.packages'),
-        ]
-        
-        archinstall_packages_file = None
-        for path in possible_paths:
-            if path.exists():
-                archinstall_packages_file = path
-                break
+        archinstall_packages_path = Path('/root/homerchy/iso-builder/builder/archinstall.packages')
+        archinstall_packages_file = archinstall_packages_path if archinstall_packages_path.exists() else None
         
         if archinstall_packages_file:
             try:
@@ -878,7 +859,7 @@ Keyboard,{keyboard_code}"""
         "mirror_config": {
             "custom_repositories": [],
             "custom_servers": [
-                {"url": "file:///var/cache/omarchy/mirror/offline/"}
+                {"url": "file:///var/cache/homerchy/mirror/offline/"}
             ],
             "mirror_regions": {},
             "optional_repositories": []

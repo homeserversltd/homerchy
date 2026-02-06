@@ -13,9 +13,9 @@ Target = elephant*
 [Action]
 Description = Restarting Walker services after system update
 When = PostTransaction
-Exec = $OMARCHY_PATH/onmachine/onmachine/bin/omarchy-restart-walker
+Exec = $HOMERCHY_PATH/onmachine/onmachine/bin/omarchy-restart-walker
 EOF
 
 # Link the visual theme menu onmachine/config
 mkdir -p ~/.onmachine/onmachine/config/elephant/menus
-ln -snf $OMARCHY_PATH/onmachine/onmachine/default/elephant/omarchy_themes.lua ~/.onmachine/onmachine/config/elephant/menus/omarchy_themes.lua
+ln -snf $HOMERCHY_PATH/onmachine/onmachine/default/elephant/omarchy_themes.lua ~/.onmachine/onmachine/config/elephant/menus/omarchy_themes.lua

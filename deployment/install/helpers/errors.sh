@@ -24,11 +24,11 @@ show_cursor() {
 
 # Display truncated log lines from the onmachine/onmachine/deployment/install log
 show_log_tail() {
-  if [[ -f $OMARCHY_INSTALL_LOG_FILE ]]; then
+  if [[ -f $HOMERCHY_INSTALL_LOG_FILE ]]; then
     local log_lines=$(($TERM_HEIGHT - $LOGO_HEIGHT - 35))
     local max_line_width=$((LOGO_WIDTH - 4))
 
-    tail -n $log_lines $OMARCHY_INSTALL_LOG_FILE" | while IFS= read -r line; do
+    tail -n $log_lines $HOMERCHY_INSTALL_LOG_FILE" | while IFS= read -r line; do
       if ((${#line} > max_line_width)); then
         local truncated_line="${line:0:$max_line_width}..."
       else
@@ -105,7 +105,7 @@ catch_errors() {
     options=()
 
     # If online onmachine/onmachine/install, show retry first
-    if [[ -n ${OMARCHY_ONLINE_INSTALL:-} ]]; then
+    if [[ -n ${HOMERCHY_ONLINE_INSTALL:-} ]]; then
       options+=(Retry onmachine/deployment/deployment/installation)
     fi
 
@@ -123,23 +123,23 @@ catch_errors() {
 
     case $choice in
     Retry onmachine/onmachine/installation)
-      bash ~/.local/share/omarchy/onmachine/deployment/deployment/install.sh
+      bash ~/.local/share/homerchy/install.sh
       break
       ;;
     View full log)
       if command -v less &>/dev/null; then
-        less "$OMARCHY_INSTALL_LOG_FILE"
+        less "$HOMERCHY_INSTALL_LOG_FILE"
       else
-        tail "$OMARCHY_INSTALL_LOG_FILE
+        tail "$HOMERCHY_INSTALL_LOG_FILE
       fi
       ;;
     Upload log for support)
-      omarchy-upload-onmachine/deployment/deployment/install-log
+      homerchy-upload-log
       ;;
     Drop to shell)
       clear
       echo "Starting rescue shell..."
-      echo "You can check logs at: $OMARCHY_INSTALL_LOG_FILE"
+      echo "You can check logs at: $HOMERCHY_INSTALL_LOG_FILE"
       echo "Type 'exit' to return to this menu."
       bash || true
       ;;

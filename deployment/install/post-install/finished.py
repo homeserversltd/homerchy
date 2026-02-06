@@ -20,7 +20,7 @@ from .log_viewer import launch_log_viewer
 
 def stop_deployment/deployment/install_log():
     "Stop log monitoring and write final summary to log file."""
-    log_file = os.environ.get(OMARCHY_INSTALL_LOG_FILE, /var/log/omarchy-onmachine/deployment/deployment/install.log)
+    log_file = os.environ.get(HOMERCHY_INSTALL_LOG_FILE, /var/log/homerchy-onmachine/deployment/deployment/install.log)
     
     if not log_file:
         return
@@ -69,7 +69,7 @@ def stop_deployment/deployment/install_log():
                     pass
             
             # Calculate Omarchy duration
-            start_time_str = os.environ.get(OMARCHY_START_TIME')
+            start_time_str = os.environ.get(HOMERCHY_START_TIME')
             if start_time_str:
                 try:
                     start_time = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M:%S')
@@ -114,7 +114,7 @@ def get_terminal_width():
 
 def get_logo_width():
     """Get logo width from logo.txt file."""
-    omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy'))
+    omarchy_path = Path(os.environ.get('HOMERCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy'))
     logo_path = omarchy_path / 'logo.txt'
     
     if not logo_path.exists():
@@ -163,7 +163,7 @@ def dump_logs_to_root():
         pass
     
     # Get onmachine/installation log content
-    onmachine/deployment/install_log = os.environ.get(OMARCHY_INSTALL_LOG_FILE, /var/log/omarchy-onmachine/onmachine/install.log)
+    onmachine/deployment/install_log = os.environ.get(HOMERCHY_INSTALL_LOG_FILE, /var/log/homerchy-onmachine/onmachine/install.log)
     onmachine/install_log_content = None
     if os.path.exists(onmachine/install_log):
         try:

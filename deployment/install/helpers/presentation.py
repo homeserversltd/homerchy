@@ -37,8 +37,8 @@ def init_environment():
     os.environ['TERM_HEIGHT'] = str(term_height)
 
     # Set logo path and dimensions
-    omarchy_path = os.environ.get('OMARCHY_PATH', '/root/omarchy')
-    logo_path = Path(omarchy_path) / 'icon.txt'
+    homerchy_path = os.environ.get('HOMERCHY_PATH', '/root/homerchy')
+    logo_path = Path(homerchy_path) / 'icon.txt'
     os.environ['LOGO_PATH'] = str(logo_path)
 
     # Calculate logo dimensions

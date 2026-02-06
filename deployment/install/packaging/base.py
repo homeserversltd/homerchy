@@ -21,11 +21,11 @@ def find_package_file(install_path: Path, filename: str) -> Path:
         return package_file
     
     # Try common locations
-    user = os.environ.get("OMARCHY_USER", os.environ.get('USER', 'user'))
+    user = os.environ.get("HOMERCHY_USER", os.environ.get('USER', 'user'))
     search_paths = [
-        Path("/root/omarchy") / "install" / filename,
-        Path.home() / ".local" / "share" / "omarchy" / "install" / filename,
-        Path("/usr/local/share/omarchy") / "install" / filename
+        Path("/root/homerchy") / "install" / filename,
+        Path.home() / ".local" / "share" / "homerchy" / "install" / filename,
+        Path("/usr/local/share/homerchy") / "install" / filename
     ]
     
     for path in search_paths:
@@ -99,8 +99,8 @@ def main(config: dict) -> dict:
         dict: Result dictionary with success status
     """
     try:
-        install_path = Path(os.environ.get("OMARCHY_INSTALL", Path(__file__).parent.parent))
-        package_filename = config.get("package_file", "omarchy-base.packages")
+        install_path = Path(os.environ.get("HOMERCHY_INSTALL", Path(__file__).parent.parent))
+        package_filename = config.get("package_file", "homerchy-base.packages")
         
         # Find package file
         package_file = find_package_file(install_path, package_filename)
@@ -119,30 +119,30 @@ def main(config: dict) -> dict:
             'xdg-terminal-exec', 'yaru-icon-theme', 'tzupdate'
         }
         
-        # Check if omarchy repo is configured (for omarchy-* packages)
-        omarchy_repo_configured = False
+        # Check if homerchy repo is configured (for omarchy-* packages, e.g. omarchy-keyring)
+        homerchy_repo_configured = False
         try:
             with open('/etc/pacman.conf', 'r') as f:
-                if '[omarchy]' in f.read():
-                    omarchy_repo_configured = True
+                if '[homerchy]' in f.read():
+                    homerchy_repo_configured = True
         except Exception:
             pass
         
         # Filter packages
         packages = []
         skipped_aur = []
-        skipped_omarchy = []
+        skipped_homerchy = []
         
         for pkg in all_packages:
             if pkg in aur_packages:
                 skipped_aur.append(pkg)
-            elif pkg.startswith('omarchy-') and not omarchy_repo_configured:
-                skipped_omarchy.append(pkg)
+            elif pkg.startswith('omarchy-') and not homerchy_repo_configured:
+                skipped_homerchy.append(pkg)
             else:
                 packages.append(pkg)
         
-        if skipped_omarchy:
-            print(f"INFO: Skipping {len(skipped_omarchy)} omarchy packages (repo not configured): {', '.join(skipped_omarchy)}")
+        if skipped_homerchy:
+            print(f"INFO: Skipping {len(skipped_homerchy)} homerchy repo packages (repo not configured): {', '.join(skipped_homerchy)}")
         
         if skipped_aur:
             print(f"INFO: Skipping {len(skipped_aur)} AUR packages (install separately): {', '.join(skipped_aur[:5])}")

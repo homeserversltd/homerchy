@@ -146,13 +146,6 @@ def inject_repository_source(repo_root: Path, profile_dir: Path):
         return ignored
     _remove_orphaned_files(repo_root, homerchy_target, ignore=top_level_ignore)
     
-    # Create symlink for backward compatibility (installer expects /root/omarchy)
-    # Use RELATIVE target "homerchy" so it works inside the VM; absolute host path would be broken in ISO
-    omarchy_link = profile_dir / 'airootfs' / 'root' / 'omarchy'
-    if omarchy_link.exists():
-        omarchy_link.unlink()
-    omarchy_link.symlink_to('homerchy')
-    
     print(f"{Colors.GREEN}✓ Repository source injected{Colors.NC}")
 
 
@@ -218,13 +211,13 @@ def fix_permissions_targets(repo_root: Path, profile_dir: Path):
     """
     print(f"{Colors.BLUE}Fixing permissions targets...{Colors.NC}")
     
-    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'omarchy' / 'mirror' / 'offline'
+    cache_dir = profile_dir / 'airootfs' / 'var' / 'cache' / 'homerchy' / 'mirror' / 'offline'
     cache_dir.mkdir(parents=True, exist_ok=True)
     
     bin_dir = profile_dir / 'airootfs' / 'usr' / 'local' / 'bin'
     bin_dir.mkdir(parents=True, exist_ok=True)
     upload_log_source = repo_root.parent / 'src' / 'bin' / 'omarchy-upload-log'
     if upload_log_source.exists():
-        shutil.copy2(upload_log_source, bin_dir / 'omarchy-upload-log')
-        (bin_dir / 'omarchy-upload-log').chmod(0o755)
-        print(f"{Colors.GREEN}✓ Copied omarchy-upload-log utility{Colors.NC}")
+        shutil.copy2(upload_log_source, bin_dir / 'homerchy-upload-log')
+        (bin_dir / 'homerchy-upload-log').chmod(0o755)
+        print(f"{Colors.GREEN}✓ Copied homerchy-upload-log utility{Colors.NC}")

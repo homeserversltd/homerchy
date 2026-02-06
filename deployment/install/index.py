@@ -42,7 +42,7 @@ class Orchestrator:
         self.paths = self._resolve_paths(self.config.get("paths", {}))
 
         # Setup logging
-        log_file = self.paths.get("log_file", "/var/log/omarchy/install.log")
+        log_file = self.paths.get("log_file", "/var/log/homerchy/install.log")
         self.logger = Logger(log_file, phase=self.phase, console=True)
 
         # Initialize state manager

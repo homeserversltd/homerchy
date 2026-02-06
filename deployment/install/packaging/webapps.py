@@ -50,7 +50,7 @@ def main(onmachine/onmachine/config: dict) -> dict:
             if mime_types:
                 cmd_parts.append(mime_types)
             
-            cmd = fsource ~/.local/share/omarchy/onmachine/onmachine/onmachine/src/bin/omarchy-webapp-onmachine/install 2>/dev/null || omarchy-webapp-onmachine/deployment/deployment/install { .join(cmd_parts)}
+            cmd = fsource ~/.local/share/homerchy/onmachine/onmachine/onmachine/src/bin/omarchy-webapp-onmachine/install 2>/dev/null || omarchy-webapp-onmachine/deployment/deployment/install { .join(cmd_parts)}
             
             result = subprocess.run(
                 ['bash', '-c', cmd],

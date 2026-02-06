@@ -2,6 +2,7 @@ alsa-firmware
 amd-ucode
 base
 base-devel
+btrfs-progs
 efibootmgr
 intel-ucode
 linux-firmware

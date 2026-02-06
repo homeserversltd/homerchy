@@ -53,7 +53,7 @@ def configure_pacman_for_build(repo_root: Path, profile_dir: Path):
     Configure pacman.conf for build vs ISO.
     mkarchiso needs online repos during build to onmachine/deployment/deployment/install base ISO packages.
     But the ISO itself should use offline mirror when booted.
-    Use the releng pacman.conf as base (has standard Arch repos) and add omarchy repo.
+    Use the releng pacman.conf as base (has standard Arch repos) and add homerchy repo.
 
     Args:
         repo_root: Root of the repository
@@ -64,30 +64,30 @@ def configure_pacman_for_build(repo_root: Path, profile_dir: Path):
     releng_source = repo_root / 'iso-builder' / 'archiso' / 'configs' / 'releng'
     releng_pacman_conf = releng_source / 'pacman.conf'
     
-    # For profile: Use releng pacman.conf (standard Arch repos) + add omarchy online repo
+    # For profile: Use releng pacman.conf (standard Arch repos) + add homerchy online repo
     # This ensures mkarchiso can build with online repos
-    # CRITICAL: Remove any offline/omarchy repos that might reference file:// paths
+    # CRITICAL: Remove any offline/homerchy repos that might reference file:// paths
     if releng_pacman_conf.exists():
-        # Read releng pacman.conf and add omarchy repo
+        # Read releng pacman.conf and add homerchy repo
         releng_content = releng_pacman_conf.read_text()
-        # Remove any existing offline or omarchy repos that use file:// paths
+        # Remove any existing offline or homerchy repos that use file:// paths
         # Remove [offline] repo section if present
         releng_content = re.sub(r"\[offline\].*?(?=\n\[|\Z)", '', releng_content, flags=re.DOTALL)
-        # Remove [omarchy] repo section if it uses file://
-        if '[omarchy]' in releng_content:
-            omarchy_match = re.search(r'\[omarchy\].*?(?=\n\[|\Z)', releng_content, re.DOTALL)
-            if omarchy_match and 'file://' in omarchy_match.group():
-                releng_content = re.sub(r'\[omarchy\].*?(?=\n\[|\Z)', '', releng_content, flags=re.DOTALL)
-        # Add omarchy repo with online URL if not already present
-        if '[omarchy]' not in releng_content:
-            omarchy_repo = '''
-[omarchy]
+        # Remove [homerchy] repo section if it uses file://
+        if '[homerchy]' in releng_content:
+            homerchy_match = re.search(r'\[homerchy\].*?(?=\n\[|\Z)', releng_content, re.DOTALL)
+            if homerchy_match and 'file://' in homerchy_match.group():
+                releng_content = re.sub(r'\[homerchy\].*?(?=\n\[|\Z)', '', releng_content, flags=re.DOTALL)
+        # Add homerchy repo with online URL if not already present
+        if '[homerchy]' not in releng_content:
+            homerchy_repo = '''
+[homerchy]
 SigLevel = Optional TrustAll
 Server = https://pkgs.omarchy.org/stable/$arch
 '''
-            releng_content += omarchy_repo
+            releng_content += homerchy_repo
         (profile_dir / 'pacman.conf').write_text(releng_content)
-        print(f"{Colors.GREEN}✓ Using releng pacman.conf with omarchy repo for mkarchiso build{Colors.NC}")
+        print(f"{Colors.GREEN}✓ Using releng pacman.conf with homerchy repo for mkarchiso build{Colors.NC}")
     else:
         print(f"{Colors.YELLOW}WARNING: releng pacman.conf not found, using onmachine/src/default{Colors.NC}")
 
@@ -117,7 +117,7 @@ def ensure_airootfs_pacman_online(profile_dir: Path):
         
         # Verify it doesn't have offline repos
         content = airootfs_pacman_conf.read_text()
-        if 'file:///var/cache/omarchy/mirror/offline' in content:
+        if 'file:///var/cache/homerchy/mirror/offline' in content:
             print(f"{Colors.RED}ERROR: airootfs/etc/pacman.conf still has offline mirror config!{Colors.NC}")
             import sys
             sys.exit(1)

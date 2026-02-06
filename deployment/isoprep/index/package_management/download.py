@@ -43,40 +43,26 @@ def download_packages_to_offline_mirror(repo_root: Path, profile_dir: Path, offl
         all_packages.update(packages)
         print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from packages.x86_64{Colors.NC}")
     
-    # 2. Homerchy base packages
-    omarchy_base = repo_root / 'homerchy' / 'deployment' / 'install' / 'omarchy-base.packages'
-    if omarchy_base.exists():
-        packages = read_package_list(omarchy_base)
+    # 2. Homerchy base packages (deployment-relative path only)
+    homerchy_base = repo_root / 'install' / 'homerchy-base.packages'
+    if homerchy_base.exists():
+        packages = read_package_list(homerchy_base)
         all_packages.update(packages)
-        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-base.packages{Colors.NC}")
-    else:
-        # Try alternative path (if called from different location)
-        omarchy_base = repo_root / 'deployment' / 'install' / 'omarchy-base.packages'
-        if omarchy_base.exists():
-            packages = read_package_list(omarchy_base)
-            all_packages.update(packages)
-            print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-base.packages{Colors.NC}")
+        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from homerchy-base.packages{Colors.NC}")
     
-    # 3. Homerchy other packages
-    omarchy_other = repo_root / 'homerchy' / 'deployment' / 'install' / 'omarchy-other.packages'
-    if omarchy_other.exists():
-        packages = read_package_list(omarchy_other)
+    # 3. Homerchy other packages (deployment-relative path only)
+    homerchy_other = repo_root / 'install' / 'homerchy-other.packages'
+    if homerchy_other.exists():
+        packages = read_package_list(homerchy_other)
         all_packages.update(packages)
-        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-other.packages{Colors.NC}")
-    else:
-        # Try alternative path
-        omarchy_other = repo_root / 'deployment' / 'install' / 'omarchy-other.packages'
-        if omarchy_other.exists():
-            packages = read_package_list(omarchy_other)
-            all_packages.update(packages)
-            print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from omarchy-other.packages{Colors.NC}")
+        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from homerchy-other.packages{Colors.NC}")
     
-    # 4. Archinstall packages
-    archinstall_packages = repo_root / 'homerchy' / 'deployment' / 'iso-builder' / 'builder' / 'arch-install.packages'
+    # 4. Archinstall packages (deployment-relative path only; single source for mirror and on-ISO)
+    archinstall_packages = repo_root / 'iso-builder' / 'builder' / 'archinstall.packages'
     if archinstall_packages.exists():
         packages = read_package_list(archinstall_packages)
         all_packages.update(packages)
-        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from arch-install.packages{Colors.NC}")
+        print(f"{Colors.GREEN}  ✓ Read {len(packages)} packages from archinstall.packages{Colors.NC}")
     
     # 5. Essential base system packages (always needed)
     essential_packages = ['base', 'base-devel', 'linux', 'linux-firmware', 'linux-headers', 'syslinux']

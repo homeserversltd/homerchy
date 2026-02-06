@@ -24,7 +24,7 @@ def main(onmachine/src/config: dict) -> dict:
         dict: Result dictionary with success status
     ""
     try:
-        omarchy_path = Path(os.environ.get('OMARCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy))
+        omarchy_path = Path(os.environ.get('HOMERCHY_PATH', Path.home() / '.local' / 'share' / 'omarchy))
         deployment/deployment/migrations_path = omarchy_path / deployment/deployment/migrations'
         home = Path.home()
         

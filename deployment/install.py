@@ -126,7 +126,7 @@ def display_persistent_message():
     header_color = colors[_run_counter % len(colors)]
     
     # Get log file path
-    log_file = os.environ.get('OMARCHY_INSTALL_LOG_FILE', '/var/log/omarchy-install.log')
+    log_file = os.environ.get('HOMERCHY_INSTALL_LOG_FILE', '/var/log/homerchy-install.log')
     
     # Get recent logs
     recent_logs = _get_recent_logs(log_file, lines=8)
@@ -205,42 +205,42 @@ def persistent_message_loop():
 
 def setup_environment():
     """Set up environment variables for installation."""
-    # Set OMARCHY_PATH if not already set - try multiple possible locations
-    if 'OMARCHY_PATH' not in os.environ:
-        omarchy_path = None
+    # Set HOMERCHY_PATH if not already set - try multiple possible locations
+    if 'HOMERCHY_PATH' not in os.environ:
+        homerchy_path = None
         
         # Try user's home directory first (normal installation)
-        candidate = Path.home() / '.local' / 'share' / 'omarchy'
+        candidate = Path.home() / '.local' / 'share' / 'homerchy'
         if (candidate / 'deployment' / 'install').exists():
-            omarchy_path = candidate
-        # Try /root/omarchy (ISO location)
-        elif (Path('/root/omarchy') / 'deployment' / 'install').exists():
-            omarchy_path = Path('/root/omarchy')
+            homerchy_path = candidate
+        # Try /root/homerchy (ISO location)
+        elif (Path('/root/homerchy') / 'deployment' / 'install').exists():
+            homerchy_path = Path('/root/homerchy')
         # Try script's parent directory (if run from repo)
         else:
             script_dir = Path(__file__).parent
             if (script_dir / 'install').exists():
-                omarchy_path = script_dir.parent
+                homerchy_path = script_dir.parent
         
-        if omarchy_path is None:
+        if homerchy_path is None:
             # Will be caught by verification below
-            omarchy_path = Path.home() / '.local' / 'share' / 'omarchy'
+            homerchy_path = Path.home() / '.local' / 'share' / 'homerchy'
         
-        os.environ['OMARCHY_PATH'] = str(omarchy_path)
+        os.environ['HOMERCHY_PATH'] = str(homerchy_path)
     
-    # Set OMARCHY_INSTALL
-    omarchy_path = Path(os.environ['OMARCHY_PATH'])
-    os.environ['OMARCHY_INSTALL'] = str(omarchy_path / 'deployment' / 'install')
+    # Set HOMERCHY_INSTALL
+    homerchy_path = Path(os.environ['HOMERCHY_PATH'])
+    os.environ['HOMERCHY_INSTALL'] = str(homerchy_path / 'deployment' / 'install')
     
     # Set log file path
-    if 'OMARCHY_INSTALL_LOG_FILE' not in os.environ:
-        os.environ['OMARCHY_INSTALL_LOG_FILE'] = '/var/log/omarchy-install.log'
+    if 'HOMERCHY_INSTALL_LOG_FILE' not in os.environ:
+        os.environ['HOMERCHY_INSTALL_LOG_FILE'] = '/var/log/homerchy-install.log'
     
-    # Add OMARCHY bin to PATH
-    omarchy_bin = omarchy_path / 'src' / 'bin'
-    if omarchy_bin.exists():
+    # Add HOMERCHY bin to PATH
+    homerchy_bin = homerchy_path / 'src' / 'bin'
+    if homerchy_bin.exists():
         current_path = os.environ.get('PATH', '')
-        os.environ['PATH'] = f"{omarchy_bin}:{current_path}"
+        os.environ['PATH'] = f"{homerchy_bin}:{current_path}"
 
 
 def unblock_tty_login():
@@ -261,7 +261,7 @@ def unblock_tty_login():
 def unlock_account():
     """Unlock user account on successful installation."""
     try:
-        username = os.environ.get('OMARCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
+        username = os.environ.get('HOMERCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
         subprocess.run(['passwd', '-u', username], 
                       check=False, capture_output=True)
     except Exception as e:
@@ -275,7 +275,7 @@ def lockout_and_reboot():
     try:
         # Remove marker file FIRST to prevent reboot loop
         # This prevents the service from running again on next boot
-        marker_file = Path('/var/lib/omarchy-install-needed')
+        marker_file = Path('/var/lib/homerchy-install-needed')
         if marker_file.exists():
             try:
                 marker_file.unlink()
@@ -289,7 +289,7 @@ def lockout_and_reboot():
                       check=False, capture_output=True)
         
         # Lock the user account
-        username = os.environ.get('OMARCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
+        username = os.environ.get('HOMERCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
         subprocess.run(['passwd', '-l', username], 
                       check=False, capture_output=True)
         
@@ -304,7 +304,7 @@ def lockout_and_reboot():
         print(f"WARNING: Failed to lock out login: {e}", file=sys.stderr)
         # Still try to remove marker and reboot even if lockout fails
         try:
-            marker_file = Path('/var/lib/omarchy-install-needed')
+            marker_file = Path('/var/lib/homerchy-install-needed')
             if marker_file.exists():
                 marker_file.unlink()
             subprocess.run(['reboot', '-f'], check=False)
@@ -318,7 +318,7 @@ def cleanup_on_exit():
         # DO NOT unblock TTY here - only unblock on explicit success/failure
         # This prevents TTY from being restored prematurely
         # CRITICAL: Remove marker file to prevent reboot loop
-        marker_file = Path('/var/lib/omarchy-install-needed')
+        marker_file = Path('/var/lib/homerchy-install-needed')
         if marker_file.exists():
             marker_file.unlink()
             print("[INSTALL] Marker file cleared in cleanup", file=sys.stderr)
@@ -358,23 +358,23 @@ def main():
     # Ensure account is unlocked at start (in case it was locked from previous failed attempt)
     # This allows installation to proceed even if account was locked before
     try:
-        username = os.environ.get('OMARCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
+        username = os.environ.get('HOMERCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
         subprocess.run(['passwd', '-u', username], 
                       check=False, capture_output=True)
     except Exception:
         pass  # Ignore errors - account might not exist yet or might not be locked
     
     # Get install path
-    install_path = Path(os.environ.get('OMARCHY_INSTALL', Path(__file__).parent / 'install'))
+    install_path = Path(os.environ.get('HOMERCHY_INSTALL', Path(__file__).parent / 'install'))
     
     # Verify install directory exists
     if not install_path.exists():
         print("ERROR: Installation directory not found!", file=sys.stderr)
         print("ERROR: Tried:", file=sys.stderr)
-        print(f"ERROR:   {Path.home() / '.local' / 'share' / 'omarchy' / 'deployment' / 'install'}", file=sys.stderr)
-        print(f"ERROR:   {Path('/root/omarchy/deployment/install')}", file=sys.stderr)
+        print(f"ERROR:   {Path.home() / '.local' / 'share' / 'homerchy' / 'deployment' / 'install'}", file=sys.stderr)
+        print(f"ERROR:   {Path('/root/homerchy/deployment/install')}", file=sys.stderr)
         print(f"ERROR:   {Path(__file__).parent / 'install'}", file=sys.stderr)
-        print(f"ERROR: OMARCHY_PATH={os.environ.get('OMARCHY_PATH')}", file=sys.stderr)
+        print(f"ERROR: HOMERCHY_PATH={os.environ.get('HOMERCHY_PATH')}", file=sys.stderr)
         print(f"ERROR: HOME={os.environ.get('HOME')}", file=sys.stderr)
         lockout_and_reboot()
         sys.exit(1)

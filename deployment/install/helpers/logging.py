@@ -29,7 +29,7 @@ def _monitor_log_file():
 
     last_position = 0
     last_inode = 0
-    log_file = os.environ.get('OMARCHY_INSTALL_LOG_FILE')
+    log_file = os.environ.get('HOMERCHY_INSTALL_LOG_FILE')
 
     if not log_file:
         return
@@ -86,7 +86,7 @@ def start_install_log():
     """
     global _log_thread, _stop_event
 
-    log_file = os.environ.get('OMARCHY_INSTALL_LOG_FILE')
+    log_file = os.environ.get('HOMERCHY_INSTALL_LOG_FILE')
     if not log_file:
         return
 
@@ -110,7 +110,7 @@ def start_install_log():
 
     # Write start message
     start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    os.environ['OMARCHY_START_TIME'] = start_time
+    os.environ['HOMERCHY_START_TIME'] = start_time
 
     try:
         with open(log_file, 'a') as f:
@@ -139,13 +139,13 @@ def stop_install_log():
     if _log_thread and _log_thread.is_alive():
         _log_thread.join(timeout=1.0)
 
-    log_file = os.environ.get('OMARCHY_INSTALL_LOG_FILE')
+    log_file = os.environ.get('HOMERCHY_INSTALL_LOG_FILE')
     if not log_file or not Path(log_file).exists():
         return
 
     # Write completion message
     end_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    os.environ['OMARCHY_END_TIME'] = end_time
+    os.environ['HOMERCHY_END_TIME'] = end_time
 
     try:
         with open(log_file, 'a') as f:
@@ -153,7 +153,7 @@ def stop_install_log():
             f.write("=== Installation Time Summary ===\n")
 
             # Calculate duration
-            start_time_str = os.environ.get('OMARCHY_START_TIME')
+            start_time_str = os.environ.get('HOMERCHY_START_TIME')
             if start_time_str:
                 try:
                     start_dt = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M:%S')

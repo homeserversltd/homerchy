@@ -151,7 +151,7 @@ class Logger:
                     result = subprocess.run(['sudo', 'mkdir', '-p', str(log_dir)], check=True, capture_output=True)
                 except (subprocess.CalledProcessError, FileNotFoundError):
                     # sudo failed or not available - use user-writable location
-                    user_log_dir = Path.home() / '.local' / 'share' / 'omarchy' / 'logs'
+                    user_log_dir = Path.home() / '.local' / 'share' / 'homerchy' / 'logs'
                     user_log_dir.mkdir(parents=True, exist_ok=True)
                     self.log_file = user_log_dir / f"{phase}-{self.log_file.name}"
                     log_dir = self.log_file.parent
@@ -171,7 +171,7 @@ class Logger:
                     subprocess.run(['sudo', 'chmod', '666', str(self.log_file)], check=True, capture_output=True)
                 except (subprocess.CalledProcessError, FileNotFoundError):
                     # sudo failed - use user-writable location
-                    user_log_dir = Path.home() / '.local' / 'share' / 'omarchy' / 'logs'
+                    user_log_dir = Path.home() / '.local' / 'share' / 'homerchy' / 'logs'
                     user_log_dir.mkdir(parents=True, exist_ok=True)
                     self.log_file = user_log_dir / f"{phase}-{self.log_file.name}"
                     self.log_file.touch(mode=0o666)

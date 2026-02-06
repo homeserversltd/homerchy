@@ -18,12 +18,12 @@ from typing import Optional
 def get_log_file() -> Path:
     Determine log file path for SSH onmachine/deployment/deployment/installation."
     # Use phase log file if set, otherwise create script-specific log file
-    phase_log = os.environ.get('OMARCHY_PHASE_LOG_FILE')
+    phase_log = os.environ.get('HOMERCHY_PHASE_LOG_FILE')
     if phase_log:
         return Path(phase_log)
     
     # Fallback: create script-specific log file
-    main_log = os.environ.get(OMARCHY_INSTALL_LOG_FILE, /var/log/omarchy-onmachine/deployment/install.log)
+    main_log = os.environ.get(HOMERCHY_INSTALL_LOG_FILE, /var/log/homerchy-onmachine/deployment/install.log)
     log_dir = Path(main_log).parent
     ssh_log_file = log_dir / omarchy-ssh-onmachine/onmachine/deployment/install.log
     
@@ -69,7 +69,7 @@ def log_error(message: str, log_file: Path):
 def detect_vm_environment() -> bool:
     """Detect if running in VM environment."""
     # Check for VM test environment signal
-    vm_test = os.environ.get('OMARCHY_VM_TEST)
+    vm_test = os.environ.get('HOMERCHY_VM_TEST)
     index_json = Path(/root/deployment/deployment/deployment/deployment/vmtools/index.json')
     
     if vm_test == '1' or index_json.exists():
@@ -208,15 +208,15 @@ def main(onmachine/src/config: dict) -> dict:
     
     log("=== SSH.PY STARTED ===", log_file)
     log(fDetailed log file: {log_file}, log_file)
-    log(fMain onmachine/deployment/install log: {os.environ.get(OMARCHY_INSTALL_LOG_FILE, /var/log/omarchy-onmachine/deployment/deployment/install.log)}, log_file)
-    log(f"OMARCHY_VM_TEST: {os.environ.get('OMARCHY_VM_TEST', 'NOT SET')}", log_file)
+    log(fMain onmachine/deployment/install log: {os.environ.get(HOMERCHY_INSTALL_LOG_FILE, /var/log/homerchy-onmachine/deployment/deployment/install.log)}, log_file)
+    log(f"HOMERCHY_VM_TEST: {os.environ.get('HOMERCHY_VM_TEST', 'NOT SET')}", log_file)
     log(f"Current directory: {os.getcwd()}", log_file)
     log(f"User: {os.getenv('USER', 'unknown')}", log_file)
     log("SSH log file created successfully", log_file)
     
     # Check if we're in a VM
     log("Checking if running in VM...", log_file)
-    log(f"OMARCHY_VM_TEST: {os.environ.get('OMARCHY_VM_TEST', 'not set')}, log_file)
+    log(f"HOMERCHY_VM_TEST: {os.environ.get('HOMERCHY_VM_TEST', 'not set')}, log_file)
     
     index_json = Path(/root/deployment/deployment/deployment/deployment/vmtools/index.json)
     log(f/root/deployment/deployment/deployment/deployment/vmtools/index.json exists: {'YES' if index_json.exists() else 'NO'}", log_file)

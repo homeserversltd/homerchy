@@ -16,15 +16,15 @@ from datetime import datetime
 from pathlib import Path
 
 
-LOG_FILE = Path('/var/log/omarchy-install.log')
+LOG_FILE = Path('/var/log/homerchy-install.log')
 
 # Python helpers module (set in main() after import; used by install_arch())
 helpers = None
 
 
 def debug_log(message: str):
-    """Log debug messages if OMARCHY_DEBUG is set."""
-    if os.environ.get('OMARCHY_DEBUG'):
+    """Log debug messages if HOMERCHY_DEBUG is set."""
+    if os.environ.get('HOMERCHY_DEBUG'):
         log(message)
     # Always print debug messages to console for visibility
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -44,35 +44,21 @@ def log(message: str):
 
 def get_install_path():
     """Get path to install directory and set environment variables."""
-    # Default path (backward compatibility - installer expects /root/omarchy)
     homerchy_path = Path('/root/homerchy')
-    omarchy_path = Path('/root/omarchy')
-
-    # Use symlink if it exists, otherwise check for direct path
-    if omarchy_path.exists() or omarchy_path.is_symlink():
-        os.environ['OMARCHY_PATH'] = str(omarchy_path)
-    elif homerchy_path.exists():
-        os.environ['OMARCHY_PATH'] = str(homerchy_path)
-    else:
-        os.environ['OMARCHY_PATH'] = '/root/omarchy'
-
-    # VM detection and path override handled by configurator
-    # No longer using vm-env.sh, configurator auto-detects VM mode from index.json
-
-    omarchy_path = Path(os.environ['OMARCHY_PATH'])
-    install_path = omarchy_path / 'install'
+    os.environ['HOMERCHY_PATH'] = str(homerchy_path)
+    install_path = homerchy_path / 'install'
 
     # Check for Python helpers
     helpers_init = install_path / 'helpers' / '__init__.py'
     if not helpers_init.exists():
-        install_path = omarchy_path / 'deployment' / 'install'
+        install_path = homerchy_path / 'deployment' / 'install'
         helpers_init = install_path / 'helpers' / '__init__.py'
 
     if not install_path.exists():
         raise FileNotFoundError(f"Homerchy install directory not found: {install_path}")
 
-    os.environ['OMARCHY_INSTALL'] = str(install_path)
-    os.environ['OMARCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
+    os.environ['HOMERCHY_INSTALL'] = str(install_path)
+    os.environ['HOMERCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
 
     return install_path
 
@@ -163,8 +149,8 @@ def run_configurator():
     if creds_file.exists():
         with open(creds_file) as f:
             creds = json.load(f)
-            os.environ['OMARCHY_USER'] = creds['users'][0]['username']
-            log(f"run_configurator: Username set to: {os.environ['OMARCHY_USER']}")
+            os.environ['HOMERCHY_USER'] = creds['users'][0]['username']
+            log(f"run_configurator: Username set to: {os.environ['HOMERCHY_USER']}")
     else:
         log("run_configurator: ERROR: user_credentials.json not found!")
         return False
@@ -174,9 +160,9 @@ def run_configurator():
 
 def chroot_bash(*args, stdout=None, stderr=None):
     """Execute command in chroot with proper environment."""
-    omarchy_user = os.environ.get('OMARCHY_USER')
-    if not omarchy_user:
-        raise ValueError("OMARCHY_USER not set")
+    homerchy_user = os.environ.get('HOMERCHY_USER')
+    if not homerchy_user:
+        raise ValueError("HOMERCHY_USER not set")
     
     user_full_name_file = Path('user_full_name.txt')
     user_email_file = Path('user_email_address.txt')
@@ -186,21 +172,21 @@ def chroot_bash(*args, stdout=None, stderr=None):
     
     env = os.environ.copy()
     env.update({
-        'OMARCHY_CHROOT_INSTALL': '1',
-        'OMARCHY_USER_NAME': user_full_name,
-        'OMARCHY_USER_EMAIL': user_email,
-        'USER': omarchy_user,
-        'HOME': f'/home/{omarchy_user}',
+        'HOMERCHY_CHROOT_INSTALL': '1',
+        'HOMERCHY_USER_NAME': user_full_name,
+        'HOMERCHY_USER_EMAIL': user_email,
+        'USER': homerchy_user,
+        'HOME': f'/home/{homerchy_user}',
     })
     
-    cmd = ['arch-chroot', '-u', omarchy_user, '/mnt'] + list(args)
+    cmd = ['arch-chroot', '-u', homerchy_user, '/mnt'] + list(args)
     return subprocess.run(cmd, env=env, stdout=stdout, stderr=stderr)
 
 
 def install_base_system():
     """Install base Arch Linux system via archinstall."""
-    # Ensure OMARCHY_PATH is set before we need it
-    if 'OMARCHY_PATH' not in os.environ:
+    # Ensure HOMERCHY_PATH is set before we need it
+    if 'HOMERCHY_PATH' not in os.environ:
         get_install_path()
     
     debug_log("install_base_system: Initializing pacman keyring")
@@ -208,7 +194,7 @@ def install_base_system():
     # Initialize keyring if needed
     gnupg_dir = Path('/etc/pacman.d/gnupg')
     if not gnupg_dir.exists() or not (gnupg_dir / 'pubring.gpg').exists():
-        debug = os.environ.get('OMARCHY_DEBUG')
+        debug = os.environ.get('HOMERCHY_DEBUG')
         if debug:
             subprocess.run(['pacman-key', '--init'],
                          stdout=open(LOG_FILE, 'a'), stderr=subprocess.STDOUT, check=False)
@@ -219,20 +205,20 @@ def install_base_system():
         debug_log("install_base_system: Keyring already initialized")
     
     # Populate keyrings
-    debug = os.environ.get('OMARCHY_DEBUG')
+    debug = os.environ.get('HOMERCHY_DEBUG')
     if debug:
         subprocess.run(['pacman-key', '--populate', 'archlinux'],
                      stdout=open(LOG_FILE, 'a'), stderr=subprocess.STDOUT, check=False)
-        subprocess.run(['pacman-key', '--populate', 'omarchy'],
+        subprocess.run(['pacman-key', '--populate', 'homerchy'],
                      stdout=open(LOG_FILE, 'a'), stderr=subprocess.STDOUT, check=False)
     else:
         subprocess.run(['pacman-key', '--populate', 'archlinux'],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
-        subprocess.run(['pacman-key', '--populate', 'omarchy'],
+        subprocess.run(['pacman-key', '--populate', 'homerchy'],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
     
     # Verify offline mirror exists (packages should be pre-downloaded in ISO)
-    offline_mirror_path = Path('/var/cache/omarchy/mirror/offline')
+    offline_mirror_path = Path('/var/cache/homerchy/mirror/offline')
     if not offline_mirror_path.exists():
         log("install_base_system: WARNING: Offline mirror directory not found!")
     else:
@@ -246,15 +232,15 @@ def install_base_system():
     pacman_conf_path = Path('/etc/pacman.conf')
     if pacman_conf_path.exists():
         pacman_conf_content = pacman_conf_path.read_text()
-        if 'file:///var/cache/omarchy/mirror/offline' not in pacman_conf_content:
+        if 'file:///var/cache/homerchy/mirror/offline' not in pacman_conf_content:
             log("install_base_system: Configuring pacman.conf for offline mirror...")
             # Read the offline pacman.conf template
-            # Use OMARCHY_PATH if set, otherwise try common paths
-            omarchy_path = Path(os.environ.get('OMARCHY_PATH', '/root/omarchy'))
-            offline_pacman_conf = omarchy_path / 'iso-builder' / 'configs' / 'pacman.conf'
+            # Use HOMERCHY_PATH if set, otherwise try common paths
+            homerchy_path = Path(os.environ.get('HOMERCHY_PATH', '/root/homerchy'))
+            offline_pacman_conf = homerchy_path / 'iso-builder' / 'configs' / 'pacman.conf'
             if not offline_pacman_conf.exists():
                 # Try alternative path structure
-                offline_pacman_conf = omarchy_path / 'configs' / 'pacman.conf'
+                offline_pacman_conf = homerchy_path / 'configs' / 'pacman.conf'
             if offline_pacman_conf.exists():
                 offline_content = offline_pacman_conf.read_text()
                 # Backup original
@@ -278,11 +264,11 @@ def install_base_system():
                 offline_repos = """
 [offline]
 SigLevel = Optional TrustAll
-Server = file:///var/cache/omarchy/mirror/offline/
+Server = file:///var/cache/homerchy/mirror/offline/
 
-[omarchy]
+[homerchy]
 SigLevel = Optional TrustAll
-Server = file:///var/cache/omarchy/mirror/offline/
+Server = file:///var/cache/homerchy/mirror/offline/
 """
                 modified_content += offline_repos
                 # Backup and write
@@ -399,7 +385,7 @@ Server = file:///var/cache/omarchy/mirror/offline/
         debug_log("install_base_system: pacman.conf already exists in installed system")
         # Check if it's already configured for offline mirror
         pacman_conf_content = pacman_conf_target.read_text()
-        if 'file:///var/cache/omarchy/mirror/offline' not in pacman_conf_content:
+        if 'file:///var/cache/homerchy/mirror/offline' not in pacman_conf_content:
             debug_log("install_base_system: Updating installed system pacman.conf to use offline mirror")
             # Replace with ISO's pacman.conf which is already configured for offline
             shutil.copy2('/etc/pacman.conf', str(pacman_conf_target))
@@ -409,12 +395,12 @@ Server = file:///var/cache/omarchy/mirror/offline/
     
     debug_log("install_base_system: Mounting offline mirror for installation")
     # Mount offline mirror from ISO to installed system (needed during archinstall)
-    offline_mirror_source = Path('/var/cache/omarchy/mirror/offline')
-    cache_target = Path('/mnt/var/cache/omarchy/mirror/offline')
+    offline_mirror_source = Path('/var/cache/homerchy/mirror/offline')
+    cache_target = Path('/mnt/var/cache/homerchy/mirror/offline')
     
     # Verify source exists and has packages
     if not offline_mirror_source.exists():
-        log("install_base_system: ERROR: Offline mirror source not found at /var/cache/omarchy/mirror/offline")
+        log("install_base_system: ERROR: Offline mirror source not found at /var/cache/homerchy/mirror/offline")
         raise RuntimeError("Offline mirror not found in ISO")
     
     package_files = list(offline_mirror_source.glob('*.pkg.tar.*'))
@@ -446,17 +432,17 @@ Server = file:///var/cache/omarchy/mirror/offline/
     sudoers_dir = Path('/mnt/etc/sudoers.d')
     sudoers_dir.mkdir(parents=True, exist_ok=True)
     
-    omarchy_user = os.environ.get('OMARCHY_USER')
+    homerchy_user = os.environ.get('HOMERCHY_USER')
     sudoers_content = f"""root ALL=(ALL:ALL) NOPASSWD: ALL
 %wheel ALL=(ALL:ALL) NOPASSWD: ALL
-{omarchy_user} ALL=(ALL:ALL) NOPASSWD: ALL
+{homerchy_user} ALL=(ALL:ALL) NOPASSWD: ALL
 """
-    (sudoers_dir / '99-omarchy-installer').write_text(sudoers_content)
-    (sudoers_dir / '99-omarchy-installer').chmod(0o440)
+    (sudoers_dir / '99-homerchy-installer').write_text(sudoers_content)
+    (sudoers_dir / '99-homerchy-installer').chmod(0o440)
     
     log("install_base_system: Ensuring user home directory exists")
     # Ensure user home exists
-    user_home = Path(f'/mnt/home/{omarchy_user}')
+    user_home = Path(f'/mnt/home/{homerchy_user}')
     if not user_home.exists():
         debug_log("install_base_system: Home directory doesn't exist, creating it")
         user_home.mkdir(parents=True, exist_ok=True)
@@ -471,40 +457,40 @@ Server = file:///var/cache/omarchy/mirror/offline/
     
     log("install_base_system: Copying Homerchy repository to user home")
     # Copy Homerchy repo
-    omarchy_path = Path(os.environ['OMARCHY_PATH'])
-    local_share = Path(f'/mnt/home/{omarchy_user}/.local/share')
+    homerchy_path = Path(os.environ['HOMERCHY_PATH'])
+    local_share = Path(f'/mnt/home/{homerchy_user}/.local/share')
     local_share.mkdir(parents=True, exist_ok=True)
     
-    target_omarchy = local_share / 'omarchy'
-    if target_omarchy.exists():
-        shutil.rmtree(target_omarchy)
-    shutil.copytree(omarchy_path, target_omarchy)
+    target_homerchy = local_share / 'homerchy'
+    if target_homerchy.exists():
+        shutil.rmtree(target_homerchy)
+    shutil.copytree(homerchy_path, target_homerchy)
     
     subprocess.run(['chown', '-R', '1000:1000', str(local_share)], check=True)
     
     debug_log("install_base_system: Setting executable permissions")
     # Set executable permissions
-    for bin_file in target_omarchy.rglob('bin/*'):
+    for bin_file in target_homerchy.rglob('bin/*'):
         if bin_file.is_file():
             bin_file.chmod(0o755)
     
-    boot_sh = target_omarchy / 'boot.sh'
+    boot_sh = target_homerchy / 'boot.sh'
     if boot_sh.exists():
         boot_sh.chmod(0o755)
     
-    waybar_script = target_omarchy / 'default' / 'waybar' / 'indicators' / 'screen-recording.sh'
+    waybar_script = target_homerchy / 'default' / 'waybar' / 'indicators' / 'screen-recording.sh'
     if waybar_script.exists():
         waybar_script.chmod(0o755)
     
     # Create systemd service for first-boot installation
     log("install_base_system: Creating first-boot installation service")
     # Create marker file to indicate Homerchy installation is needed
-    install_marker = Path('/mnt/var/lib/omarchy-install-needed')
+    install_marker = Path('/mnt/var/lib/homerchy-install-needed')
     install_marker.parent.mkdir(parents=True, exist_ok=True)
     install_marker.touch()
     
     # Use installed system paths (without /mnt prefix) for the service
-    installed_omarchy_path = f'/home/{omarchy_user}/.local/share/omarchy'
+    installed_homerchy_path = f'/home/{homerchy_user}/.local/share/homerchy'
     
     service_content = f"""[Unit]
 Description=Homerchy First-Boot Installation
@@ -513,7 +499,7 @@ After=multi-user.target network-online.target
 # Don't block boot - start after system is ready
 Wants=network-online.target
 # Only run if marker file exists AND root filesystem is mounted
-ConditionPathExists=/var/lib/omarchy-install-needed
+ConditionPathExists=/var/lib/homerchy-install-needed
 ConditionPathIsMountPoint=/
 # Don't start if system is shutting down
 DefaultDependencies=yes
@@ -521,11 +507,11 @@ DefaultDependencies=yes
 [Service]
 Type=oneshot
 # Run entire orchestrator as root - simplifies permissions for system operations
-WorkingDirectory={installed_omarchy_path}
-Environment="HOME=/home/{omarchy_user}"
-Environment="USER={omarchy_user}"
-Environment="OMARCHY_PATH={installed_omarchy_path}"
-Environment="OMARCHY_INSTALL_USER={omarchy_user}"
+WorkingDirectory={installed_homerchy_path}
+Environment="HOME=/home/{homerchy_user}"
+Environment="USER={homerchy_user}"
+Environment="HOMERCHY_PATH={installed_homerchy_path}"
+Environment="HOMERCHY_INSTALL_USER={homerchy_user}"
 # Timeout settings - prevent infinite hangs
 TimeoutStartSec=3600
 TimeoutStopSec=30
@@ -534,14 +520,14 @@ ExecStartPre=/bin/systemctl stop getty@tty1.service getty@tty2.service getty@tty
 ExecStartPre=/bin/systemctl mask getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
 ExecStartPre=/bin/systemctl disable getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
 # Run installation as root (orchestrator handles user-specific operations internally)
-ExecStart=/usr/bin/python3 {installed_omarchy_path}/install.py
+ExecStart=/usr/bin/python3 {installed_homerchy_path}/install.py
 # Remove marker file (critical - prevents reboot loop)
 # Use - to ignore errors, but ensure it happens
-ExecStartPost=-/bin/rm -f /var/lib/omarchy-install-needed
+ExecStartPost=-/bin/rm -f /var/lib/homerchy-install-needed
 # NOTE: TTY unblocking is handled by install.py/finished.py on completion
 # Do NOT unmask getty services here - let install.py handle it
 # ExecStop only removes marker (TTY stays blocked on failure for lockout)
-ExecStop=-/bin/rm -f /var/lib/omarchy-install-needed
+ExecStop=-/bin/rm -f /var/lib/homerchy-install-needed
 StandardOutput=journal
 StandardError=journal
 RemainAfterExit=yes
@@ -551,14 +537,14 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 """
     
-    service_file = Path('/mnt/etc/systemd/system/omarchy-first-boot-install.service')
+    service_file = Path('/mnt/etc/systemd/system/homerchy-first-boot-install.service')
     service_file.parent.mkdir(parents=True, exist_ok=True)
     service_file.write_text(service_content)
     service_file.chmod(0o644)
     
     # Enable service in chroot
     result = subprocess.run(
-        ['arch-chroot', '/mnt', 'systemctl', 'enable', 'omarchy-first-boot-install.service'],
+        ['arch-chroot', '/mnt', 'systemctl', 'enable', 'homerchy-first-boot-install.service'],
         capture_output=True,
         text=True
     )
@@ -618,12 +604,12 @@ def install_arch():
 
 def install_homerchy():
     """Install Homerchy on top of base Arch."""
-    omarchy_user = os.environ.get('OMARCHY_USER')
-    if not omarchy_user:
-        log("install_homerchy: ERROR: OMARCHY_USER not set")
+    homerchy_user = os.environ.get('HOMERCHY_USER')
+    if not homerchy_user:
+        log("install_homerchy: ERROR: HOMERCHY_USER not set")
         return False
     
-    debug = os.environ.get('OMARCHY_DEBUG')
+    debug = os.environ.get('HOMERCHY_DEBUG')
     
     # Install gum in chroot (Python 3 is already in base image via archinstall.packages)
     debug_log("install_homerchy: Installing gum in chroot")
@@ -639,7 +625,7 @@ def install_homerchy():
     
     # Run Homerchy installer in chroot
     log("install_homerchy: Running Homerchy installer in chroot")
-    install_cmd = ['bash', '-lc', f'source /home/{omarchy_user}/.local/share/omarchy/install.sh || bash']
+    install_cmd = ['bash', '-lc', f'source /home/{homerchy_user}/.local/share/homerchy/install.sh || bash']
     if debug:
         result = chroot_bash(*install_cmd)
         if result.returncode != 0:
@@ -654,7 +640,7 @@ def install_homerchy():
             return False
     
     # Reboot if requested by installer
-    completion_marker = Path('/mnt/var/tmp/omarchy-install-completed')
+    completion_marker = Path('/mnt/var/tmp/homerchy-install-completed')
     if completion_marker.exists():
         subprocess.run(['reboot'], check=False)
     
@@ -687,7 +673,7 @@ def main():
         f.write(f"[{timestamp}] User: {os.getenv('USER', 'unknown')}\n")
         f.write(f"[{timestamp}] PWD: {os.getcwd()}\n")
     
-    os.environ['OMARCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
+    os.environ['HOMERCHY_INSTALL_LOG_FILE'] = str(LOG_FILE)
 
     global helpers
     install_path = get_install_path()
