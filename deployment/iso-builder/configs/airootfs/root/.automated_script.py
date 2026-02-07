@@ -524,9 +524,9 @@ ExecStart=/usr/bin/python3 {installed_homerchy_path}/install.py
 # Remove marker file (critical - prevents reboot loop)
 # Use - to ignore errors, but ensure it happens
 ExecStartPost=-/bin/rm -f /var/lib/homerchy-install-needed
-# NOTE: TTY unblocking is handled by install.py/finished.py on completion
-# Do NOT unmask getty services here - let install.py handle it
-# ExecStop only removes marker (TTY stays blocked on failure for lockout)
+# Safety: always restore gettys when service exits (success, failure, or crash).
+# Ensures we never leave the system without a login prompt so we can investigate.
+ExecStartPost=-/bin/sh -c 'for t in 1 2 3 4 5 6; do /bin/systemctl unmask getty@tty$t.service 2>/dev/null; done; /bin/systemctl start getty@tty1.service 2>/dev/null'
 ExecStop=-/bin/rm -f /var/lib/homerchy-install-needed
 StandardOutput=journal
 StandardError=journal

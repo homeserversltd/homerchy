@@ -1,5 +1,5 @@
 {
-  onmachine/onmachine/default_profile": "homerchy-test",
+  "default_profile": "homerchy-test",
   "profiles": {
     "homerchy-test": {
       "keyboard": {
