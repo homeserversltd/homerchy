@@ -13,9 +13,11 @@ import os
 import sys
 from pathlib import Path
 
-# Set environment variable for repo root if not already set
+# Set environment variable for repo root (deployment/) if not already set.
+# We live at deployment/iso-builder/isoprep/build.py; profile_assembly needs repo_root
+# to contain 'iso-builder' (repo_root / 'iso-builder' / 'archiso' etc.).
 if 'ISOPREP_REPO_ROOT' not in os.environ:
-    repo_root = Path(__file__).parent.parent.resolve()
+    repo_root = Path(__file__).parent.parent.parent.resolve()
     os.environ['ISOPREP_REPO_ROOT'] = str(repo_root)
 
 # Add index directory to path

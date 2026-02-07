@@ -39,9 +39,9 @@ class Orchestrator:
         """
         paths_config = self.config.get('paths', {}).copy()
 
-        # Set default repo_root if not provided
+        # Set default repo_root if not provided (deployment/ so repo_root / 'iso-builder' exists)
         if 'repo_root' not in paths_config or not paths_config['repo_root']:
-            default_repo_root = Path(__file__).parent.parent.parent.resolve()
+            default_repo_root = Path(__file__).parent.parent.parent.parent.resolve()
             os.environ['ISOPREP_REPO_ROOT'] = str(default_repo_root)
             paths_config['repo_root'] = str(default_repo_root)
 
