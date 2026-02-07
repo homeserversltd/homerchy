@@ -2,14 +2,14 @@
     "metadata": {
         "schema_version": "1.0.0",
         "name": "Preflight Phase",
-        description: Pre-onmachine/deployment/deployment/installation checks and setup
+        "description": "Pre-installation checks and setup"
     },
-    children": [
+    "children": [
         "guard",
         "begin",
         "show-env",
         "pacman",
-        deployment/deployment/migrations",
+        "migrations",
         "first-run-mode",
         "disable-mkinitcpio"
     ],
