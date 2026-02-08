@@ -1,1 +1,22 @@
-{"metadata":{"schema_version":"1.0.0","name":"preflight","description":"Pre-install checks and TTY/env setup"},"paths":{},"children":[],"execution":{"mode":"sequential","continue_on_error":false},"config":{}}
+{
+  "metadata": {
+    "schema_version": "1.0.0",
+    "name": "preflight",
+    "description": "Pre-install checks and env setup; no TTY (main owns display)"
+  },
+  "paths": {},
+  "children": [
+    "guard",
+    "begin",
+    "show_env",
+    "pacman",
+    "migrations",
+    "first_run_mode",
+    "disable_mkinitcpio"
+  ],
+  "execution": {
+    "mode": "sequential",
+    "continue_on_error": false
+  },
+  "config": {}
+}

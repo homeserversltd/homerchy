@@ -5,43 +5,32 @@ Copyright (C) 2024 HOMESERVER LLC
 
 Loads index.json and runs child phases in order. Compatible with install.py
 entry point (Orchestrator(install_path=..., phase="root"), .run() -> state).
+State is owned by main; pass state= so display stays in sync.
 """
 
 import importlib.util
 import json
 import sys
-from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
-
-class Status(Enum):
-    """Installation outcome."""
-    COMPLETED = "completed"
-    FAILED = "failed"
-    IN_PROGRESS = "in_progress"
-
-
-class State:
-    """Runtime state for status display and phase results."""
-    __slots__ = ("status", "current_step", "errors", "children")
-
-    def __init__(self) -> None:
-        self.status = Status.IN_PROGRESS
-        self.current_step: str = "none"
-        self.errors: list[str] = []
-        self.children: dict[str, Any] = {}
+from state import State, Status
 
 
 class Orchestrator:
     """Root orchestrator: loads index.json and runs child phases sequentially."""
 
-    def __init__(self, install_path: Path, phase: str = "root") -> None:
+    def __init__(
+        self,
+        install_path: Path,
+        phase: str = "root",
+        state: Optional[State] = None,
+    ) -> None:
         self.install_path = Path(install_path)
         self.phase = phase
         self.config_path = self.install_path / "index.json"
         self.config = self._load_config()
-        self.state = State()
+        self.state = state if state is not None else State()
 
     def _load_config(self) -> dict:
         if not self.config_path.exists():
