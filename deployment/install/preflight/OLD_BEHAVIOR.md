@@ -68,7 +68,7 @@ From the file list these existed; exact behavior was not fully captured in the s
 - **pacman** – Preflight pacman (e.g. keyring, refresh, or config); we’ll define when we implement packaging.
 - **migrations** – Config or data migrations before main install; define per migration.
 - **first-run-mode** – Detect or set “first run” flag; useful for one-time setup.
-- **disable-mkinitcpio** – Turn off or adjust mkinitcpio during install to avoid rebuilds at wrong time.
+- **disable-mkinitcpio** – Turn off or adjust mkinitcpio during install to avoid rebuilds at wrong time. **Easiest to fulfill and test:** Log that we're disabling; optionally `systemctl disable mkinitcpio.service` (or mask) so we have one real side effect to confirm the engine runs. Use this with begin.py as the first two steps to validate the pipeline.
 
 Document each in this file or in the module when we implement it.
 
