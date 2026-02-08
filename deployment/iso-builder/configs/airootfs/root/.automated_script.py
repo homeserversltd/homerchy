@@ -517,13 +517,13 @@ Environment="HOMERCHY_INSTALL_USER={homerchy_user}"
 TimeoutStartSec=3600
 TimeoutStopSec=30
 # Diagnostic: log paths for journalctl ( - prefix = do not fail unit)
-ExecStartPre=-/bin/sh -c 'echo "HOMERCHY_FIRST_BOOT: ExecStart=/usr/bin/python3 {installed_homerchy_path}/deployment/install.py"; test -f {installed_homerchy_path}/deployment/install.py && echo "HOMERCHY_FIRST_BOOT: install.py exists" || echo "HOMERCHY_FIRST_BOOT: ERROR install.py missing"'
+ExecStartPre=-/bin/sh -c 'echo "HOMERCHY_FIRST_BOOT: ExecStart=/usr/bin/python3 {installed_homerchy_path}/install.py"; test -f {installed_homerchy_path}/install.py && echo "HOMERCHY_FIRST_BOOT: install.py exists" || echo "HOMERCHY_FIRST_BOOT: ERROR install.py missing"'
 # NOTE: Do NOT mask gettys in ExecStartPre. install.py blocks TTY in main() after setup.
 # Masking here would leave system without login if ExecStart fails to spawn (ExecStartPost
 # does not run when ExecStart fails). install.py uses block_tty_and_display_message() and
 # cleanup_on_exit()/atexit to restore; ExecStopPost is the safety net for kill -9 etc.
 # Run installation as root (orchestrator handles user-specific operations internally)
-ExecStart=/usr/bin/python3 {installed_homerchy_path}/deployment/install.py
+ExecStart=/usr/bin/python3 {installed_homerchy_path}/install.py
 # Remove marker (prevents reboot loop). ExecStartPost only runs on success; ExecStopPost covers failure.
 ExecStartPost=-/bin/rm -f /var/lib/homerchy-install-needed
 # Safety: ALWAYS restore gettys when service stops (success, failure, crash, or failed-to-start).

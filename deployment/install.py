@@ -188,14 +188,18 @@ def setup_environment():
     if 'HOMERCHY_PATH' not in os.environ:
         homerchy_path = None
         candidate = Path.home() / '.local' / 'share' / 'homerchy'
-        if (candidate / 'deployment' / 'install').exists():
+        if (candidate / 'install').exists() or (candidate / 'deployment' / 'install').exists():
             homerchy_path = candidate
-        elif (Path('/root/homerchy') / 'deployment' / 'install').exists():
+        elif (Path('/root/homerchy') / 'install').exists() or (Path('/root/homerchy') / 'deployment' / 'install').exists():
             homerchy_path = Path('/root/homerchy')
         else:
-            script_dir = Path(__file__).resolve().parent  # e.g. .../homerchy/deployment
-            if (script_dir / 'install').exists():
-                homerchy_path = script_dir.parent  # repo root
+            script_dir = Path(__file__).resolve().parent  # homerchy/ (flat) or homerchy/deployment/ (repo)
+            if script_dir.name == 'deployment' and (script_dir / 'install').exists():
+                homerchy_path = script_dir.parent  # repo: homerchy/deployment/install.py -> homerchy/
+            elif (script_dir / 'install').exists():
+                homerchy_path = script_dir  # flat: homerchy/install.py
+            elif script_dir.parent and (script_dir.parent / 'install').exists():
+                homerchy_path = script_dir.parent
             elif script_dir.parent and (script_dir.parent / 'deployment' / 'install').exists():
                 homerchy_path = script_dir.parent
         if homerchy_path is None:
@@ -203,7 +207,10 @@ def setup_environment():
         os.environ['HOMERCHY_PATH'] = str(homerchy_path)
 
     homerchy_path = Path(os.environ['HOMERCHY_PATH'])
-    os.environ['HOMERCHY_INSTALL'] = str(homerchy_path / 'deployment' / 'install')
+    # Installed: homerchy/install/ (flat, source_injection copies deployment contents).
+    # Dev: homerchy/deployment/install/ (repo structure).
+    install_tree = homerchy_path / 'install' if (homerchy_path / 'install').exists() else homerchy_path / 'deployment' / 'install'
+    os.environ['HOMERCHY_INSTALL'] = str(install_tree)
     if 'HOMERCHY_INSTALL_LOG_FILE' not in os.environ:
         os.environ['HOMERCHY_INSTALL_LOG_FILE'] = '/var/log/homerchy-install.log'
     homerchy_bin = homerchy_path / 'src' / 'bin'
