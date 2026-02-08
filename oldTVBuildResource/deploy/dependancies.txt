@@ -16,6 +16,5 @@ pciutils
 ripgrep
 git
 yay
-chezmoi
 inetutils
 moar
