@@ -521,7 +521,7 @@ ExecStartPre=/bin/systemctl stop getty@tty1.service getty@tty2.service getty@tty
 ExecStartPre=/bin/systemctl mask getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
 ExecStartPre=/bin/systemctl disable getty@tty1.service getty@tty2.service getty@tty3.service getty@tty4.service getty@tty5.service getty@tty6.service
 # Run installation as root (orchestrator handles user-specific operations internally)
-ExecStart=/usr/bin/python3 {installed_homerchy_path}/install.py
+ExecStart=/usr/bin/python3 {installed_homerchy_path}/deployment/install.py
 # Remove marker file (critical - prevents reboot loop)
 # Use - to ignore errors, but ensure it happens
 ExecStartPost=-/bin/rm -f /var/lib/homerchy-install-needed

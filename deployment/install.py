@@ -4,7 +4,7 @@ HOMESERVER Homerchy Installation Entry Point
 Copyright (C) 2024 HOMESERVER LLC
 
 Main Python entry point for Homerchy installation system.
-Replaces install.sh with Python-based orchestrator.
+Blocks TTY, runs root orchestrator (install/index.py), displays state via reporting.
 """
 
 import os
@@ -23,6 +23,8 @@ sys.modules['install'] = sys.modules[__name__]
 _current_status = "Starting installation..."
 _run_counter = 0  # Set by get_or_increment_run_counter()
 _orchestrator_instance = None  # Global reference for state access
+_install_state = None  # Shared state for display; set after we import from install tree
+_reporting_redraw = None  # reporting.redraw; set in main after sys.path includes install
 
 
 def get_or_increment_run_counter() -> int:
@@ -74,14 +76,20 @@ def _get_orchestrator_info() -> tuple:
 
 
 def display_persistent_message():
-    """Draw full-screen status on TTY1 and console. Refreshes every 2s from background thread."""
-    global _current_status, _run_counter
+    """Draw full-screen status on TTY1 and console. Uses install-tree reporting when state is set."""
+    global _current_status, _run_counter, _install_state, _reporting_redraw
 
+    try:
+        if _install_state is not None and _reporting_redraw is not None:
+            _reporting_redraw(_install_state, _run_counter, _current_status, None)
+            return
+    except Exception:
+        pass
+
+    # Fallback when orchestrator not yet run (no state)
     log_file = os.environ.get('HOMERCHY_INSTALL_LOG_FILE', '/var/log/homerchy-install.log')
     recent_logs = _get_recent_logs(log_file, lines=8)
     current_step, error_count, child_info = _get_orchestrator_info()
-
-    # Friendly label when orchestrator not running yet
     step_display = current_step if current_step not in ("unknown", "none") else "Initializing..."
 
     colors = [
@@ -91,7 +99,7 @@ def display_persistent_message():
     header_color = colors[_run_counter % len(colors)]
 
     try:
-        msg = "\033[2J\033[H"  # Clear screen and home cursor
+        msg = "\033[2J\033[H"
         msg += header_color
         msg += "=" * 70 + "\n"
         msg += "HOMERCHY INSTALLATION IN PROGRESS\n"
@@ -175,22 +183,145 @@ def unblock_tty_login():
         print(f"WARNING: Failed to unblock TTY: {e}", file=sys.stderr)
 
 
+def setup_environment():
+    """Set up environment variables for installation."""
+    if 'HOMERCHY_PATH' not in os.environ:
+        homerchy_path = None
+        candidate = Path.home() / '.local' / 'share' / 'homerchy'
+        if (candidate / 'deployment' / 'install').exists():
+            homerchy_path = candidate
+        elif (Path('/root/homerchy') / 'deployment' / 'install').exists():
+            homerchy_path = Path('/root/homerchy')
+        else:
+            script_dir = Path(__file__).resolve().parent  # e.g. .../homerchy/deployment
+            if (script_dir / 'install').exists():
+                homerchy_path = script_dir.parent  # repo root
+            elif script_dir.parent and (script_dir.parent / 'deployment' / 'install').exists():
+                homerchy_path = script_dir.parent
+        if homerchy_path is None:
+            homerchy_path = Path.home() / '.local' / 'share' / 'homerchy'
+        os.environ['HOMERCHY_PATH'] = str(homerchy_path)
+
+    homerchy_path = Path(os.environ['HOMERCHY_PATH'])
+    os.environ['HOMERCHY_INSTALL'] = str(homerchy_path / 'deployment' / 'install')
+    if 'HOMERCHY_INSTALL_LOG_FILE' not in os.environ:
+        os.environ['HOMERCHY_INSTALL_LOG_FILE'] = '/var/log/homerchy-install.log'
+    homerchy_bin = homerchy_path / 'src' / 'bin'
+    if homerchy_bin.exists():
+        os.environ['PATH'] = f"{homerchy_bin}:{os.environ.get('PATH', '')}"
+
+
+def unlock_account():
+    """Unlock user account on successful installation."""
+    try:
+        username = os.environ.get('HOMERCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
+        subprocess.run(['passwd', '-u', username], check=False, capture_output=True)
+    except Exception as e:
+        print(f"WARNING: Failed to unlock account: {e}", file=sys.stderr)
+
+
+def lockout_and_reboot():
+    """Lock out login and force reboot on installation failure."""
+    print("INSTALLATION FAILED - Locking out login and rebooting...", file=sys.stderr)
+    try:
+        marker_file = Path('/var/lib/homerchy-install-needed')
+        if marker_file.exists():
+            marker_file.unlink(missing_ok=True)
+        subprocess.run(['systemctl', 'disable', 'sddm.service'], check=False, capture_output=True)
+        subprocess.run(['systemctl', 'stop', 'sddm.service'], check=False, capture_output=True)
+        username = os.environ.get('HOMERCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
+        subprocess.run(['passwd', '-l', username], check=False, capture_output=True)
+        print("Login locked. Rebooting in 5 seconds...", file=sys.stderr)
+        subprocess.run(['sleep', '5'], check=False)
+        subprocess.run(['reboot', '-f'], check=False)
+    except Exception as e:
+        print(f"WARNING: Lockout failed: {e}", file=sys.stderr)
+        try:
+            Path('/var/lib/homerchy-install-needed').unlink(missing_ok=True)
+            subprocess.run(['reboot', '-f'], check=False)
+        except Exception:
+            pass
+
+
+def cleanup_on_exit():
+    """Restore TTY and clear marker on any exit."""
+    try:
+        unblock_tty_login()
+    except Exception as e:
+        print(f"[INSTALL] WARNING: Failed to unblock TTY in cleanup: {e}", file=sys.stderr)
+    try:
+        Path('/var/lib/homerchy-install-needed').unlink(missing_ok=True)
+    except Exception as e:
+        print(f"[INSTALL] WARNING: Failed to clear marker: {e}", file=sys.stderr)
+
+
+def _signal_handler(signum, frame):
+    cleanup_on_exit()
+    sys.exit(1)
+
+
 def main():
-    """Block TTY, show status (refreshing every 2s), sleep 5s, unblock, remove marker. No orchestrator yet."""
-    global _run_counter
+    """Block TTY, run root orchestrator, display state; on success unblock and exit; on failure lockout and reboot."""
+    global _run_counter, _orchestrator_instance, _install_state, _reporting_redraw
+
+    atexit.register(cleanup_on_exit)
+    signal.signal(signal.SIGTERM, _signal_handler)
+    signal.signal(signal.SIGINT, _signal_handler)
 
     _run_counter = get_or_increment_run_counter()
     print(f"[INSTALL] Run # {_run_counter}", file=sys.stderr)
 
+    setup_environment()
+
     block_tty_and_display_message()
     threading.Thread(target=persistent_message_loop, daemon=True).start()
 
-    time.sleep(5)
+    try:
+        username = os.environ.get('HOMERCHY_INSTALL_USER') or os.environ.get('USER', 'owner')
+        subprocess.run(['passwd', '-u', username], check=False, capture_output=True)
+    except Exception:
+        pass
 
-    unblock_tty_login()
-    marker = Path('/var/lib/homerchy-install-needed')
-    if marker.exists():
-        marker.unlink(missing_ok=True)
+    install_path = Path(os.environ.get('HOMERCHY_INSTALL', Path(__file__).resolve().parent / 'install'))
+    if not install_path.exists():
+        print("ERROR: Installation directory not found!", file=sys.stderr)
+        print(f"ERROR: HOMERCHY_INSTALL={install_path}", file=sys.stderr)
+        lockout_and_reboot()
+        sys.exit(1)
+
+    sys.path.insert(0, str(install_path))
+
+    try:
+        from state import State, Status  # noqa: E402
+        from index import Orchestrator  # noqa: E402
+        import reporting  # noqa: E402
+
+        _reporting_redraw = reporting.redraw
+        _install_state = State()
+        _orchestrator_instance = Orchestrator(install_path=install_path, phase="root", state=_install_state)
+
+        update_status("Initializing orchestrator...")
+        update_status("Running installation phases...")
+
+        state = _orchestrator_instance.run()
+
+        if state.status == Status.COMPLETED:
+            update_status("Installation completed successfully!")
+            unlock_account()
+            unblock_tty_login()
+            Path('/var/lib/homerchy-install-needed').unlink(missing_ok=True)
+            sys.exit(0)
+        else:
+            update_status(f"Installation failed: {state.status}")
+            lockout_and_reboot()
+            sys.exit(1)
+
+    except Exception as e:
+        print(f"ERROR: Failed to run orchestrator: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
+        lockout_and_reboot()
+        sys.exit(1)
 
 
 if __name__ == "__main__":
