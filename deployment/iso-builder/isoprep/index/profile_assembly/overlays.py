@@ -54,7 +54,7 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
             dest = profile_dir / item.name
             if item.is_dir():
                 # Special handling for airootfs: merge files instead of replacing entire directory
-                # This preserves the archiso base .automated_script.sh wrapper that runs on boot
+                # Overwrites releng root files; .zlogin runs .automated_script.py; kernel script= points at .automated_script.py
                 if item.name == 'airootfs' and dest.exists():
                     print(f"{Colors.BLUE}Merging {item.name} directory (preserving archiso base files)...{Colors.NC}")
                     # Merge files recursively, overwriting existing files but preserving archiso base files
@@ -85,12 +85,11 @@ def apply_custom_overlays(repo_root: Path, profile_dir: Path):
                             print(f"{Colors.GREEN}✓ Verified .automated_script.py copied to profile{Colors.NC}")
                         else:
                             print(f"{Colors.YELLOW}WARNING: .automated_script.py not found in profile after copy!{Colors.NC}")
-                    # Verify archiso base wrapper is preserved
+                    # Remove releng .automated_script.sh so only .automated_script.py is used (invoked by .zlogin or kernel script=)
                     archiso_wrapper = dest / 'root' / '.automated_script.sh'
                     if archiso_wrapper.exists():
-                        print(f"{Colors.GREEN}✓ Archiso base .automated_script.sh wrapper preserved{Colors.NC}")
-                    else:
-                        print(f"{Colors.YELLOW}WARNING: Archiso base .automated_script.sh wrapper not found!{Colors.NC}")
+                        archiso_wrapper.unlink()
+                        print(f"{Colors.GREEN}✓ Removed .automated_script.sh (single entry point is .automated_script.py){Colors.NC}")
                 else:
                     # For other directories, remove and copy fresh (original behavior)
                     if dest.exists():

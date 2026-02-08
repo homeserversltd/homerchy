@@ -4,6 +4,7 @@ HOMESERVER Homerchy Automated Installation Script
 Copyright (C) 2024 HOMESERVER LLC
 
 Runs during ISO boot to orchestrate Homerchy installation via archinstall.
+Invoked by: root's .zlogin (when root autologs in on tty1) or kernel cmdline script=/root/.automated_script.py.
 """
 
 import json
