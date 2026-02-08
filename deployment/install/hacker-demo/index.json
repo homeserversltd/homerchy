@@ -1,0 +1,11 @@
+{
+  "metadata": {
+    "schema_version": "1.0.0",
+    "name": "hacker-demo",
+    "description": "Fake hacker-style install demo for recording/progress video"
+  },
+  "paths": {},
+  "children": [],
+  "execution": {"mode": "sequential", "continue_on_error": true},
+  "config": {}
+}
