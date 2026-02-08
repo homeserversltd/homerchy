@@ -539,14 +539,14 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 """
     
-    service_file = Path('/mnt/etc/systemd/system/homerchy-first-boot-install.service')
+    service_file = Path('/mnt/etc/systemd/system/homerchy.service')
     service_file.parent.mkdir(parents=True, exist_ok=True)
     service_file.write_text(service_content)
     service_file.chmod(0o644)
     
     # Enable service in chroot
     result = subprocess.run(
-        ['arch-chroot', '/mnt', 'systemctl', 'enable', 'homerchy-first-boot-install.service'],
+        ['arch-chroot', '/mnt', 'systemctl', 'enable', 'homerchy.service'],
         capture_output=True,
         text=True
     )

@@ -121,7 +121,7 @@ def display_persistent_message():
                 line = line[:65] + "..."
             msg += line + "\n"
         msg += "-" * 70 + "\n"
-        msg += "\033[2mDetails: journalctl -u homerchy-first-boot-install.service\033[0m\n"
+        msg += "\033[2mDetails: journalctl -u homerchy.service\033[0m\n"
 
         for dev in ('/dev/tty1', '/dev/console'):
             try:

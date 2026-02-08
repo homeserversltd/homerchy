@@ -35,7 +35,7 @@ def build_message(
     status_str: str,
     log_file: str,
     *,
-    journalctl_hint: str = "journalctl -u homerchy-first-boot-install.service",
+    journalctl_hint: str = "journalctl -u homerchy.service",
 ) -> str:
     """Build the full-screen status string. Does not write anywhere."""
     if getattr(state, "recent_logs", None) and state.recent_logs:
