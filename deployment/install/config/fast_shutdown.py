@@ -1,0 +1,1 @@
+# Placeholder: fast shutdown

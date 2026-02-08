@@ -1,0 +1,1 @@
+{"metadata":{"schema_version":"1.0.0","name":"login","description":"Login manager, Plymouth, keyring, limine-snapper"},"paths":{},"children":[],"execution":{"mode":"sequential","continue_on_error":false},"config":{}}

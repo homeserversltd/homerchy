@@ -1,0 +1,1 @@
+# Placeholder: pacman post-install

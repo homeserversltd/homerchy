@@ -1,0 +1,1 @@
+{"metadata":{"schema_version":"1.0.0","name":"config","description":"System and user config (branding, hardware, theme, etc.)"},"paths":{},"children":["hardware"],"execution":{"mode":"sequential","continue_on_error":false},"config":{}}

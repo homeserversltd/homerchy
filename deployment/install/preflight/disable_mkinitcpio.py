@@ -1,0 +1,1 @@
+# Placeholder: disable mkinitcpio

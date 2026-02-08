@@ -1,0 +1,1 @@
+{"metadata":{"schema_version":"1.0.0","name":"first-run","description":"First-run setup: wifi, firewall, welcome, etc."},"paths":{},"children":[],"execution":{"mode":"sequential","continue_on_error":false},"config":{}}
