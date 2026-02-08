@@ -88,7 +88,7 @@ def display_persistent_message():
 
     # Fallback when orchestrator not yet run (no state)
     log_file = os.environ.get('HOMERCHY_INSTALL_LOG_FILE', '/var/log/homerchy-install.log')
-    recent_logs = _get_recent_logs(log_file, lines=8)
+    recent_logs = _get_recent_logs(log_file, lines=10)
     current_step, error_count, child_info = _get_orchestrator_info()
     step_display = current_step if current_step not in ("unknown", "none") else "Initializing..."
 
@@ -116,7 +116,7 @@ def display_persistent_message():
             msg += "\033[0m"
         msg += "\n\033[32mRecent Logs:\033[0m\n"
         msg += "-" * 70 + "\n"
-        for line in recent_logs[-6:]:
+        for line in recent_logs[-10:]:
             if len(line) > 68:
                 line = line[:65] + "..."
             msg += line + "\n"

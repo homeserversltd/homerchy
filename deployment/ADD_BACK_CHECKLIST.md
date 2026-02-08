@@ -2,7 +2,7 @@
 
 Add one item, rebuild/test, then proceed. If something breaks, the last item you added is the suspect.
 
-**Current state:** Minimal PoC (block → sleep 5 → unblock → remove marker → exit). No crash, no reboot.
+**Current state:** Add-back complete. Full orchestrator runs; all phases (preflight, packaging, config, login, first-run, display-test, hacker-demo, post-install) execute. TTY blocking in install.py main(); ExecStopPost restores gettys on any exit. See homerchy/firstBootTTY.md for TTY/marker architecture.
 
 ---
 
@@ -20,7 +20,7 @@ Add one item, rebuild/test, then proceed. If something breaks, the last item you
 
 **Limitations:** "Current Step: unknown" is unhelpful early on; no hint where to look for full logs if something fails.
 
-**Enhancements applied:** (1) When step is "unknown" or "none", show "Initializing..." instead. (2) Footer line: "Details: journalctl -u homerchy-first-boot-install.service" so user knows where to look for full logs.
+**Enhancements applied:** (1) When step is "unknown" or "none", show "Initializing..." instead. (2) Footer line: "Details: journalctl -u homerchy.service" so user knows where to look for full logs.
 
 ---
 
@@ -168,3 +168,7 @@ Add one item, rebuild/test, then proceed. If something breaks, the last item you
 | 12 | Optional explicit unblock on success | Low |
 
 If you break at step 11, the fault is in the orchestrator (import, construction, or run) or in the install tree under `deployment/install/`.
+
+---
+
+**Related:** homerchy/firstBootTTY.md — TTY blocking, marker file system, troubleshooting.

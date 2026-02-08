@@ -39,9 +39,9 @@ def build_message(
 ) -> str:
     """Build the full-screen status string. Does not write anywhere."""
     if getattr(state, "recent_logs", None) and state.recent_logs:
-        recent_logs = state.recent_logs[-8:]
+        recent_logs = state.recent_logs[-10:]
     else:
-        recent_logs = _get_recent_logs(log_file, lines=8)
+        recent_logs = _get_recent_logs(log_file, lines=10)
     current_step = state.current_step or "none"
     step_display = current_step if current_step not in ("unknown", "none") else "Initializing..."
     error_count = len(state.errors) if hasattr(state, "errors") else 0
@@ -70,7 +70,7 @@ def build_message(
         msg += "\033[0m"
     msg += "\n\033[32mRecent Logs:\033[0m\n"
     msg += "-" * 70 + "\n"
-    for line in recent_logs[-6:]:
+    for line in recent_logs[-10:]:
         if len(line) > 68:
             line = line[:65] + "..."
         msg += line + "\n"

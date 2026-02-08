@@ -1,1 +1,28 @@
 https://github.com/homeserversltd/homerchy/releases need to make this do something
+
+---
+
+## Overarching story
+
+**1. Put back install content under the new paradigm**
+
+The first-boot install engine works (orchestrator, state, reporting, TTY). Phases run but are stubs. We need to implement real logic in deployment/install per the new paradigm:
+
+- Python-only, no shell; phases mutate state, main owns display
+- Use OLD_BEHAVIOR docs and git history to steal only what we need
+- Phases: preflight (partially done), packaging, config, login, first-run, display-test (stub), hacker-demo (done), post-install
+
+See: firstBootTTY.md, deployment/ADD_BACK_CHECKLIST.md, deployment/install/README.md
+
+**2. Figure out homerchy/src and get it sorted**
+
+src/ is the "installed" Homerchy payload: applications/, bin/ (100+ scripts), config/, default/, migrations/ (93 .sh), themes/, merge-tool/. It feeds into the install (packaging deploys packages, config deploys configs, etc.). Needs:
+
+- Audit: what lives where, what's used, what's orphaned
+- omarchy vs homerchy naming (src/bin still has omarchy-*; transition may be incomplete)
+- How migrations tie to install; which configs map to which phases
+- Clear contract: src/ layout vs what install phases deploy
+
+**3. Then**
+
+Releases page, polish, whatever comes next.
