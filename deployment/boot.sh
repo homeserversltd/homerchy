@@ -1,7 +1,7 @@
-#!/onmachine/onmachine/bin/bash
+#!/usr/bin/env bash
 
-# Set onmachine/install mode to online since boot.sh is used for curl onmachine/installations
-export OMARCHY_ONLINE_INSTALL=true
+# Set homerchy install mode to online since boot.sh is used for curl homerchy installations
+export HOMERCHY_ONLINE_INSTALL=true
 
 ansi_art='                                          
    / / / /___  ____ ___  ___  __________/ /_  __  __
@@ -15,21 +15,21 @@ echo -e \n$ansi_art\n
 
 sudo pacman -Syu --noconfirm --needed git
 
-# Use custom repo if specified, otherwise onmachine/src/default to basecamp/omarchy
-OMARCHY_REPO=${OMARCHY_REPO:-homeserversltd/homerchy}"
+# Use custom repo if specified, otherwise default to homeserversltd/homerchy
+HOMERCHY_REPO=${HOMERCHY_REPO:-homeserversltd/homerchy}
 
-echo -e "\nCloning Omarchy from: https://github.com/${OMARCHY_REPO}.git"
-rm -rf ~/.local/share/omarchy/
-git clone https://github.com/${OMARCHY_REPO}.git ~/.local/share/omarchy >/dev/null
+echo -e "\nCloning HOMERCHY from: https://github.com/${HOMERCHY_REPO}.git"
+rm -rf ~/.local/share/homerchy/
+git clone https://github.com/${HOMERCHY_REPO}.git ~/.local/share/homerchy >/dev/null
 
-# Use custom branch if instructed, otherwise onmachine/src/default to master
-OMARCHY_REF=${OMARCHY_REF:-master}"
-if [[ $OMARCHY_REF != "master" ]]; then
-  echo -e "\e[32mUsing branch: $OMARCHY_REF\e[0m"
-  cd ~/.local/share/omarchy
-  git fetch origin "${OMARCHY_REF}" && git checkout "${OMARCHY_REF}"
+# Use custom branch if instructed, otherwise default to master
+HOMERCHY_REF=${HOMERCHY_REF:-master}
+if [[ $HOMERCHY_REF != "master" ]]; then
+  echo -e "\e[32mUsing branch: $HOMERCHY_REF\e[0m"
+  cd ~/.local/share/homerchy
+  git fetch origin "${HOMERCHY_REF}" && git checkout "${HOMERCHY_REF}"
   cd -
 fi
 
-echo -e "\nInstallation starting...
-source ~/.local/share/omarchy/onmachine/onmachine/install.sh
+echo -e "\nInstallation starting..."
+exec python3 ~/.local/share/homerchy/deployment/install.py
