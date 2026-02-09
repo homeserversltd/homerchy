@@ -38,6 +38,11 @@ def build_message(
     journalctl_hint: str = "journalctl -u homerchy.service",
 ) -> str:
     """Build the full-screen status string. Does not write anywhere."""
+    if hasattr(state, 'capture_log_content') and state.capture_log_content:
+        msg = "\033[2J\033[H"
+        msg += state.capture_log_content
+        msg += "\nPress any key to continue..."
+        return msg
     if getattr(state, "recent_logs", None) and state.recent_logs:
         recent_logs = state.recent_logs[-10:]
     else:

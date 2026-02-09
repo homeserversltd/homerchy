@@ -1,0 +1,1 @@
+{"metadata":{"schema_version":"1.0.0","name":"capture-hook","description":"Display full journalctl output and wait for any keypress before continuing"},"paths":{},"children":[],"execution":{"mode":"sequential","continue_on_error":false},"config":{}}
